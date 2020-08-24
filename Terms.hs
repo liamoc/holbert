@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Terms 
-  ( Term (..), Masked (..)
+  ( Term (..), Masked (..), Id
   , raise, raise'
   , isUsed
   , subst

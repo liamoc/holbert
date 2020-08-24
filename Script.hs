@@ -29,8 +29,8 @@ outstandingGoals = not . null . outstandingGoals'
 outstandingGoals' :: ProofState -> [Path]
 outstandingGoals' (PS t _) = outstandingGoalsAcc [] t
   where
-   outstandingGoalsAcc pth (Goal {}) = [pth]
-   outstandingGoalsAcc pth (Rule _ _ _ _ pts) = concat $ zipWith outstandingGoalsAcc (map (:pth) [0..]) pts 
+   outstandingGoalsAcc pth (PT _ _ _ Nothing) = [pth]
+   outstandingGoalsAcc pth (PT _ _ _ (Just (_,pts))) = concat $ zipWith outstandingGoalsAcc (map (:pth) [0..]) pts 
 
 genProofState :: Prop -> ProofState
 genProofState prop = PS (fromProp prop) 0
@@ -127,8 +127,8 @@ moveItemDown i s = let (lefts,x:y:rest) = splitAt i s
 
 clearRuleItem toClear (Proposition n p (Just (PS pt c))) = Proposition n p (Just (PS (clearRule toClear pt) c))
   where
-    clearRule toClear x@(Rule rr sks lcl g sgs) | rr == (Defn toClear) = Goal sks lcl g 
-    clearRule toClear x@(Rule rr sks lcl g sgs) = Rule rr sks lcl g (map (clearRule toClear) sgs)
+    clearRule toClear x@(PT sks lcl g (Just (rr,sgs))) | rr == (Defn toClear) = PT sks lcl g Nothing
+                                                       | otherwise            = PT sks lcl g $ Just (rr, map (clearRule toClear) sgs)
     clearRule toClear x = x
 clearRuleItem toClear p = p
 
