@@ -2,28 +2,19 @@
 module Unification (unifier, gen, Gen) where
 import           Control.Monad
 import           Control.Monad.State
-import           Control.Monad.Logic
 import           Control.Monad.Trans
 import Control.Monad.Except
 import qualified Data.Map.Strict     as M
 import           Data.Maybe
 import           Data.Foldable
 import qualified Data.Set            as S
-import Debug.Trace
+
 import Terms
 
---------------------------------------------------
------------------- the language ------------------
---------------------------------------------------
+-- almost all of this is a direct port of Tobias Nipkow's pattern unification implementation
+-- in standard ML.
 
-  
------------------------------------------------------------------
--------------- the actual unification code ----------------------
------------------------------------------------------------------
 gen = do x <- get; put (x + 1); pure x
-
-
-
 
 lams (x:xs) t = Lam (M "x") (lams xs t)
 lams [] t = t

@@ -1,15 +1,15 @@
 module StringRep (toSexps, fromSexps) where
 
-import Terms
 import Data.Char
 import Control.Monad(ap, when)
 import Data.List
 import Prelude hiding (lex)
-import Debug.Trace
 import Data.Maybe
 import Control.Monad.Except
 import Control.Applicative hiding (Const)
 import Control.Monad.State
+
+import Terms
 
 toSexps :: [String] -> Term -> String
 toSexps ctx (Lam (M x) t) = x ++ ". " ++ toSexps (x:ctx) t 
@@ -46,7 +46,6 @@ unlex (Word s) = s
 
 type Parser a = ExceptT String (State [Token]) a
 
---runParser :: Parser a  -> String -> Either String a
 runParser = runState . runExceptT
 
 expect :: Token -> Parser ()
@@ -68,7 +67,7 @@ peek = do
   pure $ listToMaybe xs
 
 parseError :: String -> Parser a
-parseError str = throwError str --  P $ \ts -> (ts, Left str)
+parseError str = throwError str
 parser :: [String] -> Parser Term
 parser ctx = do
       w <- peek

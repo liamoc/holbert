@@ -11,7 +11,7 @@ import Miso.String hiding (zipWith, map, Ap, intersperse, length, dropWhileEnd, 
 import qualified Miso.String as MS
 import Terms
 import Prop 
-
+import ProofTree
 import Script
 import Data.Function (on)
 import Data.List (intersperse, dropWhileEnd, groupBy)
@@ -784,8 +784,6 @@ name' s = let noPrimes = dropWhileEnd (== '\'') s
          
 
 initialModel = let 
-    (t1, c) = runState (goal [] r1) 0
-    (t2, c') = runState (goal [] r2) 0
  in model' -- M [Heading 0 "Holbert Playground", Block "Welcome to Holbert!", Proposition "ImpI" r0 Nothing, Proposition "ImpE" r0'''' Nothing, Proposition "ConjI" r0' Nothing, Proposition "ConjE1" r0'' Nothing, Proposition "ConjE2" r0''' Nothing,  Heading 1 "Proofs", Proposition "ConjComm" r1 (Just (PS t1 c S.empty)), Proposition "ConjAssoc" r2 (Just (PS t2 c' S.empty)), Block lipsum ] (O True Cumulative BarTurnstile (TDO True True) ) Nothing Nothing False 
    where 
      implies a b = Ap (Ap (Const "_->_") a) b

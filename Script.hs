@@ -1,5 +1,6 @@
 module Script where
 import Prop
+import ProofTree
 import Unification 
 import Terms
 import qualified Miso.String as MS
@@ -32,9 +33,7 @@ outstandingGoals' (PS t _) = outstandingGoalsAcc [] t
    outstandingGoalsAcc pth (Rule _ _ _ _ pts) = concat $ zipWith outstandingGoalsAcc (map (:pth) [0..]) pts 
 
 genProofState :: Prop -> ProofState
-genProofState prop = let 
-    (t, c) = runState (goal [] prop) 0
-  in PS t c
+genProofState prop = PS (fromProp prop) 0
 
 ruleAction :: (Prop -> Prop) -> Int -> Script -> Script
 ruleAction a i = modifyAt i (\(Proposition n p prf) -> Proposition n (a p) prf)

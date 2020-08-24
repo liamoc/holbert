@@ -9,9 +9,13 @@ module Terms
   , peelApTelescope, applyApTelescope
   , Subst, applySubst, fromUnifier
   ) where
+
 import qualified Data.Map as M
 import Data.String
 import Data.List (foldl')
+
+-- Judge equality of terms modulo alpha equivalence.
+-- we do this by hiding names from the Eq instance.
 type Id = String 
 newtype Masked a = M a 
 instance Eq (Masked a) where 
@@ -30,10 +34,11 @@ data Term = LocalVar Index
           | Const String
           | Lam (Masked Id) Term
           deriving (Show, Eq, Ord)
--- | Raise @LocalVar@s without a binding by @i@ amount. Used to avoid
--- capture in terms with free de Bruijn variables.
+
 raise :: Int -> Term -> Term
 raise = raise' 0
+
+raise' :: Int -> Int -> Term -> Term
 raise' lower i t = case t of
    LocalVar j -> if j >= lower then LocalVar (i + j) else LocalVar j
    MetaVar i -> MetaVar i
@@ -48,7 +53,6 @@ isUsed i (Ap t u)  = isUsed i t || isUsed i u
 isUsed i _ = False
 
 
--- | Substitute a term for the de Bruijn variable @i@.
 subst :: Term -> Int -> Term -> Term
 subst new i t = case t of
   LocalVar j -> case compare j i of
@@ -60,7 +64,6 @@ subst new i t = case t of
   Const s -> Const s
   Lam n body -> Lam n (subst (raise 1 new) (i + 1) body)
 
--- | Substitute a term for all metavariables with a given identifier.
 substMV :: Term -> Id -> Term -> Term
 substMV new i t = case t of
   LocalVar i -> LocalVar i
@@ -69,9 +72,6 @@ substMV new i t = case t of
   Const s -> Const s
   Lam n body -> Lam n (substMV (raise 1 new) i body)
 
--- | Implement reduction for the language. Given a term, normalize it.
--- This boils down mainly to applying lambdas to their arguments and all
--- the appropriate congruence rules.
 reduce :: Term -> Term
 reduce t = case t of
   LocalVar j -> LocalVar j
@@ -82,13 +82,11 @@ reduce t = case t of
     l' -> Ap l' (reduce r)
   Lam n body -> Lam n (reduce body)
 
--- | Turn @f a1 a2 a3 a4 ... an@ to @(f, [a1...an])@.
 peelApTelescope :: Term -> (Term, [Term])
 peelApTelescope t = go t []
   where go (Ap f r) rest = go f (r : rest)
         go t rest = (t, rest)
 
--- | Turn @(f, [a1...an])@ into @f a1 a2 a3 a4 ... an@.
 applyApTelescope :: Term -> [Term] -> Term
 applyApTelescope = foldl' Ap
 
