@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script language="javascript" src="rts.js"></script>
+    <script language="javascript" src="lib.js"></script>
+    <script language="javascript" src="out.js"></script>
+<link rel="stylesheet" type="text/css" href="typicons.min.css">
+<link rel="stylesheet" type="text/css" href="cmunfonts/fonts.css">
+<script src="split.min.js"></script>
+  <title> Holbert 0.1 </title>
+  <style>
+@font-face {
+font-family: 'NeoEulerMedium';
+font-style: normal;
+font-weight: normal;
+src: local('Neo Euler Medium'), url('euler.woff') format('woff');
+}
+     td {
+      text-align: center;
+     }
+     .conclusion  {
+        border-top: 1px solid black;
+        padding: 2px;
+     }
+.logo > small {
+font-size:8pt;
+color:#CCCCCC;
+font-weight:normal;
+padding-right:8px;
+}
+.creditsText{
+padding: 10px;
+    text-align: left;
+    font-family: Computer Modern Sans;
+}
+.logo:hover {
+color:#AA00CC;
+cursor:pointer;
+}
+.proofBox { overflow-x: scroll }
+     .premise {
+       padding-left:6px;
+       padding-right:6px;
+       vertical-align:bottom;
+     }
+     .spacer {
+       vertical-align:bottom;
+     }
+     .metavar {
+       color: gray;
+       font-style:italic;
+     padding-right:4px;}
+     .metabinder {
+       color: #006600;
+       font-size:small;
+       padding-right:1px;
+     }
+button {
+font-size:1em;
+}
+.headingButton{
+    padding: 0;
+    border: 0;
+    font-family: Computer Modern Concrete;
+    background: white;
+    cursor: text;
+}
+.headingButton > h1:hover {
+    background: #CCCCFF;
+    border-radius: 5px;
+}
+.headingButton > h2:hover {
+    background: #CCCCFF;
+    border-radius: 5px;
+}
+.headingButton > h3:hover {
+    background: #CCCCFF;
+    border-radius: 5px;
+}
+.headingButton > h4:hover {
+    background: #CCCCFF;
+    border-radius: 5px;
+}
+.headingButton > h5:hover {
+    background: #CCCCFF;
+    border-radius: 5px;
+}
+.mbEditor {
+display:inline
+}
+.mbEditor > input {
+border: 1px solid #0000AA;
+border-radius:4px;
+background: #EEEEFF;
+font-family: 'Computer Modern Typewriter'
+}
+.proofMB {
+background:white;
+border: none;
+cursor:text;
+border-radius:4px;
+font-family: 'NeoEulerMedium';
+padding:0px;
+}
+.proofMB:hover {
+background:#CCCCFF
+}
+.displayOptions{
+flex: 0 1 auto;
+font-family: 'Computer Modern Sans';
+font-size: small;
+    display: block;
+    width: 100%;
+}
+.tmEditor {
+display:inline
+}
+.tmEditor > input {
+border: 1px solid #0000aa;
+border-radius:4px;
+background: #EEEEFF;
+font-family: 'Computer Modern Typewriter'
+}
+.headingEditor {
+}
+.headingEditor > input {
+border: 1px solid #0000aa;
+border-radius:4px;
+background: #EEEEFF;
+}
+.newRnEditor {
+margin-top:5px;
+border-top: 1px dotted #eeeeee;
+display: block;
+}
+.newRnEditor > input {
+border: 1px solid #0000aa;
+border-radius:4px;
+background: #EEEEFF;
+font-family: 'Computer Modern Typewriter'
+}
+.rnEditor {
+display:inline
+}
+.rnEditor > input {
+border: 1px solid #0000aa;
+border-radius:4px;
+background: #EEEEFF;
+font-family: 'Computer Modern Typewriter'
+}
+.ruleNameB {
+background:white;
+border: none;
+cursor:text;
+border-radius:4px;
+font-family: 'NeoEulerMedium';
+padding:0px;
+}
+.hypConclusion {
+font-family: 'NeoEulerMedium';
+}
+.addPremise {
+    padding: 0;
+    border: 0px;
+    background: white;
+    margin-bottom: 2px;
+    color:#0000CC;
+    cursor:pointer;
+}
+.addPremise:hover {
+    color:#AA00FF;
+}
+.addMB {
+background: white;
+    padding: 0;
+    border: 0;
+    color: #0000CC;
+    cursor:pointer;
+font-size:small;
+}
+.addMB:hover {
+    color:#AA00FF;
+}
+.boundName {
+color: #9343a7
+}
+.referent {
+color: #9343a7
+}
+.ruleNameB:hover {
+background:#CCCCFF;
+}
+.ruleTB:hover {
+background:#CCCCFF;
+}
+.ruleTB {
+background:white;
+border: none;
+cursor:text;
+border-radius:4px;
+font-family: 'NeoEulerMedium';
+padding:0px;
+}
+code{
+display:inline-block;
+}
+.inlineMath{
+display:inline-block;
+font-family: 'NeoEulerMedium';
+}
+.endofcontent{
+height:100px;
+}
+.lhs {
+border-right: 1px solid #eeeeee;
+}
+.editingHelp{
+width:100%;
+border-bottom: 1px solid #eeeeee;
+}
+.parabutto {
+ margin-top:5px;
+margin-bottom:5px;
+}
+.paragraph {
+    white-space: break-spaces;
+    margin-right: 60px;
+    margin-top:7px;
+    margin-bottom:7px;
+    min-height:40px;
+    box-sizing: border-box;
+    width:100%;
+    display:block;
+}
+div.paragraph {
+    text-align: justify;
+}
+.indexSummary {
+font-family: Computer Modern Sans;
+padding-left:7px;
+margin-top:7px;
+}
+a[href] {
+   text-decoration:none;
+   color:#0000CC
+}
+a[href]:hover {
+   text-decoration:none;
+   color:#AA00CC
+}
+a[href]:active {
+   text-decoration:none;
+   color:#0000CC
+}
+:target {
+  -webkit-animation: target-fade 1s;
+  -moz-animation: target-fade 1s;
+  -o-animation: target-fade 1s;
+  animation: target-fade 1s;
+}
+
+/**
+ * Keyframe animation definition
+ * 
+ * 1. Insert a color of your choice here
+ */
+@-webkit-keyframes target-fade {
+  from {
+    background-color: #FFEE88;
+  }
+  /* [1] */
+  to {
+    background-color: transparent;
+  }
+}
+@-moz-keyframes target-fade {
+  from {
+    background-color: #FFEE88;
+  }
+  /* [1] */
+  to {
+    background-color: transparent;
+  }
+}
+@-o-keyframes target-fade {
+  from {
+    background-color: #FFEE88;
+  }
+  /* [1] */
+  to {
+    background-color: transparent;
+  }
+}
+@keyframes target-fade {
+  from {
+    background-color: #FFEE88;
+  }
+  /* [1] */
+  to {
+    background-color: transparent;
+  }
+}
+
+.outstandingGoalIndicator {
+  color: #FFAA00;
+}
+.noGoalIndicator {
+  color: #00AA66;
+}
+ul.indexSummary li {
+  list-style: none;
+  position: relative;
+  padding-left:15px;
+}
+ul.indexSummary li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  height: 5px;
+  width: 5px;
+  border: 1px solid #666666;
+  border-width: 2px 2px 0 0;
+  transform: rotate(45deg);
+}
+
+ul.indexSummary ul {
+  padding-left:20px;
+}
+code {
+font-family: Computer Modern Typewriter;
+}
+textarea.paragraph {
+font-family: Computer Modern Typewriter;
+font-size:1em;
+border: 1px solid #0000aa;
+    border-radius: 4px;
+    background: #EEEEFF;
+}
+.optionsGroup {
+padding-bottom:5px;
+padding-right:5px;
+}
+.errorMessage {
+flex: 0 1 auto;
+   font-family: 'Computer Modern Sans';
+    color: darkred;
+    background: #FFAAAA;
+    border-top: 1px solid #c9c9d8;
+    padding: 5px;
+    margin: 0px; 
+}
+     .definedrule {
+   font-family: 'NeoEulerMedium';
+       font-weight: bold;
+       font-size: small;
+     } 
+     .localrule {
+       font-family:monospace;
+       color: #0000AA;
+     }
+     .comma {
+       color: #990000;
+       font-weight: bold;
+     }
+     .labelbracket {
+       color: #990000;
+       font-weight: bold;
+     }
+     .parens {
+       color: #990000;
+     }
+     .turnstile {
+       color: #990000;
+       font-weight: bold;
+       padding-left:6px;
+       padding-right: 6px;
+     }
+     .equals {
+       color: #990000;
+       font-weight: bold;
+       padding-left:6px;
+       padding-right: 6px;
+     }
+.mainpanel {
+   overflow:scroll;
+width:70%;
+height:100vh;
+padding-left:20px;
+padding-right:9px;
+padding-top:0px;
+   white-space:nowrap;
+box-sizing:border-box;
+}
+.insertItemOption:hover {
+    background: #FFEEFF;
+}
+.insertItemHeader {
+padding-left:3px;
+    font-family: Computer Modern Sans;
+  border-bottom: 1px solid #c9c9d8;
+  border-top: 1px solid #c9c9d8;
+background:#EEEEEE;
+padding-top:5px;
+}
+.insertItemOption {
+    font-family: Computer Modern Concrete;
+    width: 100%;
+    text-align: left;
+    cursor:pointer;
+    border: 0;
+    background: #EEEEFF; 
+    display:block;
+}
+#hdeditor {
+width 80%;
+    font-family: Computer Modern Concrete;
+font-weight:bold;
+margin-top:5px;
+}
+.h0 > #hdeditor {
+ font-size:2em;
+}
+.h1 > #hdeditor {
+ font-size:1.5em;
+}
+.h2 > #hdeditor {
+ font-size:1.17em;
+}
+.h3 > #hdeditor {
+ font-size:1.33em;
+}
+.h4 > #hdeditor {
+ font-size:0.83em;
+}
+.topdiv {
+display:flex;
+flex-direction:row;
+}
+.gutter {
+cursor:col-resize;
+}
+.gutter:hover {
+background:#FFee88
+}
+.sidebar {
+width:30%;
+/*position: absolute;
+right:0;
+top:0;*/
+   overflow:scroll;
+box-sizing:border-box;
+height:100vh;
+border-left: 1px solid #EEEEEE;
+display:flex;
+flex-flow:column;
+}
+.sidebarmain {
+overflow:scroll;
+flex: 1 1 auto;
+}
+.logo {
+font-style: italic;
+    font-weight: bold;
+    padding-right: 10px;
+    color: brown;
+    text-align: right;
+flex: 0 1 auto;
+}
+.precontext {
+padding-right:4px;
+}
+     .freevar {
+       color: #00AA00;
+       font-weight:bold;
+     }
+     .spacer {
+       height: 1em;
+     }
+     .rulestep {
+     }
+.flexflex{
+   padding:5px;
+   font-family: 'NeoEulerMedium';
+}
+.ruleOption:hover {
+    border: 1px solid #CC00FF;
+    background: #FAEFFA;
+}
+.ruleOption {
+    border: 1px solid #0000CC;
+    background: #EFEFFA;
+    border-radius: 5px;
+white-space:nowrap;
+cursor:pointer;
+ display:inline-block;
+padding:9px;
+margin-left:5px;
+margin-top:5px;
+margin-right:0px;
+margin-bottom:0px;
+   font-family: 'NeoEulerMedium';
+}
+body {
+margin:0px;
+cursor: crosshair;
+font-family: 'Computer Modern Concrete';
+}
+.nix:hover {
+    color: #AA00FF;
+}
+.proofHeading {
+   font-style:italic;
+}
+.theoremHeading {
+   font-weight: bold;
+display:inline-block;
+}
+.axiomHeading {
+display:inline-block;
+   font-weight: bold;
+}
+h1 {
+   margin-bottom:0px;
+   margin-top:0px;
+}
+h2 {
+   margin-bottom:0px;
+   margin-top:0px;
+}
+h3 {
+   margin-bottom:0px;
+   margin-top:5px;
+}
+h4 {
+   margin-bottom:0px;
+   margin-top:9px;
+}
+h5 {
+   margin-bottom:0px;
+   margin-top:12px;
+}
+.nix {
+    padding: 0;
+    background: white;
+    border: 0px;
+    font-size: 16px;
+    color: #c30303;
+    cursor: pointer;
+}
+.insertButton:hover {
+    color: #AA00CC;
+}
+.itemBlock {
+    border-bottom:1px dotted #EEEEEE;
+    position:relative;
+    padding-top:5px;
+    padding-right:60px;
+}
+.inserting {
+    border-color:#AA00CC;
+}
+.insertButtonActive {
+    right: 0;
+    position: absolute;
+    bottom: -0.54em;
+    padding: 0;
+    background: white;
+    border: 0px;
+    font-size: 16px;
+    z-index:10000;
+    color: #AA00CC;
+    cursor: pointer;
+}
+.insertButton {
+    right: 0;
+    position: absolute;
+    z-index:10000;
+    bottom: -0.54em;
+    padding: 0;
+    background: white;
+    border: 0px;
+    font-size: 16px;
+    color: #0000CC;
+    cursor: pointer;
+}
+.itemOptions {
+position:absolute;
+right:0;
+top:10px;
+}
+.moreItemOptions {
+position:absolute;
+right:0;
+bottom:8px;
+}
+
+.movementButton:hover {
+    color: #AA00CC;
+}
+.movementButton {
+    padding: 0;
+    background: white;
+    border: 0px;
+    font-size: 16px;
+    color: #0091aa;
+    cursor: pointer;
+}
+.editButton:hover {
+    color: #AA00CC;
+}
+.editButton {
+    padding: 0;
+    background: white;
+    border: 0px;
+    font-size: 16px;
+    color: #0000CC;
+    cursor: pointer;
+}
+.confirmButton:hover {
+    color: #AA00CC;
+}
+.confirmButton {
+    padding: 0;
+    background: white;
+    border: 0px;
+    font-size: 16px;
+    color: #0000CC;
+    cursor: pointer;
+}
+.cancelButton:hover {
+    color: #AA00FF;
+} 
+.cancelButton {
+    padding: 0;
+    background: white;
+    border: 0px ;
+    font-size: 16px;
+    color: #666666;
+    cursor: pointer;
+}
+.goal:hover {
+  color:#AA00FF
+}
+.goal {
+    color: #0000CC;
+    cursor: pointer;
+    background: white;
+    border: 0px;
+    display: inline-block;
+    margin-bottom: 2px;
+font-size:20px;
+    padding: 0px;
+}
+.selectedGoal {
+    color: #AA00FF;
+    cursor: pointer;
+    background: white;
+    border: 0px;
+    display: inline-block;
+font-size:20px;
+    margin-bottom: 2px;
+    padding: 0px;
+}
+.conclusion {
+   font-family: 'NeoEulerMedium';
+}
+.comma {
+   padding-left:2px;
+   padding-right: 4px;
+}
+.prop {
+   font-family: 'NeoEulerMedium';
+}
+..hypconclusion {
+   font-family: 'NeoEulerMedium';
+        padding: 2px;
+}
+     .rulebox {
+       vertical-align:bottom;
+       padding-bottom:1.1em;
+       padding-left:2px;
+       padding-right:2px;
+   font-family: 'NeoEulerMedium';
+     }
+.mini {
+font-size: x-small;
+font-style: normal;
+}
+     .binderbox {
+       vertical-align:bottom;
+       padding-bottom:3px;
+       padding-left:2px;
+       padding-right:2px;
+   font-family: 'NeoEulerMedium';
+     }
+.placeholder {
+padding-left:1px;
+padding-right:1px;
+}
+     .goalstep {
+     }
+  </style> 
+  </head>
+  <body>
+  </body>
+  <script language="javascript" src="runmain.js" defer></script>
+</html>
