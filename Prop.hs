@@ -1,20 +1,19 @@
 module Prop where 
 import Control.Monad
-import Unification as U
+import Unification
+import Terms
 import Data.Maybe
 import Data.List
 import Debug.Trace
 import StringRep
-import qualified Data.Set as S
-type Base a = U.Gen a
 
-data Prop = Forall [String] ([Prop]) U.Term deriving (Eq, Ord, Show)
+data Prop = Forall [String] ([Prop]) Term deriving (Eq, Ord, Show)
 
 data RuleRef = Defn String | Local Int deriving (Eq, Show)
-data ProofTree = Goal ([String]) ([Prop]) U.Term 
-               | Rule RuleRef ([String]) ([Prop]) U.Term ([ProofTree]) deriving (Eq, Show)
+data ProofTree = Goal ([String]) ([Prop]) Term 
+               | Rule RuleRef ([String]) ([Prop]) Term ([ProofTree]) deriving (Eq, Show)
 
-data ProofTreeContext = PTC  RuleRef ([String]) ([Prop]) U.Term ([ProofTree]) ([ProofTree]) deriving (Eq, Show)
+data ProofTreeContext = PTC  RuleRef ([String]) ([Prop]) Term ([ProofTree]) ([ProofTree]) deriving (Eq, Show)
 
 data Zipper = Zip Path ([ProofTreeContext]) ProofTree deriving (Eq, Show)
 
@@ -95,20 +94,11 @@ renameMeta (p,x) s pt = do
 renameMetaZ :: Int -> String -> Zipper -> Zipper
 renameMetaZ x s (Zip pth ctx g) = Zip pth ctx $ case g of
          (Rule rr sks lcls trm pts) ->
-           let -- old = sks !! x
-               sks' = modifyAt x (\_ -> s) sks
+           let sks' = modifyAt x (\_ -> s) sks
             in  Rule rr sks' lcls trm pts
-         -- Rule rr sks' (map (substFVP (U.FreeVar s) old) lcls) (U.substFV (U.FreeVar s) old trm) (map (substFVPT (U.FreeVar s) old) pts)
          (Goal sks lcls trm) ->
-           let -- old = sks !! x
-               sks' = modifyAt x (\_ -> s) sks
+           let sks' = modifyAt x (\_ -> s) sks
             in Goal sks' lcls trm
-          --Goal sks' (map (substFVP (U.FreeVar s) old) lcls) (U.substFV (U.FreeVar s) old trm)
-  where
-    substFVPT for i (Rule rr sks lcls trm pts) = Rule rr sks (map (substFVP for i) lcls) (U.substFV for i trm) (map (substFVPT for i) pts)
-    substFVPT for i (Goal sks lcls trm) = Goal sks (map (substFVP for i) lcls) (U.substFV for i trm)
-
-    substFVP for i (Forall vs lcls g) = Forall vs (map (substFVP for i) lcls) (U.substFV for i g)
 
 upRightN :: Int -> Zipper -> Maybe Zipper 
 upRightN 0 = up
@@ -129,61 +119,42 @@ nixFrom :: Path -> ProofTree -> ProofTree
 nixFrom p pt = let (Zip pth ctx (Rule rr sks lcls g sgs)) = path' p (Zip [] [] pt)
                in unwind (Zip pth ctx (Goal sks lcls g))
 
-doRule :: (RuleRef, Prop) -> S.Set U.Constraint -> Path -> ProofTree -> Base (Maybe (ProofTree, S.Set U.Constraint))
-doRule r flexes p pt = do
+doRule :: (RuleRef, Prop) -> Path -> ProofTree -> Gen (Maybe ProofTree)
+doRule r p pt = do
    let z = path' p (Zip [] [] pt) 
-   mb <- rule r flexes z
-   pure $ fmap (\(z,fxs) -> (unwind z, fxs)) $ mb
+   mb <- rule r z
+   pure $ fmap unwind $ mb
 
 queryAtPath :: Path -> (Zipper -> a) -> ProofTree -> a
 queryAtPath p f pt = f (path' p (Zip [] [] pt))
 
-getRule :: RuleRef -> [Prop] -> Maybe Prop
-getRule (Local i) props = Just $ props !! i
-getRule (Defn n) _ = case n of 
-    "ImpI" -> Just $ Forall ["A" , "B" ]
-                     [ Forall [] [Forall [] [] (U.LocalVar 1)] (U.LocalVar 0)  ]
-                     (U.Ap (U.Ap (U.Const "_->_") (U.LocalVar 1)) (U.LocalVar 0))
-    "ConjI" -> Just $ Forall ["A","B"]
-                      [ Forall [] [] (U.LocalVar 1) 
-                      , Forall [] [] (U.LocalVar 0)]
-                      (U.Ap (U.Ap (U.Const "_/\\_") (U.LocalVar 1)) (U.LocalVar 0))
-    "ConjE1" -> Just $ Forall ["A","B"]
-                      [ Forall [] [] (U.Ap (U.Ap (U.Const "_/\\_") (U.LocalVar 1)) (U.LocalVar 0))]
-                      (U.LocalVar 1)
-    "ConjE2" -> Just $ Forall ["A","B"]
-                      [ Forall [] [] (U.Ap (U.Ap (U.Const "_/\\_") (U.LocalVar 1)) (U.LocalVar 0))]
-                      (U.LocalVar 0)
-    _ -> Nothing
-
-
-substMVZ :: U.Subst -> Zipper -> Zipper 
+substMVZ :: Subst -> Zipper -> Zipper 
 substMVZ sbst (Zip pth ctx pt) = (Zip pth (map (substMVC sbst) ctx) (substMVPT sbst pt))
   where 
     substMVC subst (PTC rr sks lcls g ls rs) =
        (PTC rr sks (map (substMVP subst) lcls) (substG subst g) (map (substMVPT subst) ls) (map (substMVPT subst) rs)) 
     substMVP subst (Forall vs lcls g) = Forall vs (map (substMVP subst) lcls) (substG subst g)
-    substG subst g = U.reduce (U.manySubst subst g)
+    substG subst g = reduce (applySubst subst g)
     substMVPT subst (Rule rr sks lcls g sgs) = 
         (Rule rr sks (map (substMVP subst) lcls) (substG subst g) (map (substMVPT subst) sgs))
     substMVPT subst (Goal sks lcls g) = 
         (Goal sks (map (substMVP subst) lcls) (substG subst g))
 
 addBlankPremise :: Prop -> (Prop,Int)
-addBlankPremise (Forall vs lcls g) = (Forall vs (lcls ++ [Forall [] [] (U.Const "???")]) g, length lcls)
+addBlankPremise (Forall vs lcls g) = (Forall vs (lcls ++ [Forall [] [] (Const "???")]) g, length lcls)
 
 removePremise :: Int -> Prop -> Prop
 removePremise i (Forall vs lcls g) = let (first,_:rest) = splitAt i lcls
                                       in Forall vs (first ++ rest) g
 
-rule :: (RuleRef, Prop) -> S.Set U.Constraint -> Zipper -> Base (Maybe (Zipper, S.Set U.Constraint))
-rule (r,rl) flexes z@(Zip pth ctx (Goal sks lcls g)) = do
-        ms <- applyRule flexes (knownSkolems z) g rl 
+rule :: (RuleRef, Prop) -> Zipper -> Gen (Maybe Zipper)
+rule (r,rl) z@(Zip pth ctx (Goal sks lcls g)) = do
+        ms <- applyRule (knownSkolems z) g rl 
         case ms of 
             Nothing -> pure Nothing 
-            Just (sbst, sgs, flexes') -> do 
-               pure (Just (substMVZ sbst (Zip pth ctx (Rule r sks lcls g sgs)), flexes'))
-rule r _ _ = pure Nothing 
+            Just (sbst, sgs) -> do 
+               pure (Just (substMVZ sbst (Zip pth ctx (Rule r sks lcls g sgs))))
+rule r _ = pure Nothing 
 
 knownLocals :: Zipper -> [Prop]
 knownLocals (Zip _ ctx (Goal sks lcls _))= map (raiseProp 0 (length sks)) (contextLocals ctx) ++ lcls
@@ -203,32 +174,31 @@ knownSkolems (Zip _ ctx (Goal sks _ _)) = reverse sks ++ concatMap (\(PTC _ sks 
 knownSkolems (Zip _ ctx (Rule _ sks _ _ _)) = reverse sks ++ concatMap (\(PTC _ sks _ _ _ _) -> reverse sks) ctx
 
 
-substProp :: U.Term -> Int -> Prop -> Prop 
-substProp t n (Forall [] rls g) = Forall [] (map (substProp t n) rls) (U.subst t n g)
+substProp :: Term -> Int -> Prop -> Prop 
+substProp t n (Forall [] rls g) = Forall [] (map (substProp t n) rls) (subst t n g)
 substProp t n (Forall (x :xs) rls g) = 
-  let (Forall xs' rls' g') = substProp (U.raise 1 t) (n + 1) (Forall xs rls g)
+  let (Forall xs' rls' g') = substProp (raise 1 t) (n + 1) (Forall xs rls g)
    in Forall (x :xs') rls' g'
 
-goal :: [String] -> Prop -> Base ProofTree
+goal :: [String] -> Prop -> Gen ProofTree
 goal skolems (Forall [] rls g) = do 
    pure (Goal (reverse skolems) rls g)
 goal skolems (Forall (x: xs) rls g) = do 
-    -- x' <- enfreshinate2 x x 
-    goal (x : skolems) (Forall xs rls g) -- (substProp (U.FreeVar x') 0 (Forall xs rls g)) 
+    goal (x : skolems) (Forall xs rls g) 
 
-applyRule :: S.Set U.Constraint -> [String] -> U.Term -> Prop -> Base (Maybe (U.Subst, [ProofTree], S.Set U.Constraint))
-applyRule flexes skolems g (Forall (m :ms) sgs g') = do 
-   n <- U.MetaVar . show <$> U.gen 
-   let mt = foldl U.Ap n (map U.LocalVar [0..length skolems -1]) -- (map U.FreeVar skolems)
-   applyRule flexes skolems g (substProp mt 0 (Forall ms sgs g'))
-applyRule flexes skolems g (Forall [] sgs g') 
-   = do msubst <- U.unifier g g' flexes
+applyRule :: [String] -> Term -> Prop -> Gen (Maybe (Subst, [ProofTree]))
+applyRule skolems g (Forall (m :ms) sgs g') = do 
+   n <- MetaVar . show <$> gen 
+   let mt = foldl Ap n (map LocalVar [0..length skolems -1]) 
+   applyRule skolems g (substProp mt 0 (Forall ms sgs g'))
+applyRule skolems g (Forall [] sgs g') 
+   = do msubst <- unifier g g' 
         sgs' <- traverse (goal []) sgs
         pure $ case msubst of 
-          Just (subst,flexes') -> Just (subst, sgs', flexes')
+          Just subst -> Just (subst, sgs')
           Nothing -> Nothing
   
-enfreshinate2 :: String -> String -> Base String 
+enfreshinate2 :: String -> String -> Gen String 
 enfreshinate2 s1 s2 | s1 == s2 = do 
   x <- gen 
   pure (s1 ++ show x)

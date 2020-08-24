@@ -1,6 +1,6 @@
 module StringRep (toSexps, fromSexps) where
 
-import Unification
+import Terms
 import Data.Char
 import Control.Monad(ap, when)
 import Data.List
@@ -18,7 +18,6 @@ toSexps' ctx (Ap a1 a2)    = toSexps' ctx a1 ++ " " ++ toSexps'' ctx a2
 toSexps' ctx (Lam n t)    = "(" ++ toSexps ctx (Lam n t) ++ ")"
 toSexps' ctx e = toSexps'' ctx e
 toSexps'' ctx (LocalVar v) = ctx !! v
-toSexps'' ctx (FreeVar id) = id
 toSexps'' ctx (Const id) = id
 toSexps'' ctx (MetaVar id) = "?" ++ show id
 toSexps'' ctx e = "(" ++ toSexps ctx e ++ ")"
