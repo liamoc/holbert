@@ -1,2 +1,6 @@
+OUTPUT=dist-newstyle/build/x86_64-linux/ghcjs-8.6.0.1/holbert-0.1.0.0/x/app/build/app/app.jsexe/
+STATICS=index.html euler.woff typicons.* split.min.js cmunfonts
 all:
-	cabal build && cp index.html dist/build/app/app.jsexe/index.html && cp euler.woff dist/build/app/app.jsexe/euler.woff && cp typicons.* dist/build/app/app.jsexe/ && cp -R computer-modern-web-font-master dist/build/app/app.jsexe/cmunfonts && cp split.min.js dist/build/app/app.jsexe/
+	cabal build && cp -R $(STATICS) $(OUTPUT)
+open:
+	open $(OUTPUT)/index.html

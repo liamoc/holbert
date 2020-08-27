@@ -1,16 +1,38 @@
 module ProofTree where 
 import Control.Monad
 import Unification
-import Terms
 import Data.Maybe
 import Data.List
 import Debug.Trace
 import StringRep
-import Prop
+import qualified Prop as P
+import qualified Terms as T
 
-data ProofTree = PT [Id] [Prop] Term (Maybe (RuleRef, [ProofTree])) deriving (Eq, Show)
+modifyAtE :: Int -> (a -> Either e a) -> [a] -> Either e [a]
+modifyAtE i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+     in (lefts ++) . (:rights) <$> f r
 
-data ProofTreeContext = PTC  RuleRef [Id] [Prop] Term [ProofTree] [ProofTree] deriving (Eq, Show)
+modifyAt' :: Int -> (a -> (a, b)) -> [a] -> ([a], b)
+modifyAt' i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+        (r',b) = f r
+     in (lefts ++ r':rights, b)
+
+modifyAtMany :: Int -> (a -> [a]) -> [a] -> [a]
+modifyAtMany i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+     in lefts ++ (f r ++ rights)
+modifyAt :: Int -> (a -> a) -> [a] -> [a]
+modifyAt i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+     in lefts ++ (f r:rights)
+
+data RuleRef = Defn String | Local Int deriving (Eq, Show)
+data ProofTree = PT [T.Id] [P.Prop] T.Term (Maybe (RuleRef, [ProofTree])) deriving (Eq, Show)
+type Path = [Int]
+
+data ProofTreeContext = PTC  RuleRef [T.Id] [P.Prop] T.Term [ProofTree] [ProofTree] deriving (Eq, Show)
 
 data Zipper = Zip Path [ProofTreeContext] ProofTree deriving (Eq, Show)
 
@@ -73,7 +95,7 @@ nixFrom :: Path -> ProofTree -> ProofTree
 nixFrom p pt = let (Zip pth ctx (PT sks lcls g _)) = path' p (Zip [] [] pt)
                in unwind (Zip pth ctx (PT sks lcls g Nothing))
 
-doRule :: (RuleRef, Prop) -> Path -> ProofTree -> Gen (Maybe ProofTree)
+doRule :: (RuleRef, P.Prop) -> Path -> ProofTree -> Gen (Maybe ProofTree)
 doRule r p pt = do
    let z = path' p (Zip [] [] pt) 
    mb <- rule r z
@@ -82,17 +104,17 @@ doRule r p pt = do
 queryAtPath :: Path -> (Zipper -> a) -> ProofTree -> a
 queryAtPath p f pt = f (path' p (Zip [] [] pt))
 
-substMVZ :: Subst -> Zipper -> Zipper 
+substMVZ :: T.Subst -> Zipper -> Zipper 
 substMVZ sbst (Zip pth ctx pt) = (Zip pth (map (substMVC sbst) ctx) (substMVPT sbst pt))
   where 
     substMVC subst (PTC rr sks lcls g ls rs) =
        (PTC rr sks (map (substMVP subst) lcls) (substG subst g) (map (substMVPT subst) ls) (map (substMVPT subst) rs)) 
-    substMVP subst (Forall vs lcls g) = Forall vs (map (substMVP subst) lcls) (substG subst g)
-    substG subst g = reduce (applySubst subst g)
+    substMVP subst (P.Forall vs lcls g) = P.Forall vs (map (substMVP subst) lcls) (substG subst g) -- TODO move to prop
+    substG subst g = T.reduce (T.applySubst subst g)
     substMVPT subst (PT sks lcls g sgs) = 
         PT sks (map (substMVP subst) lcls) (substG subst g) (fmap (fmap (map (substMVPT subst))) sgs)
 
-rule :: (RuleRef, Prop) -> Zipper -> Gen (Maybe Zipper)
+rule :: (RuleRef, P.Prop) -> Zipper -> Gen (Maybe Zipper)
 rule (r,rl) z@(Zip pth ctx (PT sks lcls g Nothing)) = do
         ms <- applyRule (knownSkolems z) g rl 
         case ms of 
@@ -101,27 +123,27 @@ rule (r,rl) z@(Zip pth ctx (PT sks lcls g Nothing)) = do
                pure (Just (substMVZ sbst (Zip pth ctx (PT sks lcls g (Just (r,sgs))))))
 rule r _ = pure Nothing 
 
-knownLocals :: Zipper -> [Prop]
-knownLocals (Zip _ ctx (PT sks lcls _ _)) = map (raiseProp 0 (length sks)) (contextLocals ctx) ++ lcls
+knownLocals :: Zipper -> [P.Prop]
+knownLocals (Zip _ ctx (PT sks lcls _ _)) = map (P.raise (length sks)) (contextLocals ctx) ++ lcls
 
-contextLocals :: [ProofTreeContext] -> [Prop]
+contextLocals :: [ProofTreeContext] -> [P.Prop]
 contextLocals [] = []
 contextLocals (c@(PTC _ sks lcls _ _ _):rest) = let acc = contextLocals rest
-                                                 in map (raiseProp 0 (length sks)) acc ++ lcls
+                                                 in map (P.raise (length sks)) acc ++ lcls
 
 knownSkolems :: Zipper -> [String]
 knownSkolems (Zip _ ctx (PT sks _ _ _)) = reverse sks ++ concatMap (\(PTC _ sks _ _ _ _) -> reverse sks) ctx
 
-fromProp :: Prop -> ProofTree
-fromProp (Forall sks lcls g) = PT sks lcls g Nothing
+fromProp :: P.Prop -> ProofTree
+fromProp (P.Forall sks lcls g) = PT sks lcls g Nothing
 
 
-applyRule :: [String] -> Term -> Prop -> Gen (Maybe (Subst, [ProofTree]))
-applyRule skolems g (Forall (m :ms) sgs g') = do 
-   n <- MetaVar . show <$> gen 
-   let mt = foldl Ap n (map LocalVar [0..length skolems -1]) 
-   applyRule skolems g (substProp mt 0 (Forall ms sgs g'))
-applyRule skolems g (Forall [] sgs g') 
+applyRule :: [String] -> T.Term -> P.Prop -> Gen (Maybe (T.Subst, [ProofTree]))
+applyRule skolems g (P.Forall (m :ms) sgs g') = do 
+   n <- T.MetaVar . show <$> gen 
+   let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1]) 
+   applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
+applyRule skolems g (P.Forall [] sgs g') 
    = do msubst <- unifier g g' 
         pure $ case msubst of 
           Just subst -> Just (subst, map fromProp sgs)

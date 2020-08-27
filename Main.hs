@@ -10,7 +10,7 @@ import Miso hiding (on)
 import Miso.String hiding (zipWith, map, Ap, intersperse, length, dropWhileEnd, drop, span, null, filter, zip, reverse, concat, splitAt, concatMap, all, groupBy)
 import qualified Miso.String as MS
 import Terms
-import Prop 
+import Prop  hiding (addPremise)
 import ProofTree
 import Script
 import Data.Function (on)
@@ -42,11 +42,11 @@ data Model = Model { script :: [Item], displayOptions :: DisplayOptions, selecte
   deriving (Show, Eq)
 
 
-data Focus = GoalFocus Path
-           | ProofMetabinderFocus Path Int MisoString 
-           | RuleMetabinderFocus Path Int MisoString 
+data Focus = GoalFocus ProofTree.Path
+           | ProofMetabinderFocus ProofTree.Path Int MisoString 
+           | RuleMetabinderFocus Prop.Path Int MisoString 
            | RuleNameFocus MisoString 
-           | RuleTermFocus Path MisoString
+           | RuleTermFocus Prop.Path MisoString
            | NewItemFocus
            | HeadingFocus MisoString
            | InsertingProposition Bool MisoString
@@ -55,25 +55,26 @@ data Focus = GoalFocus Path
            deriving (Show, Eq)
 
 -- | Sum type for application events
-data Action = RunRule RuleRef (Int, Path) 
-            | UnifierCompleted (Int, Path) (Either String Script)
-            | Reset | ChangeDisplayOptions DisplayOptions | SelectGoal (Int, Path) | Nix (Int, Path)
+data Action = RunRule RuleRef (Int, ProofTree.Path) 
+            | UnifierCompleted (Int, ProofTree.Path) (Either String Script)
+            | Reset | ChangeDisplayOptions DisplayOptions 
+            | SelectGoal (Int, ProofTree.Path) | Nix (Int, ProofTree.Path)
             | Noop | ShowCredits
             | ShiftDown Int
-            | SelectProofMetabinder Int Path Int String
-            | RenameProofMetabinder Int Path Int
-            | SelectRuleMetabinder Int Path Int String
-            | SelectRuleNewMetabinder Int Path Int String
-            | AddRuleMetabinder Int Path Int
-            | RenameRuleMetabinder Int Path Int
-            | DeleteRuleMetabinder Int Path Int
+            | SelectProofMetabinder Int ProofTree.Path Int String
+            | RenameProofMetabinder Int ProofTree.Path Int
+            | SelectRuleMetabinder Int Prop.Path Int String
+            | SelectRuleNewMetabinder Int Prop.Path Int String
+            | AddRuleMetabinder Int Prop.Path
+            | RenameRuleMetabinder Int Prop.Path Int
+            | DeleteRuleMetabinder Int Prop.Path Int
             | SelectRuleName Int String
             | SelectBlock Int MisoString
             | RenameRule Int
-            | SelectRuleTerm Int Path String
-            | AddPremise Int Path
-            | DeletePremise Int Path
-            | UpdateTerm Int Path
+            | SelectRuleTerm Int Prop.Path String
+            | AddPremise Int Prop.Path
+            | DeletePremise Int Prop.Path
+            | UpdateTerm Int Prop.Path
             | UpdateInput MisoString
             | DeleteItem Int
             | NewItemMenu Int
@@ -143,7 +144,7 @@ updateModel (UpdateTerm i p) m =  noEff $
           Left e -> m { message = Just e }
           Right script' -> let 
                  selected' = case p of [] -> Nothing
-                                       (_:rest)  -> Just ( i, RuleTermFocus rest (pack (ruleString rest $ itemProp (script' !! i))))
+                                       (_:rest)  -> Just ( i, RuleTermFocus rest (pack (getConclusionString rest $ itemProp (script' !! i))))
               in m { selected = selected', message = Nothing, script = script' }
  where stringInput m = let Just (_, RuleTermFocus _ s) = selected m
                         in s
@@ -177,11 +178,11 @@ updateModel (DeleteRuleMetabinder i p x) m = noEff $
        case deleteRuleMeta (i,p,x) (script m) of
           Left e -> m { message = Just e }
           Right script' -> m { selected = Nothing, message = Nothing, script = script' }
-updateModel (AddRuleMetabinder i p x) m = noEff $
+updateModel (AddRuleMetabinder i p) m = noEff $
    let s = unpack $ stringInput m 
-    in case addRuleMeta s (i,p,x) (script m) of 
+    in case addRuleMeta s (i,p) (script m) of 
          Left e -> m { message = Just e }
-         Right script' -> m { selected = Just (i , RuleTermFocus p (pack (ruleString p $ itemProp (script' !! i)))), message = Nothing, script = script' }
+         Right script' -> m { selected = Just (i , RuleTermFocus p (pack (getConclusionString p $ itemProp (script' !! i)))), message = Nothing, script = script' }
  where stringInput m = let Just (_, RuleMetabinderFocus _ _ s) = selected m
                         in s
 updateModel (RenameRule i) m = noEff $ 
@@ -498,7 +499,7 @@ renderRuleNameE editable n ctx opts prp = case ruleStyle opts of
                        $ (concat $ zipWith (metabinder' pth) [0..] vs)
                        ++ case editable of 
                             Just (idx, selected) -> case selected of 
-                              Just (idx', RuleMetabinderFocus pth' i n) | idx == idx', pth == pth', i == length vs -> [metabinderEditor (AddRuleMetabinder idx pth i) n]
+                              Just (idx', RuleMetabinderFocus pth' i n) | idx == idx', pth == pth', i == length vs -> [metabinderEditor (AddRuleMetabinder idx pth) n]
                               Just (idx', RuleTermFocus pth' _) | idx' == idx, pth == pth' -> 
                                            [ button_ [class_ "addMB", onClick (SelectRuleNewMetabinder idx pth (length vs) "")] [ span_ [class_ "typcn typcn-plus"] [] ]
                                            , span_ [class_ "metabinder"] [text "."] ]
@@ -613,7 +614,7 @@ renderProofTree opts idx pt selected = renderPTStep [] [] [] pt
     
     
     
-    renderPTStep :: [Prop] -> [String] -> Path -> ProofTree -> View Action
+    renderPTStep :: [Prop] -> [String] -> ProofTree.Path -> ProofTree -> View Action
     renderPTStep rns ctx pth (PT sks lcls prp msgs) = 
         table_ [class_ "rulestep", intProp "cellpadding" 0, intProp "cellspacing" 0 ]
           [ tr_ [class_ "premises"]
@@ -635,7 +636,7 @@ renderProofTree opts idx pt selected = renderPTStep [] [] [] pt
           ]
       where
         addNix t = span_ [] [t, button_ [class_ "nix", onClick (Nix (idx, pth))] [span_ [class_ "typcn typcn-trash"] []] ]
-        rns' = map (raiseProp 0 (length sks)) rns
+        rns' = map (Prop.raise (length sks)) rns
         
 
 
@@ -649,7 +650,7 @@ renderProofTree opts idx pt selected = renderPTStep [] [] [] pt
                                      , script_ [] "document.getElementById('mbeditor').focus(); document.getElementById('mbeditor').select();"]
 
     
-    goalButton :: Path -> [View Action]
+    goalButton :: ProofTree.Path -> [View Action]
     goalButton pth = if Just (GoalFocus pth) == selected then 
                         [button_ [class_ "selectedGoal", id_ "selGoal", onClick (SelectGoal (idx, pth)) ] [span_ [class_ "typcn typcn-location"] [] ]
                         , script_ [] "document.getElementById('selGoal').focus();"]
