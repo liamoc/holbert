@@ -1,17 +1,20 @@
 {-# LANGUAGE RankNTypes, GADTs #-}
 module Script where
-import Prop as P
-import ProofTree
-import Unification 
-import Terms
+
 import qualified Miso.String as MS
 import Data.Maybe
 import Control.Monad.State
 import Data.Char(isSpace)
-import StringRep
+
 import Optics.Core
 
-import Debug.Trace
+import StringRep
+import Prop as P
+import ProofTree
+import Unification 
+import Terms
+
+
 
 type Counter = Int
 data ProofState = PS ProofTree Counter deriving (Show, Eq)
@@ -149,7 +152,7 @@ rules' (i,p) s = let (lefts, Proposition n prp (Just (PS pt c)): rights) = split
                      lcls = zip (map Local [0..]) (ProofTree.locals context)
                      ctx = ProofTree.bound context
                      rules = groupedRules lefts []
-                  in traceShow context (ctx, filter (not . null . snd) (("Local Facts", lcls):rules))
+                  in (ctx, filter (not . null . snd) (("Local Facts", lcls):rules))
 
 rules :: (Int, ProofTree.Path) -> Script -> [(RuleRef, Prop)] 
 rules (i,p) s = let (lefts, Proposition n prp (Just (PS pt c)): rights) = splitAt i s

@@ -1,15 +1,18 @@
 {-# LANGUAGE TupleSections, FlexibleContexts, GADTs #-}
 module ProofTree where 
-import Control.Monad
-import Unification
+
 import Data.Maybe
 import Data.List
-import Debug.Trace
-import StringRep
+import Control.Monad
+
 import Control.Monad.Writer (WriterT (..), tell)
 import Control.Monad.Trans (lift)
+
 import qualified Prop as P
 import qualified Terms as T
+import StringRep
+import Unification
+
 import Optics.Core
 
 type RuleName = String
