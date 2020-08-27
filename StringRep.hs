@@ -11,6 +11,9 @@ import Control.Monad.State
 
 import Terms
 
+type Error = String 
+
+
 toSexps :: [String] -> Term -> String
 toSexps ctx (Lam (M x) t) = x ++ ". " ++ toSexps (x:ctx) t 
 toSexps ctx e = toSexps' ctx e
@@ -93,7 +96,7 @@ parser'' ctx = do
   where symbol w | Just v <- elemIndex w ctx = LocalVar v
                  | otherwise = Const w
            
-fromSexps :: [String] -> String -> Either String Term
+fromSexps :: [String] -> String -> Either Error Term
 fromSexps ctx s = case runParser (parser ctx) . preprocess . lexer $ s of 
               (Left e,_) -> Left e
               (Right v,[]) -> Right v

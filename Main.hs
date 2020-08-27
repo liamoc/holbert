@@ -25,7 +25,7 @@ import System.Timeout
 import Control.Exception
 import StringRep
 import qualified Data.Map as M
-
+import Optics.Core
   
 data AssumptionsMode = Cumulative | New | Hidden
                      deriving (Show, Eq)
@@ -204,7 +204,7 @@ updateModel (Nix (i,p)) m = noEff $
          , message = Nothing
          }
 updateModel (RunRule rr (i,p)) m = m { disableUI = True } <# do
-           x <- timeout 2000000 $ evaluatePT i $ apply rr (i,p) (script m)
+           x <- timeout 2000000 $ evaluatePT i $ Script.apply rr (i,p) (script m)
            case x of 
              Just v -> pure (UnifierCompleted (i,p) v)
              Nothing -> pure (UnifierCompleted (i,p) (Left "Cannot find unifier (timeout)"))
@@ -355,7 +355,7 @@ renderScriptItem opts selected scriptSize (i, item) = div_ [class_ $ if insertin
            : renderRuleNameE (Just (i,selected)) (Just (Defn name)) [] ruleDOs prop 
            : case mpt of 
                Just ps ->  [proofHeading, 
-                           div_ [class_ "proofBox"] [renderProofTree opts i (stateTree ps) (selected >>= \(j,path) -> guard (i == j) >> pure path)]]
+                           div_ [class_ "proofBox"] [renderProofTree opts i (ps ^. proofTree) (selected >>= \(j,path) -> guard (i == j) >> pure path)]]
                Nothing ->  []
       Block txt -> div_ [] $ (div_ [class_ "moreItemOptions"] $ 
                                 case selected of 

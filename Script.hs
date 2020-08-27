@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes, GADTs #-}
 module Script where
 import Prop as P
 import ProofTree
@@ -11,10 +11,18 @@ import Data.Char(isSpace)
 import StringRep
 import Optics.Core
 
-data ProofState = PS { stateTree :: ProofTree, counter :: Int} deriving (Show, Eq)
+import Debug.Trace
+
+type Counter = Int
+data ProofState = PS ProofTree Counter deriving (Show, Eq)
+
+proofTree :: Lens' ProofState ProofTree
+proofTree = lensVL $ \act (PS pt c) -> flip PS c <$> act pt
+
+
 
 data Item = Proposition
-            { itemName :: String
+            { itemName :: RuleName
             , itemProp :: Prop 
             , itemPS   :: Maybe ProofState
             } 
@@ -22,31 +30,81 @@ data Item = Proposition
           | Block MS.MisoString
           deriving (Show, Eq)
 
+modifyAtE :: Int -> (a -> Either e a) -> [a] -> Either e [a]
+modifyAtE i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+     in (lefts ++) . (:rights) <$> f r
+
+modifyAt' :: Int -> (a -> (a, b)) -> [a] -> ([a], b)
+modifyAt' i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+        (r',b) = f r
+     in (lefts ++ r':rights, b)
+
+modifyAtMany :: Int -> (a -> [a]) -> [a] -> [a]
+modifyAtMany i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+     in lefts ++ (f r ++ rights)
+modifyAt :: Int -> (a -> a) -> [a] -> [a]
+modifyAt i f xs 
+  = let (lefts, r:rights) = splitAt i xs
+     in lefts ++ (f r:rights)
 type Script = [Item]
 
-after :: Int -> AffineTraversal' [a] [a]
+after :: Int -> AffineTraversal' [a] (a,[a])
 after n = atraversalVL guts
   where
-    guts :: AffineTraversalVL' [a] [a]
+    guts :: AffineTraversalVL' [a] (a,[a])
     guts pure' act ls = let 
-        go 0 ls = act ls
-        go n [] = pure' ls
-        go n (x:xs) = (x:) <$> go (n-1) xs
-     in go n ls 
+         (lefts,itrights) = splitAt n ls
+      in case itrights of 
+           (it:rights) -> 
+              (\(it',rights') -> lefts ++ it':rights') <$> act (it,rights)
+           _ -> pure' ls
 
--- Warning, don't use this if it would affect proofs afterwards, use propositionHead for that.
+before :: Int -> AffineTraversal' [a] ([a],a)
+before n = atraversalVL guts
+  where
+    guts :: AffineTraversalVL' [a] ([a],a)
+    guts pure' act ls = let 
+         (lefts,itrights) = splitAt n ls
+      in case itrights of 
+           (it:rights) -> 
+              (\(lefts',it') -> lefts' ++ it':rights) <$> act (lefts,it)
+           _ -> pure' ls
+
+-- Warning, don't use this if it would affect proofs afterwards, use setPropositions for that.
 proposition :: AffineTraversal' Item Prop
-proposition = atraversal 
-  (\i ->   case i of Proposition n p s -> Right p
+proposition = rule % _2
+
+reference :: AffineTraversal' Item RuleName
+reference = rule % _1
+
+
+proofState :: AffineTraversal' Item ProofState
+proofState = atraversal
+  (\i   -> case i of Proposition _ _ (Just s) -> Right s
                      i -> Left i)
-  (\i p -> case i of Proposition n _ s -> Proposition n p s
+  (\i s -> case i of Proposition n p (Just _) -> Proposition n p (Just s)
                      i -> i)
 
-propositionHead :: Setter' [Item] Prop
-propositionHead = sets guts
+rule :: AffineTraversal' Item (RuleName, Prop)
+rule = atraversal
+  (\i        -> case i of Proposition n p s -> Right (n, p)
+                          i -> Left i)
+  (\i (n, p) -> case i of Proposition _ _ s -> Proposition n p s
+                          i -> i)
+
+setPropositions :: Setter' (Item,[Item]) Prop
+setPropositions = sets guts
   where
-    guts act (Proposition n p s:rest) = Proposition n (act p) s : map (clearRuleItem n) rest
-    guts act x = x
+    guts act (Proposition n p s, rest) 
+      | p' <- act p
+      = ( Proposition n p' (fmap (const $ genProofState p') s)
+        , map (clearRuleItem n) rest)
+
+definedRules :: Traversal' ([Item],Item) (RuleName, Prop)
+definedRules = _1 % traversed % rule
 
 outstandingGoals = not . null . outstandingGoals'
 
@@ -72,8 +130,7 @@ itemRules (Proposition n p _) = [(Defn n, p)]
 itemRules _ = []
 
 nix :: ProofTree.Path -> ProofState -> ProofState
-nix p i = i { stateTree = nixFrom p (stateTree i) }
-
+nix p = set (proofTree % ProofTree.path p % step) Nothing
 
 groupedRules :: Script -> [(String, [(RuleRef, Prop)])] -> [(String, [(RuleRef, Prop)])]
 groupedRules [] acc = acc 
@@ -85,17 +142,19 @@ groupedRules (i:xs) (h:acc) = let rs = itemRules i
 groupedRules (i:xs) [] = error "Script didn't start with a heading"
                  
 
-
+-- todo lens
 rules' :: (Int, ProofTree.Path) -> Script -> ([String], [(String, [(RuleRef, Prop)])])
 rules' (i,p) s = let (lefts, Proposition n prp (Just (PS pt c)): rights) = splitAt i s
-                     lcls = zip (map Local [0..]) (queryAtPath p knownLocals pt)
-                     ctx = queryAtPath p knownSkolems pt
+                     context = fst $ fromJust $ ipreview (ProofTree.path p %+ step) pt
+                     lcls = zip (map Local [0..]) (ProofTree.locals context)
+                     ctx = ProofTree.bound context
                      rules = groupedRules lefts []
-                  in (ctx, filter (not . null . snd) (("Local Facts", lcls):rules))
+                  in traceShow context (ctx, filter (not . null . snd) (("Local Facts", lcls):rules))
 
 rules :: (Int, ProofTree.Path) -> Script -> [(RuleRef, Prop)] 
 rules (i,p) s = let (lefts, Proposition n prp (Just (PS pt c)): rights) = splitAt i s
-                    lcls = zip (map Local [0..]) (queryAtPath p knownLocals pt)
+                    context = fst $ fromJust $ ipreview (ProofTree.path p %+ step) pt
+                    lcls = zip (map Local [0..]) (ProofTree.locals context)
                     rules = concatMap itemRules lefts 
                  in lcls ++ rules
 
@@ -112,7 +171,7 @@ insertProposition new i isT s
 
 
 validSelection :: (Int, ProofTree.Path) -> Script -> Bool
-validSelection (i,p) s = validPath p $ stateTree $ fromJust $ itemPS $ s !! i
+validSelection (i,p) s = isJust $ preview (ix i % proofState % proofTree % ProofTree.path p) s 
 
 renameRule :: String -> Int -> Script -> Either String Script
 renameRule "" i _ = Left "Cannot rename: Name cannot be empty"
@@ -120,19 +179,19 @@ renameRule new i s
    = let names = map fst $ concatMap itemRules s
          (first, Proposition n p mpt:last) = splitAt i s
       in if Defn new `elem` names then Left $ "Cannot rename: Name '" ++ new ++ "' is used already."
-         else Right $ first ++ Proposition new p mpt:map (substRRItem new n) last
-  where substRRItem new n (Proposition nm p (Just (PS pt c))) = Proposition nm p (Just (PS (substRRPT new n pt) c))
-        substRRItem new n p = p
+         else Right $ first ++ Proposition new p mpt 
+                    : over (traversed % proofState % proofTree % ruleReferences) (subst n) last
+  where subst old x = if x == Defn old then Defn new else x
 
 addPremise :: Int -> P.Path -> Script -> (Script, P.Path)
 addPremise i p s = let 
-  s' = over (after i % propositionHead % P.path p % P.premises) (++ [P.blank]) s
+  s' = over (after i % setPropositions % P.path p % P.premises) (++ [P.blank]) s
   p' = length (fromJust $ preview (ix i % proposition % P.path p % P.premises) s') - 1 : p
   in (s',p')
 
 
 deletePremise :: Int -> P.Path -> Script -> Script
-deletePremise i (x:p) = over (after i % propositionHead % P.path p) (P.removePremise x) 
+deletePremise i (x:p) = over (after i % setPropositions % P.path p) (P.removePremise x) 
 
 renameRuleMeta :: String -> (Int, P.Path, Int) -> Script -> Either String Script
 renameRuleMeta new (i,p,x) | Just msg <- invalidName new = \_ -> Left ("Cannot rename: " ++ msg)
@@ -140,11 +199,11 @@ renameRuleMeta new (i,p,x) = Right . set (ix i % proposition % P.path p % P.meta
 
 addRuleMeta :: String -> (Int, P.Path) -> Script -> Either String Script
 addRuleMeta new (i,p) | Just msg <- invalidName new = \_ -> Left msg
-addRuleMeta new (i,p) = Right . over (after i % propositionHead % P.path p) (addBinder new)
+addRuleMeta new (i,p) = Right . over (after i % setPropositions % P.path p) (addBinder new)
 
 deleteRuleMeta :: (Int, P.Path, Int) -> Script -> Either String Script
 deleteRuleMeta (i,p,x) s | Just True <- preview (ix i % proposition % P.path p % to (not . isBinderUsed x) ) s  
-                         = Right $ over (after i % propositionHead % P.path p) (removeBinder x) s
+                         = Right $ over (after i % setPropositions % P.path p) (removeBinder x) s
                          | otherwise = Left "Cannot remove binder: Variable is in use"
 
 
@@ -210,21 +269,19 @@ invalidName s = Nothing
 
 renameProofMeta :: String -> (Int, ProofTree.Path, Int) -> Script -> Either String Script
 renameProofMeta new (i,p,x) | Just msg <- invalidName new = \_ -> Left ("Cannot rename: " ++ msg)
-renameProofMeta new (i,p,x) 
-   = flip proofActionE i $ \(PS pt c) ->
-       Right $ PS (renameMeta (p,x) new pt) c 
+renameProofMeta new (i,p,x) = Right . set (ix i % proofState % proofTree % ProofTree.path p % goalbinders % ix x) new
 
 apply :: RuleRef -> (Int, ProofTree.Path) -> Script -> Either String Script
 apply rr (i,p) s = let rls = rules (i,p) s
                        onPS (PS pt c) = case lookup rr rls of 
                                           Nothing -> Left "Rule not found"
-                                          Just prp -> case runState (doRule (rr,prp) p pt) c of
-                                             (Nothing,_) -> Left "Cannot apply rule (no unifier)"
-                                             (Just (pt'),c') -> Right (PS pt' c')
+                                          Just prp -> case runUnifyM (ProofTree.apply (rr,prp) p pt) c of
+                                             (Left e,_) -> Left $ "Cannot apply rule: " ++ e  
+                                             (Right pt',c') -> Right (PS pt' c')
                     in proofActionE onPS i s
 
 updateRuleTerm :: String -> (Int, P.Path) -> Script -> Either String Script
-updateRuleTerm str (i, p) s = over (after i % propositionHead) id -- a bit of a hack..
+updateRuleTerm str (i, p) s = over (after i % setPropositions) id
                           <$> atraverseOf (ix i % proposition) Right (setConclusionString p str) s
        {-      error "TODO" modifyRuleE i $ subRuleCtx p $ \ctx (Forall vs lcls g) -> 
                case (fromSexps (reverse vs ++ ctx) str) of 

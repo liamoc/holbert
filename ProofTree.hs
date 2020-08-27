@@ -1,3 +1,4 @@
+{-# LANGUAGE TupleSections, FlexibleContexts, GADTs #-}
 module ProofTree where 
 import Control.Monad
 import Unification
@@ -5,149 +6,93 @@ import Data.Maybe
 import Data.List
 import Debug.Trace
 import StringRep
+import Control.Monad.Writer (WriterT (..), tell)
+import Control.Monad.Trans (lift)
 import qualified Prop as P
 import qualified Terms as T
+import Optics.Core
 
-modifyAtE :: Int -> (a -> Either e a) -> [a] -> Either e [a]
-modifyAtE i f xs 
-  = let (lefts, r:rights) = splitAt i xs
-     in (lefts ++) . (:rights) <$> f r
+type RuleName = String
 
-modifyAt' :: Int -> (a -> (a, b)) -> [a] -> ([a], b)
-modifyAt' i f xs 
-  = let (lefts, r:rights) = splitAt i xs
-        (r',b) = f r
-     in (lefts ++ r':rights, b)
+data RuleRef = Defn RuleName
+             | Local Int 
+             deriving (Eq, Show)
 
-modifyAtMany :: Int -> (a -> [a]) -> [a] -> [a]
-modifyAtMany i f xs 
-  = let (lefts, r:rights) = splitAt i xs
-     in lefts ++ (f r ++ rights)
-modifyAt :: Int -> (a -> a) -> [a] -> [a]
-modifyAt i f xs 
-  = let (lefts, r:rights) = splitAt i xs
-     in lefts ++ (f r:rights)
+type Rule = (RuleRef, P.Prop)
 
-data RuleRef = Defn String | Local Int deriving (Eq, Show)
-data ProofTree = PT [T.Id] [P.Prop] T.Term (Maybe (RuleRef, [ProofTree])) deriving (Eq, Show)
+data ProofTree = PT [T.Id] [P.Prop] T.Term (Maybe (RuleRef, [ProofTree])) 
+               deriving (Eq, Show)
+
 type Path = [Int]
 
-data ProofTreeContext = PTC  RuleRef [T.Id] [P.Prop] T.Term [ProofTree] [ProofTree] deriving (Eq, Show)
+data Context = Context { bound :: [T.Id], locals :: [P.Prop] } deriving (Show)
 
-data Zipper = Zip Path [ProofTreeContext] ProofTree deriving (Eq, Show)
+instance Semigroup Context where
+  Context bs lcls <> Context bs' lcls' = Context (bs' ++ bs) (map (P.raise (length bs')) lcls ++ lcls')
+instance Monoid Context where
+  mempty = Context [] []
 
-allSkolems :: ProofTree -> [String]
-allSkolems (PT sks _ _ rst) = sks ++ maybe [] (concatMap allSkolems . snd) rst
+infixl 9 %+
+(%+) a b = icompose (<>) (a % b)
 
-up :: Zipper -> Maybe Zipper 
-up (Zip pth ctx (PT skms lrs g (Just (r, sg:sgs)))) = Just (Zip (0:pth) (PTC r skms lrs g [] sgs:ctx) sg)
-up _ = Nothing
+subgoals :: IxAffineTraversal' Context ProofTree [ProofTree]
+subgoals = step % _Just % _2 
 
-down :: Zipper -> Maybe Zipper 
-down (Zip (_ :pth) ((PTC r skms lrs g lefts rights): ctx) sg) = Just (Zip pth ctx (PT skms lrs g $ Just (r, lefts ++ sg:rights)))
-down _ = Nothing
+subgoal :: Int -> IxAffineTraversal' Context ProofTree ProofTree
+subgoal n = subgoals % ix n
 
-left :: Zipper -> Maybe Zipper
-left (Zip pth ((PTC r skms lrs g (lg: lefts) rights): ctx) sg) = Just (Zip pth (PTC r skms lrs g lefts (sg:rights): ctx) lg)
-left _ = Nothing
+step :: IxLens' Context ProofTree (Maybe (RuleRef, [ProofTree]))
+step = ilens (\(PT xs lcls t sg) -> (Context (reverse xs) lcls, sg))
+             (\(PT xs lcls t _ ) sg -> PT xs lcls t sg)
 
-right :: Zipper -> Maybe Zipper
-right (Zip pth (PTC r skms lrs g lefts (rg: rights): ctx) sg) = Just (Zip pth ((PTC r skms lrs g (sg:lefts) rights): ctx) rg)
-right _ = Nothing
+path :: [Int] -> IxAffineTraversal' Context ProofTree ProofTree
+path [] = iatraversal (Right . (mempty,)) (const id) 
+path (x:xs) = path xs %+ subgoal x
 
-substRRPT :: String -> String -> ProofTree -> ProofTree
-substRRPT new old (PT sks lcls trm (Just (rr,pts))) 
-  = PT  sks lcls trm (Just (if rr == Defn old then Defn new else rr, map (substRRPT new old) pts))
-substRRPT new old r = r 
+assumptions :: Lens' ProofTree [P.Prop]
+assumptions = lens (\(PT _  lcls _ _ ) -> lcls) 
+                   (\(PT xs _    t sg) lcls -> PT xs lcls t sg)
 
-renameMeta :: (Path, Int) -> String -> ProofTree -> ProofTree
-renameMeta (p,x) s pt = do
-   let z = path' p (Zip [] [] pt) 
-       z' = renameMetaZ x s z
-    in unwind z'
+inference :: IxLens' Context ProofTree T.Term 
+inference = ilens (\(PT xs lcls t _ ) -> (Context (reverse xs) lcls, t))
+                  (\(PT xs lcls _ sg) t -> PT xs lcls t sg)
 
-renameMetaZ :: Int -> String -> Zipper -> Zipper
-renameMetaZ x s (Zip pth ctx g) = Zip pth ctx $ case g of
-         (PT sks lcls trm pts) ->
-           let sks' = modifyAt x (\_ -> s) sks
-            in  PT sks' lcls trm pts
-
-upRightN :: Int -> Zipper -> Maybe Zipper 
-upRightN 0 = up
-upRightN n = right <=< upRightN (n-1)
-
-path :: Path -> Zipper -> Maybe Zipper 
-path = foldr (\n f -> upRightN n <=< f) Just
-
-validPath :: Path -> ProofTree -> Bool
-validPath p pt = not $ isNothing $ path p $ Zip [] [] pt
-
-path' :: Path -> Zipper -> Zipper 
-path' p z = fromMaybe z (path p z)
-
-rewind :: Zipper -> Zipper 
-rewind z = maybe z rewind (down z)
-
-unwind :: Zipper -> ProofTree 
-unwind z = let Zip _ _ pt = rewind z in pt 
-
-nixFrom :: Path -> ProofTree -> ProofTree
-nixFrom p pt = let (Zip pth ctx (PT sks lcls g _)) = path' p (Zip [] [] pt)
-               in unwind (Zip pth ctx (PT sks lcls g Nothing))
-
-doRule :: (RuleRef, P.Prop) -> Path -> ProofTree -> Gen (Maybe ProofTree)
-doRule r p pt = do
-   let z = path' p (Zip [] [] pt) 
-   mb <- rule r z
-   pure $ fmap unwind $ mb
-
-queryAtPath :: Path -> (Zipper -> a) -> ProofTree -> a
-queryAtPath p f pt = f (path' p (Zip [] [] pt))
-
-substMVZ :: T.Subst -> Zipper -> Zipper 
-substMVZ sbst (Zip pth ctx pt) = (Zip pth (map (substMVC sbst) ctx) (substMVPT sbst pt))
-  where 
-    substMVC subst (PTC rr sks lcls g ls rs) =
-       (PTC rr sks (map (substMVP subst) lcls) (substG subst g) (map (substMVPT subst) ls) (map (substMVPT subst) rs)) 
-    substMVP subst (P.Forall vs lcls g) = P.Forall vs (map (substMVP subst) lcls) (substG subst g) -- TODO move to prop
-    substG subst g = T.reduce (T.applySubst subst g)
-    substMVPT subst (PT sks lcls g sgs) = 
-        PT sks (map (substMVP subst) lcls) (substG subst g) (fmap (fmap (map (substMVPT subst))) sgs)
-
-rule :: (RuleRef, P.Prop) -> Zipper -> Gen (Maybe Zipper)
-rule (r,rl) z@(Zip pth ctx (PT sks lcls g Nothing)) = do
-        ms <- applyRule (knownSkolems z) g rl 
-        case ms of 
-            Nothing -> pure Nothing 
-            Just (sbst, sgs) -> do 
-               pure (Just (substMVZ sbst (Zip pth ctx (PT sks lcls g (Just (r,sgs))))))
-rule r _ = pure Nothing 
-
-knownLocals :: Zipper -> [P.Prop]
-knownLocals (Zip _ ctx (PT sks lcls _ _)) = map (P.raise (length sks)) (contextLocals ctx) ++ lcls
-
-contextLocals :: [ProofTreeContext] -> [P.Prop]
-contextLocals [] = []
-contextLocals (c@(PTC _ sks lcls _ _ _):rest) = let acc = contextLocals rest
-                                                 in map (P.raise (length sks)) acc ++ lcls
-
-knownSkolems :: Zipper -> [String]
-knownSkolems (Zip _ ctx (PT sks _ _ _)) = reverse sks ++ concatMap (\(PTC _ sks _ _ _ _) -> reverse sks) ctx
+goalbinders :: Lens' ProofTree [T.Id] 
+goalbinders = lens (\(PT xs _   _ sg) -> xs) 
+                   (\(PT _ lcls t sg) xs -> PT xs lcls t sg)
 
 fromProp :: P.Prop -> ProofTree
 fromProp (P.Forall sks lcls g) = PT sks lcls g Nothing
 
+ruleReferences :: Traversal' ProofTree RuleRef
+ruleReferences = traversalVL guts
+  where 
+    guts act (PT sks lcls g (Just (rr,sgs))) 
+        = (\rr' sgs' -> PT sks lcls g (Just (rr',sgs'))) 
+          <$> act rr 
+          <*> traverse (guts act) sgs
+    guts act x = pure x
 
-applyRule :: [String] -> T.Term -> P.Prop -> Gen (Maybe (T.Subst, [ProofTree]))
-applyRule skolems g (P.Forall (m :ms) sgs g') = do 
-   n <- T.MetaVar . show <$> gen 
-   let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1]) 
-   applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
-applyRule skolems g (P.Forall [] sgs g') 
-   = do msubst <- unifier g g' 
-        pure $ case msubst of 
-          Just subst -> Just (subst, map fromProp sgs)
-          Nothing -> Nothing
+apply :: Rule -> Path -> ProofTree -> UnifyM ProofTree
+apply (r,prp) p pt = do 
+    do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
+       pure $ applySubst subst pt'
+  where
+    guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
+    guts context (PT xs lcls t _) = do
+       (subst, sgs) <- lift $ applyRule (reverse xs ++ bound context) t prp
+       tell subst
+       pure $ PT xs lcls t (Just (r,sgs))
 
+    applyRule :: [T.Id] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
+    applyRule skolems g (P.Forall (m :ms) sgs g') = do 
+       n <- fresh
+       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1]) 
+       applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
+    applyRule skolems g (P.Forall [] sgs g') = do 
+       (,map fromProp sgs) <$> unifier g g' 
 
-  
+applySubst :: T.Subst -> ProofTree -> ProofTree
+applySubst subst (PT sks lcls g sgs) = 
+    PT sks (map (P.applySubst subst) lcls) (T.applySubst subst g) (fmap (fmap (map (applySubst subst))) sgs)
+       

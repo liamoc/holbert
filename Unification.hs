@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Unification (unifier, gen, Gen) where
+module Unification (unifier, fresh, UnifyM, runUnifyM) where
 import           Control.Monad
 import           Control.Monad.State
 import           Control.Monad.Trans
@@ -18,7 +18,6 @@ gen = do x <- get; put (x + 1); pure x
 
 lams (x:xs) t = Lam (M "x") (lams xs t)
 lams [] t = t
-
 
 hnf xs f ss = lams xs (applyApTelescope f ss)
 
@@ -45,8 +44,6 @@ devar sS s | (MetaVar f, is) <- peelApTelescope s
            , Just t <- lookup f sS = devar sS (red t is [])
 devar sS s = s
 
-
-
 pos :: (a -> Bool) -> [a] -> [Term]
 pos p (x:xs) = if p x then LocalVar(length xs) : pos p xs else pos p xs
 pos p [] = []
@@ -57,13 +54,15 @@ idx (b:bs) b' = if b==b' then LocalVar(length bs) else idx bs b'
 idx [] _ = LocalVar(-10000)
 
 
+fresh = MetaVar . show <$> lift gen
+
 proj sS s = case peelApTelescope (devar sS s) of
         (Lam _ t,_) -> proj sS t
         (Const _,ss) -> foldlM proj sS ss
         (LocalVar i,ss) | i >= 0 -> foldlM proj sS ss
                         | otherwise -> throwError "Unification Failure i < 0"
         (MetaVar f,bs) -> do
-           var <- MetaVar . show <$> lift gen
+           var <- fresh
            bs' <- posM ( \ t -> case t of (LocalVar i) -> pure (i >= 0)
                                           otherthing  -> throwError ("Non-pattern equation") ) bs
            pure ((f , hnf bs var bs' ):sS)
@@ -72,7 +71,7 @@ proj sS s = case peelApTelescope (devar sS s) of
 flexflex1 f ym zn sS 
     | ym == zn =  pure $ sS 
     | otherwise = do
-       var <- MetaVar . show <$> lift gen
+       var <- fresh
        pure ((f, hnf ym var (pos (uncurry (==)) (zip ym zn))) : sS)
 
 
@@ -87,7 +86,7 @@ flexflex2 f im g jn sS
     | jn `subset` im = pure $ ((f, lam' im (MetaVar g) jn) : sS)
     | otherwise = do
          let kl = im `intersection` jn 
-         h <- MetaVar . show <$> lift gen
+         h <- fresh
          pure ((f, lam' im h kl ) : (g, lam' jn h kl ) : sS)
   where 
     lam' im g jn = hnf im g (map (idx im) jn)
@@ -119,11 +118,11 @@ rigidrigid a ss b ts sS
   | otherwise = throwError "Unification Error (rigid, rigid)"
 
 type Gen = State Int
--- | Solve a constraint and return the remaining flex-flex constraints
--- and the substitution for it.
-unifier :: Term-> Term -> Gen (Maybe Subst)
-unifier t1 t2 = do
-  x <- runExceptT $ unif [] (t1,t2)
-  case x of Left _ -> pure Nothing
-            Right s -> pure (Just (fromUnifier s))
 
+type UnifyM = ExceptT String (State Int)
+
+unifier :: Term-> Term -> UnifyM Subst
+unifier t1 t2 = fromUnifier <$> unif [] (t1,t2)
+
+
+runUnifyM = runState . runExceptT 

@@ -16,7 +16,6 @@ import Optics.Core
 
 data Prop = Forall [String] [Prop] T.Term deriving (Eq, Ord, Show)
 
-
 type Path = [Int]
 
 type RuleContext = [T.Id]
@@ -25,26 +24,23 @@ infixl 9 %.
 (%.) a b = icompose (flip (++)) (a % b)
 
 premise :: Int -> IxAffineTraversal' RuleContext Prop Prop
-premise n = iatraversal match update
-  where
-     match r@(Forall xs lcls t) 
-         | Just l <- lcls ^? ix n = Right (reverse xs, l)
-         | otherwise = Left r
-     update s@(Forall xs lcls t) new = Forall xs (set (ix n) new lcls) t
+premise n = premises % ix n
 
 path :: [Int] -> IxAffineTraversal' RuleContext Prop Prop
 path [] = iatraversal (Right . ([],)) (const id) 
 path (x:xs) = path xs %. premise x
 
-premises :: Lens' Prop [Prop]
-premises = lens (\(Forall _ lcls _) -> lcls) (\(Forall xs _ t) lcls -> Forall xs lcls t)
+premises :: IxLens' RuleContext Prop [Prop]
+premises = ilens (\(Forall xs lcls _) -> (reverse xs, lcls)) 
+                 (\(Forall xs _    t) lcls -> Forall xs lcls t)
 
 conclusion :: IxLens' RuleContext Prop T.Term 
-conclusion = ilens (\(Forall xs _ t) -> (reverse xs, t)) (\(Forall xs lcls _) t -> Forall xs lcls t)
+conclusion = ilens (\(Forall xs _    t) -> (reverse xs, t)) 
+                   (\(Forall xs lcls _) t -> Forall xs lcls t)
 
 metabinders :: Lens' Prop [T.Id] 
-metabinders = lens (\(Forall xs _ _) -> xs) (\(Forall _ lcls t) xs -> Forall xs lcls t)
-
+metabinders = lens (\(Forall xs _    _) -> xs) 
+                   (\(Forall _  lcls t) xs -> Forall xs lcls t)
 
 blank :: Prop 
 blank = Forall [] [] (T.Const "???")
@@ -76,6 +72,7 @@ isUsed x (Forall vs lcls g) = T.isUsed (x + length vs) g || any (isUsed (x + len
 raise :: Int -> Prop -> Prop
 raise = raise' 0
 
+raise' :: Int -> Int -> Prop -> Prop
 raise' l n (Forall xs ps g) = Forall xs (map (raise' (l + length xs) n) ps) (T.raise' (l + length xs) n g )
  
 subst :: T.Term -> Int -> Prop -> Prop 
@@ -86,6 +83,9 @@ subst t n (Forall xs rls g) = let
      g' = T.subst t' n' g
   in Forall xs rls' g'
 
+-- we do no raising because substitutions should only map metavariables to closed terms
+applySubst :: Subst -> Prop -> Prop
+applySubst subst (Forall vs lcls g) = Forall vs (map (applySubst subst) lcls) (T.applySubst subst g)
 
 -- A bit disappointing that this can't be cleanly lensified.
 getConclusionString :: Path -> Prop -> String

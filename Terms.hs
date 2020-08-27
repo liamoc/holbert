@@ -70,6 +70,7 @@ substMV new i t = case t of
   MetaVar j -> if i == j then new else MetaVar j
   Ap l r -> substMV new i l `Ap` substMV new i r
   Const s -> Const s
+  -- This raising should not be strictly necessary as metavariables should not be subbed for open terms
   Lam n body -> Lam n (substMV (raise 1 new) i body)
 
 reduce :: Term -> Term
@@ -98,7 +99,7 @@ instance Monoid Subst where
   mempty = S (M.empty)
 
 applySubst :: Subst -> Term -> Term
-applySubst (S s) t = M.foldrWithKey (\mv sol t -> substMV sol mv t) t s
+applySubst (S s) t = reduce $ M.foldrWithKey (\mv sol t -> substMV sol mv t) t s
 
 fromUnifier :: [(String,Term)] -> Subst
 fromUnifier [] = mempty
