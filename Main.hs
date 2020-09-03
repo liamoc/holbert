@@ -12,7 +12,7 @@ import qualified Miso.String as MS
 import Terms
 import Prop  hiding (addPremise)
 import ProofTree
-import Script
+import Editor
 import Data.Function (on)
 import Data.List (intersperse, dropWhileEnd, groupBy)
 import Data.Char (isDigit)
@@ -26,259 +26,72 @@ import Control.Exception
 import StringRep
 import qualified Data.Map as M
 import Optics.Core
-  
-data AssumptionsMode = Cumulative | New | Hidden
-                     deriving (Show, Eq)
-data DisplayOptions = O { showMetaBinders :: Bool, assumptionsMode :: AssumptionsMode, compactRules :: RuleStyle , tDOs :: TermDisplayOptions }
-                    deriving (Show, Eq)
-data TermDisplayOptions = TDO { showTeles :: Bool, showInfixes :: Bool } -- more later
-                    deriving (Show, Eq)
-data RuleStyle = BarTurnstile | Turnstile | Bar | Dots deriving (Show, Eq)
-
+import qualified Rule as R 
+import qualified Heading as H 
+import qualified Paragraph as P 
+import qualified Item as I
 data RuleDisplayOptions = RDO { termDisplayOptions :: TermDisplayOptions, showInitialMetas :: Bool, ruleStyle :: RuleStyle, showEmptyTurnstile :: Bool } -- more later
 
--- | Type synonym for an application model
-data Model = Model { script :: [Item], displayOptions :: DisplayOptions, selected :: Maybe (Int, Focus), message :: Maybe String, disableUI :: Bool}
-  deriving (Show, Eq)
 
-
-data Focus = GoalFocus ProofTree.Path
-           | ProofMetabinderFocus ProofTree.Path Int MisoString 
-           | RuleMetabinderFocus Prop.Path Int MisoString 
-           | RuleNameFocus MisoString 
-           | RuleTermFocus Prop.Path MisoString
-           | NewItemFocus
-           | HeadingFocus MisoString
-           | InsertingProposition Bool MisoString
-           | BlockFocus MisoString
-           | Credits
-           deriving (Show, Eq)
-
--- | Sum type for application events
-data Action = RunRule RuleRef (Int, ProofTree.Path) 
-            | UnifierCompleted (Int, ProofTree.Path) (Either String Script)
-            | Reset | ChangeDisplayOptions DisplayOptions 
-            | SelectGoal (Int, ProofTree.Path) | Nix (Int, ProofTree.Path)
-            | Noop | ShowCredits
-            | ShiftDown Int
-            | SelectProofMetabinder Int ProofTree.Path Int String
-            | RenameProofMetabinder Int ProofTree.Path Int
-            | SelectRuleMetabinder Int Prop.Path Int String
-            | SelectRuleNewMetabinder Int Prop.Path Int String
-            | AddRuleMetabinder Int Prop.Path
-            | RenameRuleMetabinder Int Prop.Path Int
-            | DeleteRuleMetabinder Int Prop.Path Int
-            | SelectRuleName Int String
-            | SelectBlock Int MisoString
-            | RenameRule Int
-            | SelectRuleTerm Int Prop.Path String
-            | AddPremise Int Prop.Path
-            | DeletePremise Int Prop.Path
-            | UpdateTerm Int Prop.Path
-            | UpdateInput MisoString
-            | DeleteItem Int
-            | NewItemMenu Int
-            | InsertHeading Int Int
-            | InsertBlock Int
-            | SelectHeading Int MisoString
-            | UpdateHeading Int
-            | UpdateBlock Int
-            | InsertProposition Int Bool MisoString
-            | ConfirmProposition Int
-            deriving (Show, Eq)
-
-
--- | Entry point for a miso application
 main :: IO ()
 main = startApp App {..}
   where
-    initialAction = Reset -- initial action to be executed on application load
-    model  = initialModel         -- initial model
-    update = updateModel          -- update function
-    view   = viewModel            -- view function
-    events = defaultEvents        -- default delegated events
-    subs   = []                   -- empty subscription list
-    mountPoint = Nothing          -- mount point for application (Nothing defaults to 'body')
-    logLevel = Off                -- used during prerendering to see if the VDOM and DOM are in synch (only used with `miso` function)
+    initialAction = Reset
+    model         = initialEditor
+    update        = updateModel
+    view          = viewModel
+    events        = defaultEvents
+    subs          = []
+    mountPoint    = Nothing
+    logLevel      = Off
 
 -- | Updates model, optionally introduces side effects
-updateModel :: Action -> Model -> Effect Action Model
-updateModel (UnifierCompleted (i,p) result) m = noEff $
-     case result of
-       Left e -> m { message = Just e, disableUI = False }
-       Right s' -> let m' = m { script = s', disableUI = False  }
-                       m'' = if validSelection (i,0:p) (script m')
-                             then m' { selected = Just (i,GoalFocus $ 0:p) } 
-                             else case outstandingGoals' (fromJust (itemPS (s'!!i))) of
-                                    [] -> m' { selected = Nothing }
-                                    (p:_) -> m' { selected = Just (i, GoalFocus p) }
-                    in m'' { message = Nothing }
-updateModel (UpdateInput s) m = noEff $ case selected m of 
-                                          Just (i,ProofMetabinderFocus p x _) ->  m { selected = Just (i, ProofMetabinderFocus p x s) }
-                                          Just (i,RuleMetabinderFocus p x _) ->  m { selected = Just (i, RuleMetabinderFocus p x s) }
-                                          Just (i,RuleTermFocus p _) ->  m { selected = Just (i, RuleTermFocus p s) }
-                                          Just (i,InsertingProposition iT _) ->  m { selected = Just (i, InsertingProposition iT s) }
-                                          Just (i,RuleNameFocus _) ->  m { selected = Just (i, RuleNameFocus s) }
-                                          Just (i,HeadingFocus _) ->  m { selected = Just (i, HeadingFocus s) }
-                                          Just (i,BlockFocus _) ->  m { selected = Just (i, BlockFocus s) }
-                                          _ -> m
-updateModel Noop m = noEff m
-updateModel _ m | disableUI m = noEff m
-updateModel Reset m = effectSub (m { selected = Nothing}) (\ _ -> consoleLog (pack $ show m)) 
-updateModel (ChangeDisplayOptions o) m = noEff (m { displayOptions = o})
-updateModel (SelectGoal p) m = noEff (m { selected = Just (fmap GoalFocus p), message = Nothing})
-updateModel (ShowCredits) m = noEff (m { selected = Just (0, Credits), message = Nothing})
-updateModel (SelectProofMetabinder i p x s) m = noEff (m { message=Nothing, selected = Just (i , ProofMetabinderFocus p x (pack s))})
-updateModel (SelectRuleMetabinder i p x s) m = noEff (m {  message=Nothing,selected = Just (i , RuleMetabinderFocus p x (pack s))})
-updateModel (SelectRuleNewMetabinder i p x s) m = updateModel (UpdateTerm i p) m >>= \m' ->
-       noEff (m' {  message=Nothing,selected = Just (i , RuleMetabinderFocus p x (pack s))})
-updateModel (SelectRuleName i s) m = noEff (m {  message=Nothing,selected = Just (i , RuleNameFocus (pack s))})
-updateModel (SelectHeading i s) m = noEff (m {  message=Nothing,selected = Just (i , HeadingFocus s)})
-updateModel (SelectBlock i s) m = noEff (m {  message=Nothing,selected = Just (i , BlockFocus s)})
-updateModel (SelectRuleTerm i p s) m = noEff (m {  message=Nothing,selected = Just (i , RuleTermFocus p (pack s))})
-updateModel (InsertProposition i isT s) m = noEff (m {  message=Nothing,selected = Just (i , InsertingProposition isT s)})
-updateModel (NewItemMenu i) m = noEff (m {  message=Nothing,selected = Just (i , NewItemFocus)})
-updateModel (UpdateTerm i p) m =  noEff $
-   let s = unpack $ stringInput m
-    in case updateRuleTerm s (i,p) (script m) of
-          Left e -> m { message = Just e }
-          Right script' -> let 
-                 selected' = case p of [] -> Nothing
-                                       (_:rest)  -> Just ( i, RuleTermFocus rest (pack (getConclusionString rest $ itemProp (script' !! i))))
-              in m { selected = selected', message = Nothing, script = script' }
- where stringInput m = let Just (_, RuleTermFocus _ s) = selected m
-                        in s
-updateModel (ShiftDown i) m = clearFocus #>
-    m { script = moveItemDown i (script m), message = Nothing, selected = Nothing }
-  where
-    clearFocus = do 
-      blur $ "up" <> pack (show (i+1))
-      blur $ "dn" <> pack (show i)
-      pure Reset
-updateModel (UpdateHeading i) m =  noEff $
-   let s = stringInput m
-    in m { script = modifyAt i (\(Heading l _) -> Heading l s) (script m), message = Nothing, selected = Nothing }
- where stringInput m = let Just (_, HeadingFocus s) = selected m
-                        in s
-updateModel (RenameProofMetabinder i p x) m = noEff $ 
-   let s = unpack $ stringInput m
-    in case renameProofMeta s (i,p,x) (script m) of
-          Left e -> m { message = Just e }
-          Right script' -> m { selected = Nothing, message = Nothing, script = script' }
- where stringInput m = let Just (_, ProofMetabinderFocus _ _ s) = selected m
-                        in s
-updateModel (RenameRuleMetabinder i p x) m = noEff $ 
-   let s = unpack $ stringInput m
-    in case renameRuleMeta s (i,p,x) (script m) of
-          Left e -> m { message = Just e }
-          Right script' -> m { selected = Nothing, message = Nothing, script = script' }
- where stringInput m = let Just (_, RuleMetabinderFocus _ _ s) = selected m
-                        in s
-updateModel (DeleteRuleMetabinder i p x) m = noEff $
-       case deleteRuleMeta (i,p,x) (script m) of
-          Left e -> m { message = Just e }
-          Right script' -> m { selected = Nothing, message = Nothing, script = script' }
-updateModel (AddRuleMetabinder i p) m = noEff $
-   let s = unpack $ stringInput m 
-    in case addRuleMeta s (i,p) (script m) of 
-         Left e -> m { message = Just e }
-         Right script' -> m { selected = Just (i , RuleTermFocus p (pack (getConclusionString p $ itemProp (script' !! i)))), message = Nothing, script = script' }
- where stringInput m = let Just (_, RuleMetabinderFocus _ _ s) = selected m
-                        in s
-updateModel (RenameRule i) m = noEff $ 
-   let s = unpack $ stringInput m
-    in case renameRule s i (script m) of
-          Left e -> m { message = Just e }
-          Right script' -> m { message = Nothing, selected = Nothing, script = script' }
- where stringInput m = let Just (_, RuleNameFocus s) = selected m
-                        in s
-updateModel (ConfirmProposition i) m = noEff $ 
-   let s' = unpack s
-    in case insertProposition s' (i+1) isT (script m) of
-          Left e -> m { message = Just e }
-          Right script' -> m { message = Nothing, selected = Just (i+1, RuleTermFocus [] "???"), script = script' }
- where Just (_, InsertingProposition isT s) = selected m
-updateModel (Nix (i,p)) m = noEff $ 
-       m { selected = Just (i,GoalFocus p)
-         , script = proofAction (nix p) i (script m)
-         , message = Nothing
-         }
-updateModel (RunRule rr (i,p)) m = m { disableUI = True } <# do
-           x <- timeout 2000000 $ evaluatePT i $ Script.apply rr (i,p) (script m)
-           case x of 
-             Just v -> pure (UnifierCompleted (i,p) v)
-             Nothing -> pure (UnifierCompleted (i,p) (Left "Cannot find unifier (timeout)"))
-  where 
-    evaluatePT i (Right s) | Proposition _ _ (Just (PS _ _))  <- s !! i = do  pure (Right s)
-    evaluatePT i (Left e ) = return (Left e)
- 
-updateModel (AddPremise i p) m = updateModel (UpdateTerm i p) m >>= \m'->
-                                 let (s', pth) = addPremise i p $ script m'
-                                   in noEff (m' { script = s', selected = Just (i, RuleTermFocus pth "???") })
-updateModel (DeletePremise i p) m = noEff (m { selected = Nothing, script = deletePremise i p $ script m }) 
-updateModel (DeleteItem i) m = noEff $ m { script = deleteItem i $ script m
-                                         , selected = Nothing } 
-updateModel (UpdateBlock i) m =  noEff $
-   let s = stringInput m
-    in m { script = modifyAtMany i (\(Block _) -> blocksFor s) (script m), message = Nothing, selected = Nothing }
- where stringInput m = let Just (_, BlockFocus s) = selected m
-                        in s
-       blocksFor = map Block .  map MS.unlines . filter (not . all MS.null) .  groupBy ((==) `on` MS.null) . MS.lines 
-updateModel (InsertHeading i l) m = noEff $ m
-   { script = let (first,rest) = splitAt (i+1) (script m)
-               in first ++ Heading l "Heading" : rest
-   , selected = Just (i+1, HeadingFocus "Heading")
-   }    
-updateModel (InsertBlock i) m = noEff $ m
-   { script = let (first,rest) = splitAt (i+1) (script m)
-               in first ++ Block "" : rest
-   , selected = Just (i+1, BlockFocus "")
-   }    
-
-
+updateModel :: EditorAction -> Editor -> Effect EditorAction Editor
+updateModel act ed = noEff $ runAction act ed
 
 -- | Constructs a virtual DOM from a model
-viewModel :: Model -> View Action
+viewModel :: Editor -> View EditorAction
 viewModel x = div_ [class_ "topdiv", onKeyDown (\(KeyCode kc) -> if kc == 27 then Reset else Noop ) ] $
-      [ div_ [class_ "mainpanel", id_ "mainpanel"] $ renderScript (displayOptions x) (selected x) (script x)  ++ [div_ [class_ "endofcontent"] []]
+      [ div_ [class_ "mainpanel", id_ "mainpanel"] $ renderScript (inputText x) (displayOptions x) (currentFocus x) (document x) ++ [div_ [class_ "endofcontent"] []]
       , div_ [class_ "sidebar", id_ "sidebar"] $ logo:
           (case message x of 
-              Just m ->  (div_ [class_ "errorMessage"] [text (pack m)]:)
+              Just m ->  (div_ [class_ "errorMessage"] [text m]:)
               Nothing -> id) (div_ [class_ "sidebarmain"] (
-          (case selected x of 
-             Just (i, GoalFocus p) -> 
-                   (let (ctx, rs) = rules' (i,p) (script x)
-                    in concatMap (renderRuleGroup i p ctx) rs)
-             Just (i, NewItemFocus) -> newItemMenu i
-             Just (i, BlockFocus s) -> editingHelp
-             Just (i, Credits) -> div_ [class_ "insertItemHeader"] [text "Credits"]
-                                : div_ [class_ "creditsText"] 
-                                       [ text "Holbert is made by ", a_ [href_ "http://liamoc.net"] [text "Liam O'Connor"], text", a lecturer at the University of Edinburgh," 
-                                       , text "using GHCJS and the Miso framework. Some icons are from the Typicons icon set by Stephen Hutchings."
-                                       , text " It (will be) released under the BSD3 license."
-                                       , text " Some code is based on work by Daniel Gratzer and Tobias Nipkow." 
-                                       ]
-                                : []
-             _ -> [ div_ [class_ "insertItemHeader"] [text "Facts Summary:"],renderIndex (script x)]))
+          (case currentFocus x of 
+             ItemFocus i (I.RuleFocus (R.GoalFocus p)) -> 
+                    let (ctx, rs) = rulesSummary (i,p) (document x)
+                     in concatMap (renderRuleGroup i p ctx) rs
+             NewItemFocus i -> newItemMenu i
+             ItemFocus i (I.ParagraphFocus _) -> editingHelp
+             CreditsFocus -> div_ [class_ "insertItemHeader"] [text "Credits"]
+                           : div_ [class_ "creditsText"] 
+                                  [ text "Holbert is made by ", a_ [href_ "http://liamoc.net"] [text "Liam O'Connor"], text", a lecturer at the University of Edinburgh," 
+                                  , text "using GHCJS and the Miso framework. Some icons are from the Typicons icon set by Stephen Hutchings."
+                                  , text " It (will be) released under the BSD3 license."
+                                  , text " Some code is based on work by Daniel Gratzer and Tobias Nipkow." 
+                                  ]
+                           : []
+             _ -> [ div_ [class_ "insertItemHeader"] [text "Facts Summary:"],renderIndex (document x)]))
           :renderDisplayOptions (displayOptions x):[])
       , script_ [] "Split(['#mainpanel','#sidebar'],{ sizes: [70,30], minSize:200});"
       ]
   where 
         renderRuleGroup i p ctx (n,rs) = div_ [class_ "insertItemHeader"] [text $ pack (n ++ ":")]:
                 [div_ [class_ "optionsGroup"] $ map (renderAvailableRule ctx (displayOptions x) (i,p)) rs]
-        selectedGF x | Just (i, GoalFocus p) <- selected x = Just (i,p)
+        selectedGF x | ItemFocus i (I.RuleFocus (R.GoalFocus p)) <- currentFocus x = Just (i,p)
                      | otherwise = Nothing
-        logo = div_ [class_ "logo", onClick ShowCredits ] [small_ [] ["click for credits"], text "Holbert 0.1"]
-        newItemMenu i = -- div_ [] 
-          [  div_ [class_ "insertItemHeader"] [text "Proof elements:"]
-          , button_ [onClick (InsertProposition i False "Name"), class_ "insertItemOption" ] [div_ [class_ "axiomHeading"] ["Axiom."]]
-          , button_ [onClick (InsertProposition i True  "Name"), class_ "insertItemOption" ] [div_ [class_ "theoremHeading"] ["Theorem."]]
+        logo = div_ [class_ "logo", onClick (SetFocus CreditsFocus)] [small_ [] ["click for credits"], text "Holbert 0.1"]
+        insertHeading i n = InsertItem i (I.Heading (H.Heading n ""))
+        newItemMenu i = 
+          [ div_ [class_ "insertItemHeader"] [text "Proof elements:"]
+          , button_ [onClick (SetFocus $ InsertingPropositionFocus False i), class_ "insertItemOption" ] [div_ [class_ "axiomHeading"] ["Axiom."]]
+          , button_ [onClick (SetFocus $ InsertingPropositionFocus True i ), class_ "insertItemOption" ] [div_ [class_ "theoremHeading"] ["Theorem."]]
           , div_ [class_ "insertItemHeader"] [text "Text elements:"]
-          , button_ [onClick (InsertHeading i 1), class_ "insertItemOption" ] [h2_ [] ["Heading 1"]]
-          , button_ [onClick (InsertHeading i 2), class_ "insertItemOption"] [h3_ [] ["Heading 2"]]
-          , button_ [onClick (InsertHeading i 3), class_ "insertItemOption"] [h4_ [] ["Heading 3"]]
-          , button_ [onClick (InsertHeading i 4), class_ "insertItemOption"] [h5_ [] ["Heading 4"]]
-          , button_ [onClick (InsertBlock i), class_ "insertItemOption"] [div_ [class_ "parabutton"] ["Paragraph"]]
+          , button_ [onClick (insertHeading i 1), class_ "insertItemOption" ] [h2_ [] ["Heading 1"]]
+          , button_ [onClick (insertHeading i 2), class_ "insertItemOption"] [h3_ [] ["Heading 2"]]
+          , button_ [onClick (insertHeading i 3), class_ "insertItemOption"] [h4_ [] ["Heading 3"]]
+          , button_ [onClick (insertHeading i 4), class_ "insertItemOption"] [h5_ [] ["Heading 4"]]
+          , button_ [onClick (InsertItem i (I.Paragraph $ P.Paragraph "")), class_ "insertItemOption"] [div_ [class_ "parabutton"] ["Paragraph"]]
           ]
         editingHelp = 
          [ div_ [class_ "insertItemHeader"] [text "Editing Help"]
@@ -308,19 +121,19 @@ viewModel x = div_ [class_ "topdiv", onKeyDown (\(KeyCode kc) -> if kc == 27 the
 
 renderIndex (_:script) = ul_ [class_ "indexSummary"] $ renderIndex' (zip [1..] script)
   where
-    renderIndex' ((i, Heading lvl hd):scr) 
+    renderIndex' ((i, I.Heading (H.Heading lvl hd)):scr) 
            | (itms, rest) <- span (within lvl) scr 
            = li_ [] [b_ [] [a_ [href_ $ "#anchor" <> (pack $ show i)] [text hd]], ul_ [] $ renderIndex' itms ] : renderIndex' rest
-    renderIndex' ((i, Proposition n _ mpt):scr) 
+    renderIndex' ((i, I.Rule (R.R n _ mpt)):scr) 
            = li_ [] [ a_ [href_ $ "#anchor" <> (pack $ show i)] [renderRR $ Defn n]
                     , case mpt of 
-                         Just ps | outstandingGoals ps -> span_ [class_ "typcn typcn-warning outstandingGoalIndicator" ] []
+                         Just ps | R.unresolved ps -> span_ [class_ "typcn typcn-warning outstandingGoalIndicator" ] []
                                  | otherwise  -> span_ [class_ "typcn typcn-input-checked noGoalIndicator" ] []
                          Nothing -> span_ [] []
                     ]:renderIndex' scr
     renderIndex' ((i, _):scr) = renderIndex' scr
     renderIndex' [] = []
-    within n (_,Heading lvl hd) = lvl > n
+    within n (_,I.Heading (H.Heading lvl hd)) = lvl > n
     within n _ = True
  
 
@@ -344,41 +157,44 @@ renderParagraph txt = normalText txt
                              Right t -> [span_ [class_ "inlineMath"][renderTermCtx ctx (TDO True True) t]]
 
 
-renderScript opts selected script = map (renderScriptItem opts selected (length script)) (zip [0..] script)
+renderScript textIn opts selected script = map (renderScriptItem textIn opts selected (length script)) (zip [0..] script)
 
-renderScriptItem opts selected scriptSize (i, item) = div_ [class_ $ if inserting then "itemBlock inserting" else "itemBlock"] $ [mainItem] ++ deleteButton:insertButton
+renderScriptItem textIn opts selected scriptSize (i, item) = div_ [class_ $ if inserting then "itemBlock inserting" else "itemBlock"] $ [mainItem] ++ deleteButton:insertButton
   where
     mainItem = case item of 
-      Proposition name prop mpt ->
+      I.Rule (R.R name prop mpt) ->
          div_ []
            $ (if isNothing mpt then axiomHeading else theoremHeading) 
-           : renderRuleNameE (Just (i,selected)) (Just (Defn name)) [] ruleDOs prop 
+           : renderRuleNameE (Just (i,selected,textIn)) (Just (Defn name)) [] ruleDOs prop 
            : case mpt of 
                Just ps ->  [proofHeading, 
-                           div_ [class_ "proofBox"] [renderProofTree opts i (ps ^. proofTree) (selected >>= \(j,path) -> guard (i == j) >> pure path)]]
+                           div_ [class_ "proofBox"] [renderProofTree opts i (ps ^. R.proofTree) 
+                                (case selected of
+                                    ItemFocus j (I.RuleFocus f) -> guard (i == j) >> pure (f, textIn)
+                                    _ -> Nothing)]]
                Nothing ->  []
-      Block txt -> div_ [] $ (div_ [class_ "moreItemOptions"] $ 
+      I.Paragraph (P.Paragraph txt) -> div_ [] $ (div_ [class_ "moreItemOptions"] $ 
                                 case selected of 
-                                  Just (i', BlockFocus n) | i == i' -> [
-                                       button_ [class_ "confirmButton", onClick (UpdateBlock i) ] [ span_ [class_ "typcn typcn-tick-outline"] []]
+                                  ItemFocus i' (I.ParagraphFocus _) | i == i' -> [
+                                       button_ [class_ "confirmButton", onClick (ItemAction (Just i) (I.ParagraphAct P.Edit)) ] [ span_ [class_ "typcn typcn-tick-outline"] []]
                                      , button_ [class_ "cancelButton", type_ "button", onClick Reset ] [ span_ [class_ "typcn typcn-times-outline"] []]
                                      ]
-                                  _ -> [button_ [class_ "editButton", onClick (SelectBlock i txt)] [ span_ [class_ "typcn typcn-edit"] [] ]])
+                                  _ -> [button_ [class_ "editButton", onClick (SetFocus (ItemFocus i (I.ParagraphFocus P.Select)))] [ span_ [class_ "typcn typcn-edit"] [] ]])
                            : (case selected of
-                                Just (i', BlockFocus n) | i == i' -> 
-                                     [ textarea_ [ id_ "ta", onInput UpdateInput, class_ "paragraph"]  [text n]
+                                ItemFocus i' (I.ParagraphFocus _) | i == i' ->
+                                     [ textarea_ [ id_ "ta", onInput UpdateInput, class_ "paragraph"]  [text textIn]
                                      , script_ [] "it = document.getElementById('ta'); var fn = function() {  it.style.height=''; it.style.height = it.scrollHeight+'px'; }; window.setTimeout(fn,100); it.addEventListener('input',fn); it.focus();it.setSelectionRange(it.value.length, it.value.length);"
                                      ]
                                 _ -> [div_ [class_ "paragraph"]  $ renderParagraph txt] )
                            
-      Heading l txt -> case selected of 
-                          Just (i',HeadingFocus n) | i == i' -> 
-                            anchor i [ form_ [ class_ ("headingEditor h" <> (pack $ show l)), onSubmit (UpdateHeading i) ]  $
-                                     [ input_ [id_ "hdeditor", onInput (\s -> UpdateInput s), value_ n]
+      I.Heading (H.Heading l txt) -> case selected of 
+                          ItemFocus i' (I.HeadingFocus _) | i == i' ->
+                            anchor i [ form_ [ class_ ("headingEditor h" <> (pack $ show l)), onSubmit (ItemAction (Just i) (I.HeadingAct H.Edit) ) ]  $
+                                     [ input_ [id_ "hdeditor", onInput (\s -> UpdateInput s), value_ textIn]
                                      , button_ [class_ "confirmButton" ] [ span_ [class_ "typcn typcn-tick-outline"] []]
                                      , button_ [class_ "cancelButton", type_ "button", onClick Reset ] [ span_ [class_ "typcn typcn-times-outline"] []]
                                      , script_ [] "document.getElementById('hdeditor').focus(); document.getElementById('hdeditor').select();"]]
-                          _ -> button_ [ onClick (SelectHeading i txt), class_ "headingButton" ] 
+                          _ -> button_ [ onClick (SetFocus (ItemFocus i (I.HeadingFocus H.Select))), class_ "headingButton" ] 
                                                 [case l of 0 -> h1_ [] [anchor i [ text txt]]
                                                            1 -> h2_ [] [anchor i [ text txt]]
                                                            2 -> h3_ [] [anchor i [ text txt]]
@@ -395,27 +211,24 @@ renderScriptItem opts selected scriptSize (i, item) = div_ [class_ $ if insertin
                              ++ (if i > 1 then [ button_ [class_ "movementButton", id_ $ "up" <> pack (show i) ,onClick (ShiftDown (i-1))] [span_ [class_ "typcn typcn-arrow-up-outline"] []]] else [])
                              ++ (if i < scriptSize - 1 then [button_ [class_ "movementButton", id_ $ "dn" <> pack (show i), onClick (ShiftDown i)] [span_ [class_ "typcn typcn-arrow-down-outline"] []]] else [])
                  | otherwise = span_ [] []
-    inserting = selected == Just (i, NewItemFocus)
+    inserting = selected == NewItemFocus i
     insertButton = let (cls,icn) = if inserting then ("insertButtonActive","typcn typcn-plus")
                                                 else ("insertButton", "typcn typcn-plus-outline")
-                   in button_ [class_ cls, onClick (NewItemMenu i)] [span_ [class_ icn] []]:
+                   in button_ [class_ cls, onClick (SetFocus (NewItemFocus i))] [span_ [class_ icn] []]:
                       case selected of
-                        Just (i',InsertingProposition isT n) | i == i' -> pure $
-                               form_ [ class_ "newRnEditor", onSubmit (ConfirmProposition i) ] 
+                        InsertingPropositionFocus isT i' | i == i' -> pure $
+                               form_ [ class_ "newRnEditor", onSubmit (InsertProposition i isT) ] 
                                      [ if isT then theoremHeading else axiomHeading
-                                     , input_ [id_ "rneditor", style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length n) + 1) *16) / 30)) <> "em")) 
-                                              , onInput (\s -> UpdateInput s), value_ n]
+                                     , input_ [id_ "rneditor", style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length textIn) + 1) *16) / 30)) <> "em")) 
+                                              , onInput (\s -> UpdateInput s), value_ textIn]
                                      , button_ [class_ "confirmButton" ] [ span_ [class_ "typcn typcn-tick-outline"] []]
                                      , button_ [class_ "cancelButton", type_ "button", onClick Reset ] [ span_ [class_ "typcn typcn-times-outline"] []]
                                      , script_ [] "document.getElementById('rneditor').focus(); document.getElementById('rneditor').select();"]
                         _ -> []
-                      
-                   
-    
 
 
 renderAvailableRule ctx opts (i,p) (rr,r) 
-     = button_ [class_ "ruleOption", onClick (RunRule rr (i,p)) ] [ renderRuleName (Just rr) ctx ruleDOs r]
+     = button_ [class_ "ruleOption", onClick (ItemAction (Just i) $ I.RuleAct $ R.Apply (rr,r) p) ] [ renderRuleName (Just rr) ctx ruleDOs r]
   where
     ruleDOs = RDO { termDisplayOptions = tDOs opts , showInitialMetas = showMetaBinders opts, showEmptyTurnstile = False, ruleStyle = compactRules opts } 
   
@@ -498,39 +311,41 @@ renderRuleNameE editable n ctx opts prp = case ruleStyle opts of
     metabinders pth vs = precontext 
                        $ (concat $ zipWith (metabinder' pth) [0..] vs)
                        ++ case editable of 
-                            Just (idx, selected) -> case selected of 
-                              Just (idx', RuleMetabinderFocus pth' i n) | idx == idx', pth == pth', i == length vs -> [metabinderEditor (AddRuleMetabinder idx pth) n]
-                              Just (idx', RuleTermFocus pth' _) | idx' == idx, pth == pth' -> 
-                                           [ button_ [class_ "addMB", onClick (SelectRuleNewMetabinder idx pth (length vs) "")] [ span_ [class_ "typcn typcn-plus"] [] ]
+                            Just (idx, selected, n) -> case selected of 
+                              ItemFocus idx' (I.RuleFocus (R.NewRuleBinderFocus pth')) 
+                                   | idx == idx', pth == pth' -> [metabinderEditor Nothing (ItemAction (Just idx) (I.RuleAct (R.AddRuleBinder pth))) n]
+                              ItemFocus idx' (I.RuleFocus (R.RuleTermFocus pth')) | idx' == idx, pth == pth' -> 
+                                           [ button_ [class_ "addMB", onClick (SetFocus (ItemFocus idx (I.RuleFocus (R.NewRuleBinderFocus pth))))] [ span_ [class_ "typcn typcn-plus"] [] ]
                                            , span_ [class_ "metabinder"] [text "."] ]
                               _ -> []
                             _ -> []
         where precontext [] = span_ [] []
               precontext content = span_ [class_ "precontext"] content
     metabinder' pth i n = case editable of 
-                            Just (idx, selected) -> case selected of
-                              Just (idx',RuleMetabinderFocus pth' i' n) | idx == idx', pth == pth', i == i' -> [metabinderEditor (RenameRuleMetabinder idx pth i) n] 
-                              _ -> [ button_ [class_ "proofMB", onClick (SelectRuleMetabinder idx pth i n)] [ metabinder n ] ]
+                            Just (idx, selected, n') -> case selected of
+                              ItemFocus idx' (I.RuleFocus (R.RuleBinderFocus pth' i')) 
+                                   | idx == idx', pth == pth', i == i' -> [metabinderEditor (Just (idx,pth,i)) (ItemAction (Just idx) $ I.RuleAct $ R.RenameRuleBinder pth i) n'] 
+                              _ -> [ button_ [class_ "proofMB", onClick (SetFocus (ItemFocus idx (I.RuleFocus (R.RuleBinderFocus pth i)))) ] [ metabinder n ] ]
                             Nothing -> [ metabinder n ]
-    metabinderEditor act n = form_ [ class_ "mbEditor", onSubmit act ]  $
+    metabinderEditor exists act n = form_ [ class_ "mbEditor", onSubmit act ]  $
                                      [ input_ [id_ "mbeditor", style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length n) + 1) *16) / 30)) <> "em")) 
                                               , onInput (\s -> UpdateInput s), value_ n]
                                      , button_ [class_ "confirmButton" ] [ span_ [class_ "typcn typcn-tick-outline"] []]
                                      , button_ [class_ "cancelButton", type_ "button", onClick Reset ] [ span_ [class_ "typcn typcn-times-outline"] []]
                                      , script_ [] "document.getElementById('mbeditor').focus(); document.getElementById('mbeditor').select();"]
-                                 ++ case act of 
-                                       RenameRuleMetabinder idx pth i -> [ button_ [type_ "button", class_ "nix", onClick (DeleteRuleMetabinder idx pth i)] [span_ [class_ "typcn typcn-trash"] []] ]
-                                       _ -> []
+                                 ++ case exists of
+                                     Just (idx,pth,i) -> [button_ [type_ "button", class_ "nix", onClick (ItemAction (Just idx) $ I.RuleAct $ R.DeleteRuleBinder pth i)] [span_ [class_ "typcn typcn-trash"] []] ]
+                                     _ -> []
     renderTerm' ctx pth trm = case editable of 
-                             Just (idx,selected) -> case selected of 
-                                Just (idx',RuleTermFocus pth' s) | idx == idx', pth == pth' 
-                                  -> span_ [] $ [termEditor idx ctx pth s] -- [renderTermCtx ctx (termDisplayOptions opts) trm]
-                                            ++ if pth /= [] then [ button_ [class_ "nix", onClick (DeletePremise idx pth)] [span_ [class_ "typcn typcn-trash"] []]  ]
+                             Just (idx,selected, s) -> case selected of 
+                                ItemFocus idx' (I.RuleFocus (R.RuleTermFocus pth')) | idx == idx', pth == pth' 
+                                  -> span_ [] $ [termEditor idx ctx pth s]
+                                            ++ if pth /= [] then [button_ [class_ "nix", onClick (ItemAction (Just idx) $ I.RuleAct $ R.DeletePremise pth)] [span_ [class_ "typcn typcn-trash"] []]]
                                                             else []
-                                _ -> span_ [] [ button_ [class_ "ruleTB", onClick (SelectRuleTerm idx pth (toSexps ctx trm))] [renderTermCtx ctx (termDisplayOptions opts) trm]]
+                                _ -> span_ [] [ button_ [class_ "ruleTB", onClick (SetFocus (ItemFocus idx (I.RuleFocus (R.RuleTermFocus pth))))] [renderTermCtx ctx (termDisplayOptions opts) trm]]
                              _ -> renderTermCtx ctx (termDisplayOptions opts) trm 
 
-    termEditor i ctx pth n = form_ [ class_ "tmEditor", onSubmit (UpdateTerm i pth) ]  $
+    termEditor i ctx pth n = form_ [ class_ "tmEditor", onSubmit (ItemAction (Just i) $ I.RuleAct $ R.UpdateTerm pth) ]  $
                              [ input_ [id_ "tmeditor", style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length n) + 1) *16) / 30)) <> "em")) 
                                       , onInput (\s -> UpdateInput s), value_ n]
                              , button_ [class_ "confirmButton" ] [ span_ [class_ "typcn typcn-tick-outline"] []]
@@ -538,33 +353,34 @@ renderRuleNameE editable n ctx opts prp = case ruleStyle opts of
                              , script_ [] "document.getElementById('tmeditor').focus(); document.getElementById('tmeditor').select();"]
 
     context' pth v = case editable of 
-                   Just (idx,selected) -> case selected of 
-                      Just (idx',RuleTermFocus pth' s) | idx == idx', pth == pth' -> 
-                            context (intersperse comma $ v ++ [button_ [class_ "addPremise", onClick (AddPremise idx pth) ] [span_ [class_ "typcn typcn-plus-outline"] []]])
+                   Just (idx,selected,n) -> case selected of 
+                      ItemFocus idx' (I.RuleFocus (R.RuleTermFocus pth')) | idx == idx', pth == pth' -> 
+                            context (intersperse comma $ v ++ [button_ [class_ "addPremise", onClick $ ItemAction (Just idx) $ I.RuleAct $ R.AddPremise pth] [span_ [class_ "typcn typcn-plus-outline"] []]])
                       _ -> context (intersperse comma v)
                    _ -> context (intersperse comma v)
 
     isEditingMetas pth = case editable of 
-       Just (idx,selected) -> case selected of 
-          Just (idx',RuleTermFocus pth' _) | idx == idx', pth == pth' -> True
-          Just (idx',RuleMetabinderFocus pth' _ _) | idx == idx', pth == pth' -> True
+       Just (idx,selected,n) -> case selected of 
+          ItemFocus idx' (I.RuleFocus (R.RuleTermFocus pth')) | idx == idx', pth == pth' -> True
+          ItemFocus idx' (I.RuleFocus (R.RuleBinderFocus pth' _)) | idx == idx', pth == pth' -> True
+          ItemFocus idx' (I.RuleFocus (R.NewRuleBinderFocus pth')) | idx == idx', pth == pth' -> True
           _ -> False
        _ -> False
     isSelected pth = case editable of 
-       Just (idx,selected) -> case selected of 
-          Just (idx',RuleTermFocus pth' _) | idx == idx', pth == pth' -> Just idx
+       Just (idx,selected,n) -> case selected of 
+          ItemFocus idx' (I.RuleFocus (R.RuleTermFocus pth')) | idx == idx', pth == pth' -> Just idx
           _ -> Nothing
        _ -> Nothing
 
-    renderRR' :: RuleRef -> View Action
+    renderRR' :: RuleRef -> View EditorAction
     renderRR' rr@(Local n) = renderRR rr
     renderRR' rr@(Defn n) = span_ [] $ case editable of 
-                     Just (idx, selected) -> case selected of
-                        Just (idx',RuleNameFocus n) | idx == idx' -> [ruleNameEditor idx n] 
-                        _ -> [ button_ [class_ "ruleNameB", onClick (SelectRuleName idx n)] [ renderRR rr ] ]
+                     Just (idx, selected,n) -> case selected of
+                        ItemFocus idx' (I.RuleFocus R.NameFocus) | idx == idx' -> [ruleNameEditor idx n] 
+                        _ -> [ button_ [class_ "ruleNameB", onClick (SetFocus $ ItemFocus idx $ I.RuleFocus R.NameFocus)] [ renderRR rr ] ]
                      Nothing -> [ renderRR rr ]
 
-    ruleNameEditor idx n = form_ [ class_ "rnEditor", onSubmit (RenameRule idx) ] 
+    ruleNameEditor idx n = form_ [ class_ "rnEditor", onSubmit (ItemAction (Just idx) $ I.RuleAct R.Rename) ] 
                                      [ input_ [id_ "rneditor", style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length n) + 1) *16) / 30)) <> "em")) 
                                               , onInput (\s -> UpdateInput s), value_ n]
                                      , button_ [class_ "confirmButton" ] [ span_ [class_ "typcn typcn-tick-outline"] []]
@@ -592,7 +408,7 @@ renderRuleNameE editable n ctx opts prp = case ruleStyle opts of
               (td_ [class_ "binderbox", rowspan_ $ if style == Dots then "3" else "2"] (if showInitialMetas opts || style == Dots then [metabinders pth sks] else [])
               : (map (td_ [class_ "premise"] . pure) (zipWith ((if  style == Bar then renderBigProp Dots else renderProp True) (reverse sks ++ ctx)) (map (:pth) [0..]) lcls)) 
               ++ [case isSelected pth of Nothing -> td_ [class_ "spacer"] [text ""] 
-                                         Just idx -> td_ [class_ "spacer"] [button_ [class_ "addPremise", onClick (AddPremise idx pth) ] [span_ [class_ "typcn typcn-plus-outline"] []]] ]
+                                         Just idx -> td_ [class_ "spacer"] [button_ [class_ "addPremise", onClick (ItemAction (Just idx) $ I.RuleAct $ R.AddPremise pth) ] [span_ [class_ "typcn typcn-plus-outline"] []]] ]
               ++ [td_ [rowspan_ $ if style == Dots then "3" else "2", class_ "rulebox"] [maybe (text "") renderRR' (guard (style /= Dots) >> n)] ])]
           ++ (if style == Dots then [ tr_ [] [td_ [class_ "hypothetical", colspan_ (pack $ show $ length lcls + 1)] [text "⋮" ]]  ] else []) ++
           [ tr_ [] [td_ [class_ (if style /= Dots then "conclusion" else "hypconclusion"),colspan_ (pack $ show $ length lcls + 1)] 
@@ -601,7 +417,7 @@ renderRuleNameE editable n ctx opts prp = case ruleStyle opts of
           ]
 
 
-renderProofTree :: DisplayOptions -> Int -> ProofTree -> Maybe Focus -> View Action
+renderProofTree :: DisplayOptions -> Int -> ProofTree -> Maybe (R.Focus R.Rule, MisoString) -> View EditorAction
 renderProofTree opts idx pt selected = renderPTStep [] [] [] pt
   where
     termDOs = tDOs opts
@@ -611,10 +427,7 @@ renderProofTree opts idx pt selected = renderPTStep [] [] [] pt
     
     renderPropNestedLabelled ctx i p = span_ [] [span_ [class_ "labelbracket"] [text "⟨"], renderRule ctx ruleDOs p, span_ [class_ "labelbracket"] [text "⟩"], sup_ [] [ localrule i ]]
     
-    
-    
-    
-    renderPTStep :: [Prop] -> [String] -> ProofTree.Path -> ProofTree -> View Action
+    renderPTStep :: [Prop] -> [String] -> ProofTree.Path -> ProofTree -> View EditorAction
     renderPTStep rns ctx pth (PT sks lcls prp msgs) = 
         table_ [class_ "rulestep", intProp "cellpadding" 0, intProp "cellspacing" 0 ]
           [ tr_ [class_ "premises"]
@@ -635,27 +448,27 @@ renderProofTree opts idx pt selected = renderPTStep [] [] [] pt
                   ) ]
           ]
       where
-        addNix t = span_ [] [t, button_ [class_ "nix", onClick (Nix (idx, pth))] [span_ [class_ "typcn typcn-trash"] []] ]
+        addNix t = span_ [] [t, button_ [class_ "nix", onClick (ItemAction (Just idx) $ I.RuleAct $ R.Nix pth)] [span_ [class_ "typcn typcn-trash"] []] ]
         rns' = map (Prop.raise (length sks)) rns
         
 
 
     metabinder' pth i n = case selected of
-                             Just (ProofMetabinderFocus pth' i' n) | pth == pth', i == i' -> [metabinderEditor pth i n] 
-                             _ -> [ button_ [class_ "proofMB", onClick (SelectProofMetabinder idx pth i n)] [ metabinder n ] ]
-    metabinderEditor pth i n = form_ [ class_ "mbEditor", onSubmit (RenameProofMetabinder idx pth i) ] 
+                             Just (R.ProofBinderFocus pth' i', n) | pth == pth', i == i' -> [metabinderEditor pth i n] 
+                             _ -> [ button_ [class_ "proofMB", onClick (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.ProofBinderFocus pth i)] [ metabinder n ] ]
+    metabinderEditor pth i n = form_ [ class_ "mbEditor", onSubmit (ItemAction (Just idx) $ I.RuleAct $ R.RenameProofBinder pth i) ] 
                                      [input_ [id_ "mbeditor", style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length n) + 1) *16) / 30)) <> "em")) , onInput (\s -> UpdateInput s), value_ n]
                                      , button_ [class_ "confirmButton" ] [ span_ [class_ "typcn typcn-tick-outline"] []]
                                      , button_ [class_ "cancelButton", type_ "button", onClick Reset ] [ span_ [class_ "typcn typcn-times-outline"] []]
                                      , script_ [] "document.getElementById('mbeditor').focus(); document.getElementById('mbeditor').select();"]
 
     
-    goalButton :: ProofTree.Path -> [View Action]
-    goalButton pth = if Just (GoalFocus pth) == selected then 
-                        [button_ [class_ "selectedGoal", id_ "selGoal", onClick (SelectGoal (idx, pth)) ] [span_ [class_ "typcn typcn-location"] [] ]
+    goalButton :: ProofTree.Path -> [View EditorAction]
+    goalButton pth = if Just (R.GoalFocus pth) == fmap fst selected then 
+                        [button_ [class_ "selectedGoal", id_ "selGoal", onClick (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.GoalFocus pth) ] [span_ [class_ "typcn typcn-location"] [] ]
                         , script_ [] "document.getElementById('selGoal').focus();"]
                      else 
-                        [button_ [class_ "goal", onClick (SelectGoal (idx, pth)) ] [span_ [class_ "typcn typcn-location-outline"] []]]
+                        [button_ [class_ "goal", onClick (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.GoalFocus pth) ] [span_ [class_ "typcn typcn-location-outline"] []]]
 
 metabinder v = span_ [ class_ "metabinder" ] (name v ++ [text "."])
 context [] = span_ [ ] []
@@ -664,10 +477,7 @@ space = span_ [class_ "space" ] [text " "]
 turnstile = span_ [class_ "turnstile" ] [text "⊢"] 
 comma = span_ [class_ "comma" ] [text ","] 
 placeholder = span_ [class_ "placeholder" ] [text "␣"] 
-localrule :: Int -> View Action
 localrule i = span_ [ class_ "localrule" ] [text (pack (show i))]
-
-renderRR :: RuleRef -> View Action
 renderRR (Defn d) = span_ [ class_ "definedrule" ] (name d)
 renderRR (Local i) = localrule i
 
@@ -779,32 +589,3 @@ name' s = let noPrimes = dropWhileEnd (== '\'') s
               makePrimeString n = "⁗" <> makePrimeString (n - 4)
 
            in if bulk' == "" then [text (pack rest)] else [text (pack bulk'), sub_ [] [text (pack rest)], text primeString ]             
-         
-
-initialModel = let 
- in model' -- M [Heading 0 "Holbert Playground", Block "Welcome to Holbert!", Proposition "ImpI" r0 Nothing, Proposition "ImpE" r0'''' Nothing, Proposition "ConjI" r0' Nothing, Proposition "ConjE1" r0'' Nothing, Proposition "ConjE2" r0''' Nothing,  Heading 1 "Proofs", Proposition "ConjComm" r1 (Just (PS t1 c S.empty)), Proposition "ConjAssoc" r2 (Just (PS t2 c' S.empty)), Block lipsum ] (O True Cumulative BarTurnstile (TDO True True) ) Nothing Nothing False 
-   where 
-     implies a b = Ap (Ap (Const "_->_") a) b
-     conjunct a b = Ap (Ap (Const "_/\\_") a) b
-     lipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum"
-     r0 = Forall ["A" , "B" ]
-                     [ Forall [] [Forall [] [] (LocalVar 1)] (LocalVar 0)  ]
-                     (Ap (Ap (Const "_->_") (LocalVar 1)) (LocalVar 0))
-     r0' = Forall ["A","B"]
-                      [ Forall [] [] (LocalVar 1) 
-                      , Forall [] [] (LocalVar 0)]
-                      (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0))
-     r0'' = Forall ["A","B"]
-                      [ Forall [] [] (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0))]
-                      (LocalVar 1)
-     r0''' = Forall ["A","B"]
-                      [ Forall [] [] (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0))]
-                     (LocalVar 0)
-     r0'''' = Forall ["A","B"] [ Forall [] [] (implies (LocalVar 1) (LocalVar 0))
-                               , Forall [] [] (LocalVar 1) ] (LocalVar 0)
-     r1 = Forall ["A" , "B"] [] (implies (conjunct (LocalVar 1) (LocalVar 0))  (conjunct (LocalVar 0) (LocalVar 1)))
-     r2 = Forall ["A" , "B", "C"] [] (implies (conjunct (conjunct (LocalVar 2) (LocalVar 1)) (LocalVar 0))  (conjunct (LocalVar 2) (conjunct (LocalVar 1) (LocalVar 0))))
- 
-lam x p = Lam (M x) p
-model'=Model {script = [Heading 0 "Holbert Prototype Demo",Block "Welcome to this demo of the Holbert prototype. Holbert is the combination of an online notebook and theorem prover. It allows for preparation of interactive documents which include proof exercises in natural deduction. \n",Heading 3 "A Warning",Block "Holbert is *very much pre-alpha software*. It is inefficient, hacked together, and likely has bugs. At this point, I am *not* looking for bug reports or help with development (although I will be in future!). This is just for demonstration purposes to show what I have been working on.  \n",Heading 1 "Design Philosophy",Block "I designed Holbert to be an educational tool. Ultimately, I plan to convert the notes from the Programming Languages course I taught for many years into this tool. Previous attempts to integrate theorem provers with PL foundations education have been quite successful (see /Software Foundations/, /Concrete Semantics/), but I feel that the complexity of tools such as Coq and Isabelle mean that their respective courses become less about PL foundations in general and more about how to operate the theorem prover effectively. People using these PL foundations books to learn how to use their proof assistants rather than to learn PL foundations is evidence of this. \n",Block "In addition, conventional proof assistants are large pieces of software that can be complicated to install. By making Holbert run in the browser, students don't have to install anything, and can even use a tablet or other device to access work.\n",Block "Holbert is both a document preparation system and a proof assistant. This way, proof problems and sets of rules and exercises can be embedded right within educational notes. In future, I want to extend this system to support examinations and assessments as well.\n",Block "Holbert is based on /natural deduction/ and /higher order logic/. Because it doesn't have a type system, this means the logic it encodes is *unsound*. So it should not be used to verify production software or anywhere where the theorems it proves should be trusted. Normally, I would be very opposed to removing type systems from anything, however removing the type system from higher order logic simplifies its pedagogy, particularly when teaching a course about type systems. If I used a typed theorem prover, in order to teach about types, I would first have to teach about types, which is an annoying circularity.\n",Heading 1 "Propositional Logic",Block "To give an example of Holbert in action, lets define basic propositional logic. All terms are given in untyped lambda calculus. Terms applied to constants with underscores in them are rendered as infix operators. For example, ~if_then_else_fi A B C~ is rendered as $A B C:if_then_else_fi A B C$. Many common operators and symbols have their ASCII approximations replaced with unicode, and trailing numbers are rendered as subscripts.\n",Proposition {itemName = "/\\ I", itemProp = Forall ["A","B"] [Forall [] [] (LocalVar 1),Forall [] [] (LocalVar 0)] (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0)), itemPS = Nothing},Proposition {itemName = "/\\ E1", itemProp = Forall ["A","B"] [Forall [] [] (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0))] (LocalVar 1), itemPS = Nothing},Proposition {itemName = "/\\ E2", itemProp = Forall ["A","B"] [Forall [] [] (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0))] (LocalVar 0), itemPS = Nothing},Block "The implication rules give an example of a hypothetical derivation (i.e. a rule with a rule as a premise):\n",Proposition {itemName = "-> I", itemProp = Forall ["A","B"] [Forall [] [Forall [] [] (LocalVar 1)] (LocalVar 0)] (Ap (Ap (Const "_->_") (LocalVar 1)) (LocalVar 0)), itemPS = Nothing},Proposition {itemName = "-> E", itemProp = Forall ["A","B"] [Forall [] [] (Ap (Ap (Const "_->_") (LocalVar 1)) (LocalVar 0)),Forall [] [] (LocalVar 1)] (LocalVar 0), itemPS = Nothing},Block "The \"Display Options\" in the bottom section of the sidebar provides a few options for rendering these rules. By default, we use the \"Hybrid\" mode which uses linear notation for premises and vertical notation for the main inference vinculum. Vertical notation is closer to Gentzen's original notation for natural deduction.\n",Block "The rules are editable. Click any part of the rule to edit it. To add premises, first click on the conclusion to which you want to add a premise. Similarly for meta-binders.\n",Block "/Note/: Altering rules will delete any part of a proof that makes use of the rule, to ensure that theorems remain in a consistent state. Be careful of this!\n",Block "To add new rules (or indeed any other element), click on a plus sign icon on the right hand side of the main content panel, then click \"Axiom\".\n",Heading 2 "Proofs",Block "Proofs are constructed \"backwards\", in the bottom-up fashion working from the conclusion. Clicking on a goal tag on the proof tree for a Theorem gives a list of all available facts. Click on any such fact to apply it as an introduction rule. Only pattern unification is used. In the future, I plan to allow \"unsolved constraint\" steps where unification problems can be delayed, which will give more flexibility in working with proofs. I also plan to allow the user to explicitly instantiate metavariables in future.\n",Block "The first proof here (commutativity of conjunction) is partially complete already, whereas associativity has not been started:\n",Proposition {itemName = "/\\ Comm", itemProp = Forall ["A","B"] [] (Ap (Ap (Const "_->_") (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0))) (Ap (Ap (Const "_/\\_") (LocalVar 0)) (LocalVar 1))), itemPS = Nothing},Proposition {itemName = "/\\ Assoc", itemProp = Forall ["A","B","C"] [] (Ap (Ap (Const "_->_") (Ap (Ap (Const "_/\\_") (Ap (Ap (Const "_/\\_") (LocalVar 2)) (LocalVar 1))) (LocalVar 0))) (Ap (Ap (Const "_/\\_") (LocalVar 2)) (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0)))), itemPS = Nothing},Heading 2 "Disjunction and Negation",Block "We haven't yet specified all the remaining bits of propositional logic, so let's quickly do that now:\n",Proposition {itemName = "\\/ I1", itemProp = Forall ["A","B"] [Forall [] [] (LocalVar 1)] (Ap (Ap (Const "_\\/_") (LocalVar 1)) (LocalVar 0)), itemPS = Nothing},Proposition {itemName = "\\/ I2", itemProp = Forall ["A","B"] [Forall [] [] (LocalVar 0)] (Ap (Ap (Const "_\\/_") (LocalVar 1)) (LocalVar 0)), itemPS = Nothing},Proposition {itemName = "\\/ E", itemProp = Forall ["A","B","C"] [Forall [] [] (Ap (Ap (Const "_\\/_") (LocalVar 2)) (LocalVar 1)),Forall [] [Forall [] [] (LocalVar 2)] (LocalVar 0),Forall [] [Forall [] [] (LocalVar 1)] (LocalVar 0)] (LocalVar 0), itemPS = Nothing},Block "We will specify negation $A: not A$ as merely equivalent to $A: _->_ A bot$, with the same introduction and elimination rules as implication:\n",Proposition {itemName = "not I", itemProp = Forall ["P"] [Forall [] [Forall [] [] (LocalVar 0)] (Const "bot")] (Ap (Const "not") (LocalVar 0)), itemPS = Nothing},Proposition {itemName = "not E", itemProp = Forall ["P"] [Forall [] [] (Ap (Const "not") (LocalVar 0)),Forall [] [] (LocalVar 0)] (Const "bot"), itemPS = Nothing},Block "Lastly, the rules to define the constants for true $top$ and false $bot$, where true has only an introduction rule and false has only an elimination rule.\n",Proposition {itemName = "top I", itemProp = Forall [] [] (Const "top"), itemPS = Nothing},Proposition {itemName = "bot E", itemProp = Forall ["P"] [Forall [] [] (Const "bot")] (LocalVar 0), itemPS = Nothing},Heading 3 "Constructivity",Block "The logic we have formalised so far is only constructive. We can prove only double negation introduction:\n",Proposition {itemName = "not not I", itemProp = Forall ["A"] [] (Ap (Ap (Const "_->_") (LocalVar 0)) (Ap (Const "not") (Ap (Const "not") (LocalVar 0)))), itemPS = Nothing},Block "To experiment with the above proof, you can press the trash can next to any rule application to reconstruct the proof from that point.\n",Proposition {itemName = "not not E", itemProp = Forall ["A"] [] (Ap (Ap (Const "_->_") (Ap (Const "not") (Ap (Const "not") (LocalVar 0)))) (LocalVar 0)), itemPS = Nothing},Block "The rules we have aren't enough to express this classical logic principle.\n",Heading 1 "Higher Order Abstract Syntax",Block "As Holbert terms are $lambda$ terms, we can use $lambda$-abstractions to encode variable binding structure, and avoid ugliness such as substitution. These $lambda$ abstractions are defined without much ceremony in Holbert, where $P: x. P x$ (written as ~x. P x~) is a $lambda$ term with a parameter $x$ and a result $P: P x$.\n",Proposition {itemName = "all I", itemProp = Forall ["P"] [Forall ["x"] [] (Ap (LocalVar 1) (LocalVar 0))] (Ap (Const "all") (lam "x" (Ap (LocalVar 1) (LocalVar 0)))), itemPS = Nothing},Proposition {itemName = "spec", itemProp = Forall ["P","x"] [Forall [] [] (Ap (Const "all") (lam "x" (Ap (LocalVar 2) (LocalVar 0))))] (Ap (LocalVar 1) (LocalVar 0)), itemPS = Nothing},Block "The above rule $spec$ might be considered an elimination rule for the $all$ quantifier, but the two metavariables in the one application do not play well with our unification algorithm (or indeed, any unification algorithm). Therefore, it's often more useful to have a slightly less direct elimination rule:\n",Proposition {itemName = "all E", itemProp = Forall ["R","P"] [Forall [] [] (Ap (Const "all") (lam "x" (Ap (LocalVar 1) (LocalVar 0)))),Forall [] [Forall ["x"] [] (Ap (LocalVar 1) (LocalVar 0))] (LocalVar 1)] (LocalVar 1), itemPS = Nothing},Block "The existential quantifier is the dual of the universal, and the rules are using a similar format:\n",Proposition {itemName = "exists I", itemProp = Forall ["P","x"] [Forall [] [] (Ap (LocalVar 1) (LocalVar 0))] (Ap (Const "exists") (lam "x" (Ap (LocalVar 2) (LocalVar 0)))), itemPS = Nothing},Proposition {itemName = "exists E", itemProp = Forall ["P","R"] [Forall [] [] (Ap (Const "exists") (lam "x" (Ap (LocalVar 2) (LocalVar 0)))),Forall ["x"] [Forall [] [] (Ap (LocalVar 2) (LocalVar 0))] (LocalVar 1)] (LocalVar 0), itemPS = Nothing},Block "As we are still in a constructive logic, we can prove only one direction of the classical equivalence between $P: exists (x. not (P x))$ and $P: not (all (x. P x))$.\n",Proposition {itemName = "exists not all", itemProp = Forall ["P"] [] (Ap (Ap (Const "_->_") (Ap (Const "exists") (lam "x" (Ap (Const "not") (Ap (LocalVar 1) (LocalVar 0)))))) (Ap (Const "not") (Ap (Const "all") (lam "x" (Ap (LocalVar 1) (LocalVar 0)))))), itemPS = Nothing},Block "In the other direction, we do get almost to a complete proof, and at first glance it looks as though we could unify the metavariable with $x: x$ to complete the proof:\n",Proposition {itemName = "not all exists", itemProp = Forall ["P"] [] (Ap (Ap (Const "_->_") (Ap (Const "not") (Ap (Const "all") (lam "x" (Ap (LocalVar 1) (LocalVar 0)))))) (Ap (Const "exists") (lam "x" (Ap (Const "not") (Ap (LocalVar 1) (LocalVar 0)))))), itemPS = Nothing},Block "The reason this doesn't work becomes clearer if we show metavariable telescopes (the option in the sidebar). The variable $x: x$ does not occur in the telescope, and thus this metavariable cannot be unified with $x : x$.\n",Heading 1 "Future Plans",Block "In the short term, I will mostly be focused on making the codebase of Holbert fit to see the light of day. After that, the next features on the roadmap are:\n",Block "- User-supplied instantiation of metavariables.\n- Unsolved proof steps, where unification constraints can be delayed until later.\n- More text elements, such as code blocks and lists.\n- Saving and loading to local storage or to some server.\n",Block "More distantly, I plan to add:\n",Block "- Support for equality and definitions (can be encoded now but not nicely).\n- Rewriting//simplification by the above.\n- Equational reasoning proofs for preorders.\n",Block "Even more distantly, I will add:\n",Block "- Recursive functions\n- Generating induction principles and elimination rules.\n- Nicer (non-tree based) presentation of inductive // cases structure in proofs.\n- Support for locking parts of the sheet, for assessments and examinations\n"], displayOptions = O {showMetaBinders = True, assumptionsMode = New, compactRules = BarTurnstile, tDOs = TDO {showTeles = False, showInfixes = True}}, selected = Just (0,HeadingFocus "Holbert Prototype Demo"), message = Nothing, disableUI = False}
-

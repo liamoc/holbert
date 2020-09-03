@@ -84,7 +84,7 @@ subst t n (Forall xs rls g) = let
   in Forall xs rls' g'
 
 -- we do no raising because substitutions should only map metavariables to closed terms
-applySubst :: Subst -> Prop -> Prop
+applySubst :: T.Subst -> Prop -> Prop
 applySubst subst (Forall vs lcls g) = Forall vs (map (applySubst subst) lcls) (T.applySubst subst g)
 
 -- A bit disappointing that this can't be cleanly lensified.

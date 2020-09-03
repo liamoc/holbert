@@ -8,11 +8,13 @@ module Terms
   , reduce
   , peelApTelescope, applyApTelescope
   , Subst, applySubst, fromUnifier
+  , invalidName
   ) where
 
 import qualified Data.Map as M
 import Data.String
 import Data.List (foldl')
+import Data.Char (isSpace)
 
 -- Judge equality of terms modulo alpha equivalence.
 -- we do this by hiding names from the Eq instance.
@@ -34,6 +36,11 @@ data Term = LocalVar Index
           | Const String
           | Lam (Masked Id) Term
           deriving (Show, Eq, Ord)
+
+invalidName "" = Just "Name cannot be empty"
+invalidName s | any isSpace s = Just "Name contains spaces"
+invalidName s | any (`elem` ("()." :: String)) s = Just "Name contains reserved symbols"
+invalidName s = Nothing
 
 raise :: Int -> Term -> Term
 raise = raise' 0

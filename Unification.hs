@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Unification (unifier, fresh, UnifyM, runUnifyM) where
+module Unification (unifier, fresh, UnifyM, runUnifyM, UnifyError) where
 import           Control.Monad
 import           Control.Monad.State
 import           Control.Monad.Trans
@@ -13,6 +13,7 @@ import Terms
 
 -- almost all of this is a direct port of Tobias Nipkow's pattern unification implementation
 -- in standard ML.
+type UnifyError = String
 
 gen = do x <- get; put (x + 1); pure x
 

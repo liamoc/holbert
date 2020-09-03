@@ -7,7 +7,7 @@ cabal-version:       >=1.10
 
 executable app
   main-is:             Main.hs
-  other-modules: StringRep Prop ProofTree Terms Unification Script
+  other-modules: StringRep Prop ProofTree Terms Unification Editor Rule Heading Paragraph Controller Item
   ghcjs-options:
     -dedupe
   build-depends:       base, miso, mtl, containers, optics-core

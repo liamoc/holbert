@@ -21,7 +21,7 @@ data RuleRef = Defn RuleName
              | Local Int 
              deriving (Eq, Show)
 
-type Rule = (RuleRef, P.Prop)
+type NamedProp = (RuleRef, P.Prop)
 
 data ProofTree = PT [T.Id] [P.Prop] T.Term (Maybe (RuleRef, [ProofTree])) 
                deriving (Eq, Show)
@@ -64,19 +64,30 @@ goalbinders :: Lens' ProofTree [T.Id]
 goalbinders = lens (\(PT xs _   _ sg) -> xs) 
                    (\(PT _ lcls t sg) xs -> PT xs lcls t sg)
 
+
+
 fromProp :: P.Prop -> ProofTree
 fromProp (P.Forall sks lcls g) = PT sks lcls g Nothing
 
-ruleReferences :: Traversal' ProofTree RuleRef
-ruleReferences = traversalVL guts
+dependencies :: Traversal' ProofTree RuleName
+dependencies = traversalVL guts
   where 
-    guts act (PT sks lcls g (Just (rr,sgs))) 
-        = (\rr' sgs' -> PT sks lcls g (Just (rr',sgs'))) 
+    guts act (PT sks lcls g (Just (Defn rr,sgs))) 
+        = (\rr' sgs' -> PT sks lcls g (Just (Defn rr',sgs'))) 
           <$> act rr 
           <*> traverse (guts act) sgs
     guts act x = pure x
 
-apply :: Rule -> Path -> ProofTree -> UnifyM ProofTree
+
+outstandingGoals :: IxTraversal' Path ProofTree ProofTree
+outstandingGoals = itraversalVL (\act -> guts act [])
+  where 
+    guts act pth (PT sks lcls g (Just (rr,sgs))) 
+        = (\sgs' -> PT sks lcls g (Just (rr,sgs'))) 
+          <$> traverse (uncurry $ guts act) (zip (map (:pth) [0..]) sgs)
+    guts act pth p@(PT sks lcls g Nothing) = act pth p
+
+apply :: NamedProp -> Path -> ProofTree -> UnifyM ProofTree
 apply (r,prp) p pt = do 
     do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
        pure $ applySubst subst pt'
@@ -98,4 +109,15 @@ apply (r,prp) p pt = do
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT sks lcls g sgs) = 
     PT sks (map (P.applySubst subst) lcls) (T.applySubst subst g) (fmap (fmap (map (applySubst subst))) sgs)
-       
+
+clear :: RuleName -> ProofTree -> ProofTree 
+clear toClear x@(PT sks lcl g (Just (rr,sgs))) 
+     | rr == (Defn toClear) = PT sks lcl g Nothing
+     | otherwise            = PT sks lcl g $ Just (rr, map (clear toClear) sgs)
+clear toClear x = x
+
+
+renameRule :: (RuleName, RuleName) -> ProofTree -> ProofTree 
+renameRule (s,s') pt = over dependencies subst pt
+  where
+    subst n = if n == s then s' else n
