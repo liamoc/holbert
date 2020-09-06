@@ -36,6 +36,14 @@ labelledBrackets content label = multi [inline "labelbracket" [text "⟨"], cont
 parenthesise = ([inline "parens" [text "("]] ++) . (++ [inline "parens" [text ")"]])
 
 expandingTextbox i act n = input_ [id_ i, style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length n) + 1) *16) / 30)) <> "em")) , onInput act, value_ n]
+expandingTextarea ids cls act textIn = multi
+     [ textarea_ [ id_ ids, onInput act, class_ cls]  [text textIn]
+     , script_ []  $ "it = document.getElementById('ta');" <>
+                     "var fn = function() {" <>
+                     "it.style.height=''; it.style.height = it.scrollHeight+'px'; " <>
+                     "}; window.setTimeout(fn,100); it.addEventListener('input',fn);" <>
+                     "it.focus();it.setSelectionRange(it.value.length, it.value.length);"
+     ]
 
 inferrule binders premises spacer ruleTitle conclusion = 
    table_ [class_ "rulestep", intProp "cellpadding" 0, intProp "cellspacing" 0 ]

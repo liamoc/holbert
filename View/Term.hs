@@ -29,7 +29,6 @@ renderTermCtx context opts trm = renderTerm' True context trm
               multi $ (if outer then id else parenthesise) 
                     $ renderTerm'' False ctx x : renderITelescope ts ++ space : intersperse space (map (renderTerm'' False ctx) args)
       where 
-        parenthesise = ([inline "parens" [text "("]] ++) . (++ [inline "parens" [text ")"]])
         infixTerms [] [] = []
         infixTerms str [] = [constant str]
         infixTerms ('_':str) (x:xs) = renderTerm' False ctx x : infixTerms str xs 

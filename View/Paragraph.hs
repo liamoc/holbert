@@ -24,20 +24,19 @@ renderText txt = normalText txt
                                          (_,crest) | MS.null crest   -> ([],txt)
                                          (ctx,crest) | Just (_,rest) <- MS.uncons crest -> (map MS.unpack (MS.words ctx), rest)
                         in case fromSexps ctx (MS.unpack txt') of
-                             Left _ -> [text "$", text txt, text "$"]
-                             Right t -> [span_ [class_ "inlineMath"][renderTermCtx ctx (TDO True True) t]]
+                             Left _ ->  [text "$", text txt, text "$"]
+                             Right t -> [span_ [class_ "inlineMath"] [renderTermCtx ctx (TDO True True) t]]
 
-renderParagraph textIn selected i (P.Paragraph txt) = div_ [] $ (div_ [class_ "moreItemOptions"] $ 
-                                case selected of 
-                                  ItemFocus i' (I.ParagraphFocus _) | i == i' -> [
-                                       button_ [class_ "confirmButton", onClick (ItemAction (Just i) (I.ParagraphAct P.Edit)) ] [ span_ [class_ "typcn typcn-tick-outline"] []]
-                                     , button_ [class_ "cancelButton", type_ "button", onClick Reset ] [ span_ [class_ "typcn typcn-times-outline"] []]
-                                     ]
-                                  _ -> [button_ [class_ "editButton", onClick (SetFocus (ItemFocus i (I.ParagraphFocus P.Select)))] [ span_ [class_ "typcn typcn-edit"] [] ]])
-                           : (case selected of
-                                ItemFocus i' (I.ParagraphFocus _) | i == i' ->
-                                     [ textarea_ [ id_ "ta", onInput UpdateInput, class_ "paragraph"]  [text textIn]
-                                     , script_ [] "it = document.getElementById('ta'); var fn = function() {  it.style.height=''; it.style.height = it.scrollHeight+'px'; }; window.setTimeout(fn,100); it.addEventListener('input',fn); it.focus();it.setSelectionRange(it.value.length, it.value.length);"
-                                     ]
-                                _ -> [div_ [class_ "paragraph"]  $ renderText txt] )
-                   
+renderParagraph textIn selected i (P.Paragraph txt) = 
+   block "paragraphBlock" $ case selected of 
+      ItemFocus i' (I.ParagraphFocus _) | i == i' ->
+         [ block "moreItemOptions" 
+            [ button "confirmButton" (ItemAction (Just i) (I.ParagraphAct P.Edit)) [typicon "tick-outline"]
+            , button "cancelButton" Reset [ typicon "times-outline"]
+            ]
+         , expandingTextarea "ta" "paragraph" UpdateInput textIn
+         ]
+      _ -> [ block "moreItemOptions" 
+              [ button "editButton" (SetFocus (ItemFocus i (I.ParagraphFocus P.Select))) [typicon "edit"]]
+           , block "paragraph" (renderText txt)
+           ] 
