@@ -30,7 +30,7 @@ renderTermCtx context opts trm = renderTerm' True context trm
 
       | (x, ts, args) <- peelApTelescope' t
       = multi $ (if outer then id else parenthesise) $
-          renderTerm'' False ctx x : renderITelescope ts ++ space : intersperse space (map (renderTerm'' False ctx) args)
+          renderTerm'' False ctx x : space : intersperse space (map (renderTerm'' False ctx) args)
       where
         infixTerms [] [] = []
         infixTerms str [] = [constant str]

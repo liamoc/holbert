@@ -7,13 +7,14 @@ import qualified Miso.String as MS
 import Data.List (intersperse, dropWhileEnd, groupBy)
 import ProofTree
 import Data.Char
+import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
 
 axiomHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i [text "Axiom."]]
 theoremHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i [text "Theorem."]]
 metabinder v = span_ [ class_ "rule-binder" ] (name v ++ [text "."])
 context [] = span_ [ ] []
-context v = span_ [ ] v
+context v = span_ [class_ "rule-context" ] v
 space = span_ [class_ "space" ] [text " "] 
 turnstile = span_ [class_ "symbol symbol-turnstile symbol-bold" ] [text "⊢"] 
 miniTurnstile = sub_ [class_ "symbol-mini"] [text "⊢"]
@@ -23,7 +24,7 @@ localrule i = span_ [ class_ "rule-rulename-local" ] [text (pack (show i))]
 renderRR (Defn d) = span_ [ class_ "rule-rulename-defined" ] (name d)
 renderRR (Local i) = localrule i
 anchor i = a_ [id_ $ "anchor" <> pack (show i)]
-button cls onClk = button_ [class_ cls, onClick onClk]
+button cls onClk = button_ [class_ cls, type_ "button", onClick onClk]
 submitButton cls = button_ [class_ cls]
 focusedButton cls onClk content = multi [button_ [class_ cls, id_ "focusedButton", onClick onClk ] content
                                 , script_ [] "document.getElementById('focusedButton').focus();"]
@@ -54,9 +55,30 @@ inferrule binders premises spacer ruleTitle conclusion =
              [td_ [class_ "rule-cell rule-binderbox", rowspan_ "2"] binders]
           ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
           ++ [td_ [class_ "rule-cell rule-spacer"] [spacer]]
-          ++ [td_ [rowspan_ "2", class_ "rule-cell rule-rulebox"] [ruleTitle] ]
+          ++ [td_ [rowspan_ "2", class_ "rule-cell rule-rulebox"] [fromMaybe (text "") ruleTitle] ]
        , tr_ [] [td_ [class_ "rule-cell rule-conclusion",colspan_ (pack $ show $ length premises + 1)] conclusion]
        ]
+
+hypothetical showTurnstile binders premises spacer ruleTitle conclusion = 
+   table_ [intProp "cellpadding" 0, intProp "cellspacing" 0 ]
+       [ tr_ [] $
+             [td_ [class_ "rule-cell rule-binderbox", rowspan_ "3"] binders]
+          ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
+          ++ [td_ [class_ "rule-cell rule-spacer"] [spacer]]
+          ++ [td_ [rowspan_ "3", class_ "rule-cell rule-rulebox"] [fromMaybe (text "") ruleTitle] ]
+       , tr_ [] [td_ [class_ "rule-cell", colspan_ (pack $ show $ length premises + 1)] $
+             if not (null premises) || showTurnstile then [text "⋮" ] else []]
+       , tr_ [] [td_ [class_ "rule-cell rule-hypothetical-conclusion",colspan_ (pack $ show $ length premises + 1)] conclusion]
+       ]
+entailment showTurnstile binders premises spacer ruleTitle conclusion =
+    multi $ (case ruleTitle of Just t  ->  [t, text ":",space] 
+                               Nothing ->  [])
+        ++ binders
+        ++ [ context (intersperse comma premises ++ [spacer])
+           , if not (null premises) || showTurnstile then turnstile else text ""
+           ] ++ conclusion 
+                
+
 
 name [] = []
 name ('_':str) = placeholder : name str

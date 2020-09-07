@@ -15,7 +15,7 @@ import Data.Maybe
 
 renderRule opts textIn selected i (R.R name prop mpt) = div_ []
            $ (if isNothing mpt then axiomHeading else theoremHeading) i
-           : renderPropNameE (Just (i,selected,textIn)) (Just (PT.Defn name)) [] ruleDOs prop 
+           : block "rule" [renderPropNameE (Just (i,selected,textIn)) (Just (PT.Defn name)) [] ruleDOs prop]
            : case mpt of 
                Just ps ->  [proofHeading, 
                            div_ [class_ "item-rule-proofbox"] [renderProofTree opts i (ps ^. R.proofTree) 

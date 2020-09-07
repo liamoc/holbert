@@ -31,7 +31,7 @@ renderProofTree opts idx pt selected = renderPT [] [] [] pt
             Nothing        -> []
           spacer = maybe (goalButton pth) (const $ text "") msgs
 
-          ruleTitle = maybe (text "?") (addNix . renderRR . fst) msgs
+          ruleTitle = Just $ maybe (text "?") (addNix . renderRR . fst) msgs
 
           conclusionTerm = renderTermCtx ctx' termDOs prp
 
