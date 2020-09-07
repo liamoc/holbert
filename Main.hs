@@ -28,12 +28,13 @@ import qualified Heading as H
 import qualified Paragraph as P 
 import qualified Item as I
 import View.Term
-import View.Utils
+import View.Utils hiding (LocalAction(..))
 import View.Prop
 import View.ProofTree
 import View.Paragraph
 import View.Heading
 import View.Rule
+import View.Item
 
 
 main :: IO ()
@@ -53,68 +54,73 @@ updateModel act ed = noEff $ runAction act ed
 
 viewModel :: Editor -> View EditorAction
 viewModel x = div_ [class_ "container", onKeyDown (\(KeyCode kc) -> if kc == 27 then Reset else Noop ) ] $
-      [ div_ [class_ "document", id_ "document"] $ renderScript (inputText x) (displayOptions x) (currentFocus x) (document x) ++ [div_ [class_ "document-endofcontent"] []]
-      , div_ [class_ "sidebar", id_ "sidebar"] $ logo:
+      [ div_ [class_ "document", id_ "document"] $ renderScript (inputText x) (displayOptions x) (currentFocus x) (document x) ++ [block "document-endofcontent" []]
+      , div_ [class_ "sidebar" , id_ "sidebar" ] $ logo:
           (case message x of 
-              Just m ->  (div_ [class_ "sidebar-errormessage"] [text m]:)
-              Nothing -> id) (div_ [class_ "sidebar-main"] (
+              Just m ->  (block "sidebar-errormessage" [text m]:)
+              Nothing -> id) 
+          (block "sidebar-main" 
           (case currentFocus x of 
              ItemFocus i (I.RuleFocus (R.GoalFocus p)) -> 
-                    let (ctx, rs) = rulesSummary (i,p) (document x)
-                     in concatMap (renderPropGroup i p ctx) rs
+               let (ctx, rs) = rulesSummary (i,p) (document x)
+                in concatMap (renderPropGroup i p ctx) rs
              NewItemFocus i -> newItemMenu i
              ItemFocus i (I.ParagraphFocus _) -> editingHelp
-             CreditsFocus -> div_ [class_ "sidebar-header"] [text "Credits"]
-                           : div_ [class_ "sidebar-credits"] 
-                                  [ text "Holbert is made by ", a_ [href_ "http://liamoc.net"] [text "Liam O'Connor"], text", a lecturer at the University of Edinburgh," 
-                                  , text "using GHCJS and the Miso framework. Some icons are from the Typicons icon set by Stephen Hutchings."
-                                  , text " It (will be) released under the BSD3 license."
-                                  , text " Some code is based on work by Daniel Gratzer and Tobias Nipkow." 
-                                  ]
-                           : []
-             _ -> [ div_ [class_ "sidebar-header"] [text "Facts Summary:"],renderIndex (document x)]))
+             CreditsFocus -> 
+               [ block "sidebar-header" ["Credits"]
+               , block "sidebar-credits"
+                 [ "Holbert is made by ", a_ [href_ "http://liamoc.net"] ["Liam O'Connor"], ", a lecturer at the University of Edinburgh," 
+                 , "using GHCJS and the Miso framework. Some icons are from the Typicons icon set by Stephen Hutchings."
+                 , " It (will be) released under the BSD3 license."
+                 , " Some code is based on work by Daniel Gratzer and Tobias Nipkow." 
+                 ]
+               ]
+             _ -> [ block "sidebar-header" ["Facts Summary:"] , renderIndex $ document x])
           :renderDisplayOptions (displayOptions x):[])
       , script_ [] "Split(['#document','#sidebar'],{ sizes: [70,30], minSize:200});"
       ]
   where 
-        renderPropGroup i p ctx (n,rs) = div_ [class_ "sidebar-header"] [text $ pack (n ++ ":")]:
-                [div_ [class_ "sidebar-apply-group"] $ map (renderAvailableRule ctx (displayOptions x) (i,p)) rs]
-        selectedGF x | ItemFocus i (I.RuleFocus (R.GoalFocus p)) <- currentFocus x = Just (i,p)
-                     | otherwise = Nothing
-        logo = div_ [class_ "sidebar-logo", onClick (SetFocus CreditsFocus)] [small_ [] ["click for credits"], text "Holbert 0.1"]
+        renderPropGroup i p ctx (n,rs) = 
+          [ block "sidebar-header" [text $ pack (n ++ ":")]
+          , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i,p)) rs
+          ]
+        selectedGF x 
+          | ItemFocus i (I.RuleFocus (R.GoalFocus p)) <- currentFocus x = Just (i,p)
+          | otherwise = Nothing
+        logo = div_ [class_ "sidebar-logo", onClick (SetFocus CreditsFocus)] [small_ [] ["click for credits"], "Holbert 0.1"]
         insertHeading i n = InsertItem i (I.Heading (H.Heading n ""))
         newItemMenu i = 
-          [ div_ [class_ "sidebar-header"] [text "Proof elements:"]
-          , button_ [onClick (SetFocus $ InsertingPropositionFocus False i), class_ "sidebar-insert" ] [div_ [class_ "item-rule-theoremheading"] ["Axiom."]]
-          , button_ [onClick (SetFocus $ InsertingPropositionFocus True i ), class_ "sidebar-insert" ] [div_ [class_ "item-rule-theoremheading"] ["Theorem."]]
-          , div_ [class_ "sidebar-header"] [text "Text elements:"]
-          , button_ [onClick (insertHeading i 1), class_ "sidebar-insert" ] [h2_ [] ["Heading 1"]]
-          , button_ [onClick (insertHeading i 2), class_ "sidebar-insert"] [h3_ [] ["Heading 2"]]
-          , button_ [onClick (insertHeading i 3), class_ "sidebar-insert"] [h4_ [] ["Heading 3"]]
-          , button_ [onClick (insertHeading i 4), class_ "sidebar-insert"] [h5_ [] ["Heading 4"]]
-          , button_ [onClick (InsertItem i (I.Paragraph $ P.Paragraph "")), class_ "sidebar-insert"] [div_ [class_ "sidebar-insert-paragraph"] ["Paragraph"]]
+          [ block  "sidebar-header" ["Proof elements:"]
+          , button "sidebar-insert" (SetFocus $ InsertingPropositionFocus False i) [block "item-rule-theoremheading" ["Axiom."]]
+          , button "sidebar-insert" (SetFocus $ InsertingPropositionFocus True  i) [block "item-rule-theoremheading" ["Theorem."]]
+          , block  "sidebar-header" ["Text elements:"]
+          , button "sidebar-insert" (insertHeading i 1) [h2_ [] ["Heading 1"]]
+          , button "sidebar-insert" (insertHeading i 2) [h3_ [] ["Heading 2"]]
+          , button "sidebar-insert" (insertHeading i 3) [h4_ [] ["Heading 3"]]
+          , button "sidebar-insert" (insertHeading i 4) [h5_ [] ["Heading 4"]]
+          , button "sidebar-insert" (InsertItem i (I.Paragraph $ P.Paragraph "")) [block "sidebar-insert-paragraph" ["Paragraph"]]
           ]
         editingHelp = 
-         [ div_ [class_ "sidebar-header"] [text "Editing Help"]
+         [ block "sidebar-header" ["Editing Help"]
          , table_ [class_ "sidebar-paragraph-editing"]
            [ tr_ [] 
-             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [ code_ [] [text "~codeSnippet()~"] ]
-             , td_ [] [ code_ [] [text "codeSnippet()"  ] ]
+             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [ code_ [] ["~codeSnippet()~"] ]
+             , td_ [] [ code_ [] ["codeSnippet()"  ] ]
              ]
            , tr_ [] 
-             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [ code_ [] [text "*bold text*"] ]
-             , td_ [] [ b_    [] [text "bold text"  ] ]
+             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [ code_ [] ["*bold text*"] ]
+             , td_ [] [ b_    [] ["bold text"  ] ]
              ]
            , tr_ [] 
-             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [ code_ [] [text "/italic text/"] ]
-             , td_ [] [ i_    [] [text "italic text"  ] ]
+             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [ code_ [] ["/italic text/"] ]
+             , td_ [] [ i_    [] ["italic text"  ] ]
              ]
            , tr_ [] 
-             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [code_ [] [text "$_/\\_ A B$"] ]
+             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [code_ [] ["$_/\\_ A B$"] ]
              , td_ [class_ "inline-math"] $ pure $ renderTerm (TDO True True) (Ap (Ap (Const "_/\\_") (Const "A")) (Const "B"))
              ]
            , tr_ [] 
-             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [code_ [] [text "$A B:_/\\_ A B$"] ]
+             [ td_ [class_ "sidebar-paragraph-editing-lhs"] [code_ [] ["$A B:_/\\_ A B$"] ]
              , td_ [class_ "inline-math"] $ pure $ renderTermCtx ["A","B"] (TDO True True) (Ap (Ap (Const "_/\\_") (LocalVar 1)) (LocalVar 0))
              ]
            ] 
@@ -128,8 +134,8 @@ renderIndex (_:script) = ul_ [class_ "sidebar-index"] $ renderIndex' (zip [1..] 
     renderIndex' ((i, I.Rule (R.R n _ mpt)):scr) 
            = li_ [] [ a_ [href_ $ "#anchor" <> (pack $ show i)] [renderRR $ Defn n]
                     , case mpt of 
-                         Just ps | R.unresolved ps -> span_ [class_ "typcn typcn-warning sidebar-index-unsolved" ] []
-                                 | otherwise  -> span_ [class_ "typcn typcn-input-checked sidebar-index-solved" ] []
+                         Just ps | R.unresolved ps -> inline "sidebar-index-unsolved" [typicon "warning"]
+                                 | otherwise       -> inline "sidebar-index-solved"   [typicon "input-checked"] 
                          Nothing -> span_ [] []
                     ]:renderIndex' scr
     renderIndex' ((i, _):scr) = renderIndex' scr
@@ -141,62 +147,52 @@ renderIndex (_:script) = ul_ [class_ "sidebar-index"] $ renderIndex' (zip [1..] 
 
 renderScript textIn opts selected script = map (renderScriptItem textIn opts selected (length script)) (zip [0..] script)
 
-renderScriptItem textIn opts selected scriptSize (i, item) = div_ [class_ $ if inserting then "item item-inserting" else "item"] $ [mainItem] ++ deleteButton:insertButton
+renderScriptItem textIn opts selected scriptSize (i, item) = block (if inserting then "item item-inserting" else "item") $ [mainItem, deleteButton] ++ insertButton
   where
-    mainItem = case item of 
-      I.Paragraph para -> renderParagraph textIn selected i para
-      I.Heading head -> renderHeading textIn selected i head
-      I.Rule rule -> renderRule opts textIn selected i rule
-    deleteButton | i > 0 = div_ [class_ "item-options"] $
-                                [ button_ [class_ "button-icon button-icon-red", onClick (DeleteItem i)] [span_ [class_ "typcn typcn-trash"] []]]
-                             ++ (if i > 1 then [ button_ [class_ "button-icon button-icon-teal", id_ $ "up" <> pack (show i) ,onClick (ShiftDown (i-1))] [span_ [class_ "typcn typcn-arrow-up-outline"] []]] else [])
-                             ++ (if i < scriptSize - 1 then [button_ [class_ "button-icon button-icon-teal", id_ $ "dn" <> pack (show i), onClick (ShiftDown i)] [span_ [class_ "typcn typcn-arrow-down-outline"] []]] else [])
-                 | otherwise = span_ [] []
+    mainItem = renderItem opts i textIn item selected
     inserting = selected == NewItemFocus i
-    insertButton = let (cls,icn) = if inserting then ("button-icon button-icon-insert button-icon-active","typcn typcn-plus")
-                                                else ("button-icon button-icon-insert button-icon-blue", "typcn typcn-plus-outline")
-                   in button_ [class_ cls, onClick (SetFocus (NewItemFocus i))] [span_ [class_ icn] []]:
+    deleteButton 
+      | i > 0 = block "item-options" $ [button "button-icon button-icon-red" (DeleteItem i) [typicon "trash"]]
+                  ++ (if i > 1              then [button "button-icon button-icon-teal" (ShiftDown $ i-1) [typicon "arrow-up-outline"  ]] else [])
+                  ++ (if i < scriptSize - 1 then [button "button-icon button-icon-teal" (ShiftDown i)     [typicon "arrow-down-outline"]] else [])
+      | otherwise = multi []
+    insertButton = let (cls,icn) = if inserting then ("button-icon button-icon-insert button-icon-active","plus")
+                                                else ("button-icon button-icon-insert button-icon-blue", "plus-outline")
+                   in button cls (SetFocus $ NewItemFocus i) [typicon icn] :
                       case selected of
-                        InsertingPropositionFocus isT i' | i == i' -> pure $
-                               form_ [ class_ "editor editor-newrule", onSubmit (InsertProposition i isT) ] 
-                                     [ if isT then theoremHeading i else axiomHeading i
-                                     , input_ [id_ "rneditor", style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length textIn) + 1) *16) / 30)) <> "em")) 
-                                              , onInput (\s -> UpdateInput s), value_ textIn]
-                                     , button_ [class_ "button-icon button-icon-blue" ] [ span_ [class_ "typcn typcn-tick-outline"] []]
-                                     , button_ [class_ "button-icon button-icon-grey", type_ "button", onClick Reset ] [ span_ [class_ "typcn typcn-times-outline"] []]
-                                     , script_ [] "document.getElementById('rneditor').focus(); document.getElementById('rneditor').select();"]
+                        InsertingPropositionFocus isT i' | i == i' ->
+                          [editorWithTitle (if isT then theoremHeading i else axiomHeading i) "newrule" (InsertProposition i isT) UpdateInput Reset textIn]
                         _ -> []
 
-
-renderAvailableRule ctx opts (i,p) (rr,r) 
-     = button_ [class_ "apply-option", onClick (ItemAction (Just i) $ I.RuleAct $ R.Apply (rr,r) p) ] [ renderPropName (Just rr) ctx ruleDOs r]
+renderAvailableRule ctx opts (i,p) (rr,r) =
+    button "apply-option" (ItemAction (Just i) $ I.RuleAct $ R.Apply (rr,r) p) [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
   where
-    ruleDOs = RDO { termDisplayOptions = tDOs opts , showInitialMetas = showMetaBinders opts, showEmptyTurnstile = False, ruleStyle = compactRules opts } 
+    ruleDOs = RDO { termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts } 
   
 
 renderDisplayOptions opts = 
   form_ [class_ "sidebar-displayoptions"] 
-       [ div_ [class_ "sidebar-header"] [text "Rule Format:"]
+       [ div_ [class_ "sidebar-header"] ["Rule Format:"]
        , input_ [checked_ (compactRules opts == Turnstile), id_ "linear", type_ "radio", name_ "rules", onChecked (\ _ -> ChangeDisplayOptions (opts { compactRules = Turnstile}) ) ]
-       , label_ [for_ "linear"] [text "Linear" ]
+       , label_ [for_ "linear"] ["Linear"]
        , input_ [checked_ (compactRules opts == Bar), id_ "vertical", type_ "radio", name_ "rules", onChecked (\ _ -> ChangeDisplayOptions (opts { compactRules = Bar }) ) ] 
-       , label_ [for_ "vertical"] [text "Vertical" ]
+       , label_ [for_ "vertical"] ["Vertical"]
        , input_ [checked_ (compactRules opts == BarTurnstile), id_ "mixture",type_ "radio", name_ "rules", onChecked (\ _ -> ChangeDisplayOptions (opts { compactRules = BarTurnstile}) ) ] 
-       , label_ [for_ "mixture"] [text "Hybrid" ]
-       , div_ [class_ "sidebar-header"] [text "Proof Tree Contexts:"]
+       , label_ [for_ "mixture"] ["Hybrid"]
+       , div_ [class_ "sidebar-header"] ["Proof Tree Contexts:"]
        , input_ [checked_ (assumptionsMode opts == Hidden),  type_ "radio", name_ "assumptions", id_ "assH", onChecked (\ _ -> ChangeDisplayOptions (opts { assumptionsMode = Hidden}) ) ]
-       , label_ [for_ "assH"] [text "Hidden" ]
+       , label_ [for_ "assH"] ["Hidden"]
        , input_ [checked_ (assumptionsMode opts == New),  type_ "radio", name_ "assumptions", id_ "assN", onChecked (\ _ -> ChangeDisplayOptions (opts { assumptionsMode = New }) ) ] 
-       , label_ [for_ "assN"] [text "New Only" ]
+       , label_ [for_ "assN"] ["New Only"]
        , input_ [checked_ (assumptionsMode opts == Cumulative), type_ "radio", name_ "assumptions", id_ "assC", onChecked (\ _ -> ChangeDisplayOptions (opts { assumptionsMode = Cumulative}) ) ] 
-       , label_ [for_ "assC"] [text "All" ]
-       , div_ [class_ "sidebar-header"] [text "Display Options:"]
+       , label_ [for_ "assC"] ["All"]
+       , div_ [class_ "sidebar-header"] ["Display Options:"]
        , div_ [] [ input_ [checked_ (showMetaBinders opts), id_ "showMB", type_ "checkbox", onChecked (\(Checked b) -> ChangeDisplayOptions (opts { showMetaBinders = b }))]
-                 , label_ [for_ "showMB"] [text "Show Quantifiers" ]]
+                 , label_ [for_ "showMB"] ["Show Quantifiers"]]
        , div_ [] [ input_ [checked_ (showTeles (tDOs opts)), id_ "showTeles", type_ "checkbox", onChecked (\(Checked b) -> ChangeDisplayOptions (opts { tDOs = (tDOs opts) {showTeles = b } }))]
-                 , label_ [for_ "showTeles"] [text "Show Metavariable Telescopes" ]]
+                 , label_ [for_ "showTeles"] ["Show Metavariable Telescopes"]]
        , div_ [] [ input_ [checked_ (showInfixes (tDOs opts)), id_ "useInfix", type_ "checkbox", onChecked (\(Checked b) -> ChangeDisplayOptions (opts { tDOs = (tDOs opts) {showInfixes = b } }))]
-                 , label_ [for_ "useInfix"] [text "Use Infix Notation" ]]
+                 , label_ [for_ "useInfix"] ["Use Infix Notation"]]
        ] 
 
 

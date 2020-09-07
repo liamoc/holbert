@@ -41,7 +41,7 @@ renderTermCtx context opts trm = renderTerm' True context trm
     metavar v = inline "term-metavar" (name ('?' : v))
     constant v = inline "term-const" (name v)
     boundName txt = inline "term-bound" (name txt)
-    binder txt bdy = inline "term-binder" $ [boundName txt, text ".", space, bdy]
+    binder txt bdy = inline "term-binder" $ [boundName txt, ".", space, bdy]
 
     peelApTelescope' t | (t', args) <- peelApTelescope t =
       case t' of

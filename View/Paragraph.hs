@@ -5,9 +5,11 @@ import qualified Miso.String as MS
 import qualified Paragraph as P
 import View.Utils
 import View.Term
-import Editor
 import qualified Item as I
 import StringRep
+
+--TODO fix this
+import Editor (TermDisplayOptions (..))
 
 renderText txt = normalText txt
   where
@@ -24,19 +26,19 @@ renderText txt = normalText txt
                                          (_,crest) | MS.null crest   -> ([],txt)
                                          (ctx,crest) | Just (_,rest) <- MS.uncons crest -> (map MS.unpack (MS.words ctx), rest)
                         in case fromSexps ctx (MS.unpack txt') of
-                             Left _ ->  [text "$", text txt, text "$"]
+                             Left _ ->  ["$", text txt, "$"]
                              Right t -> [inline "inline-math" [renderTermCtx ctx (TDO True True) t]]
 
-renderParagraph textIn selected i (P.Paragraph txt) = 
+renderParagraph textIn selected (P.Paragraph txt) = 
    block "" $ case selected of 
-      ItemFocus i' (I.ParagraphFocus _) | i == i' ->
+      Just P.Select  ->
          [ block "item-options-bottom" 
-            [ button "button-icon button-icon-blue" (ItemAction (Just i) (I.ParagraphAct P.Edit)) [typicon "tick-outline"]
-            , button "button-icon button-icon-grey" Reset [typicon "times-outline"]
+            [ button "button-icon button-icon-blue" (Act P.Edit) [typicon "tick-outline" ]
+            , button "button-icon button-icon-grey" Reset  [typicon "times-outline"]
             ]
          , expandingTextarea "ta" "paragraph" UpdateInput textIn
          ]
       _ -> [ block "item-options-bottom" 
-              [ button "button-icon button-icon-blue" (SetFocus (ItemFocus i (I.ParagraphFocus P.Select))) [typicon "edit"]]
+              [ button "button-icon button-icon-blue" (SetFocus P.Select) [typicon "edit"]]
            , block "paragraph" (renderText txt)
            ] 

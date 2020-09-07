@@ -74,9 +74,9 @@ subst new i t = case t of
 substMV :: Term -> Id -> Term -> Term
 substMV new i t = case t of
   LocalVar i -> LocalVar i
-  MetaVar j -> if i == j then new else MetaVar j
-  Ap l r -> substMV new i l `Ap` substMV new i r
-  Const s -> Const s
+  MetaVar j  -> if i == j then new else MetaVar j
+  Ap l r     -> substMV new i l `Ap` substMV new i r
+  Const s    -> Const s
   -- This raising should not be strictly necessary as metavariables should not be subbed for open terms
   Lam n body -> Lam n (substMV (raise 1 new) i body)
 

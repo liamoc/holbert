@@ -9,32 +9,33 @@ import ProofTree
 import Data.Char
 import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
+data LocalAction f a = UpdateInput MS.MisoString | Reset | Act a | SetFocus f deriving (Show, Eq)
 
-axiomHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i [text "Axiom."]]
-theoremHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i [text "Theorem."]]
-metabinder v = span_ [ class_ "rule-binder" ] (name v ++ [text "."])
+axiomHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i ["Axiom."]]
+theoremHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i ["Theorem."]]
+metabinder v = span_ [ class_ "rule-binder" ] (name v ++ ["."])
 context [] = span_ [ ] []
 context v = span_ [class_ "rule-context" ] v
-space = span_ [class_ "space" ] [text " "] 
-turnstile = span_ [class_ "symbol symbol-turnstile symbol-bold" ] [text "⊢"] 
-miniTurnstile = sub_ [class_ "symbol-mini"] [text "⊢"]
-comma = span_ [class_ "symbol symbol-bold symbol-comma" ] [text ","] 
-placeholder = span_ [class_ "placeholder" ] [text "␣"] 
+space = span_ [class_ "space" ] [" "] 
+turnstile = span_ [class_ "symbol symbol-turnstile symbol-bold" ] ["⊢"] 
+miniTurnstile = sub_ [class_ "symbol-mini"] ["⊢"]
+comma = span_ [class_ "symbol symbol-bold symbol-comma" ] [","] 
+placeholder = span_ [class_ "placeholder" ] ["␣"] 
 localrule i = span_ [ class_ "rule-rulename-local" ] [text (pack (show i))]
 renderRR (Defn d) = span_ [ class_ "rule-rulename-defined" ] (name d)
 renderRR (Local i) = localrule i
 anchor i = a_ [id_ $ "anchor" <> pack (show i)]
 button cls onClk = button_ [class_ cls, type_ "button", onClick onClk]
 submitButton cls = button_ [class_ cls]
-focusedButton cls onClk content = multi [button_ [class_ cls, id_ "focusedButton", onClick onClk ] content
+focusedButton cls onClk content = multi [button_ [class_ cls, type_ "button", id_ "focusedButton", onClick onClk ] content
                                 , script_ [] "document.getElementById('focusedButton').focus();"]
 focusHack i = script_ [] $ "document.getElementById('" <> i <> "').focus(); document.getElementById('" <> i <> "').select();"
 typicon icn = span_ [class_ $ "typcn typcn-" <> icn] [] 
 block cls is = div_ [class_ cls] is
 inline cls is = span_ [class_ cls] is
 multi = span_ []
-labelledBrackets content label = multi [inline "symbol symbol-bold" [text "⟨"], content, inline "symbol symbol-bold" [text "⟩"], sup_ [] [ label ]]
-parenthesise = ([inline "symbol" [text "("]] ++) . (++ [inline "symbol" [text ")"]])
+labelledBrackets content label = multi [inline "symbol symbol-bold" ["⟨"], content, inline "symbol symbol-bold" ["⟩"], sup_ [] [ label ]]
+parenthesise = ([inline "symbol" ["("]] ++) . (++ [inline "symbol" [")"]])
 
 textbox i act n = input_ [id_ i, onInput act, value_ n]
 
@@ -55,7 +56,7 @@ inferrule binders premises spacer ruleTitle conclusion =
              [td_ [class_ "rule-cell rule-binderbox", rowspan_ "2"] binders]
           ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
           ++ [td_ [class_ "rule-cell rule-spacer"] [spacer]]
-          ++ [td_ [rowspan_ "2", class_ "rule-cell rule-rulebox"] [fromMaybe (text "") ruleTitle] ]
+          ++ [td_ [rowspan_ "2", class_ "rule-cell rule-rulebox"] [fromMaybe "" ruleTitle] ]
        , tr_ [] [td_ [class_ "rule-cell rule-conclusion",colspan_ (pack $ show $ length premises + 1)] conclusion]
        ]
 
@@ -65,26 +66,47 @@ hypothetical showTurnstile binders premises spacer ruleTitle conclusion =
              [td_ [class_ "rule-cell rule-binderbox", rowspan_ "3"] binders]
           ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
           ++ [td_ [class_ "rule-cell rule-spacer"] [spacer]]
-          ++ [td_ [rowspan_ "3", class_ "rule-cell rule-rulebox"] [fromMaybe (text "") ruleTitle] ]
+          ++ [td_ [rowspan_ "3", class_ "rule-cell rule-rulebox"] [fromMaybe "" ruleTitle] ]
        , tr_ [] [td_ [class_ "rule-cell", colspan_ (pack $ show $ length premises + 1)] $
-             if not (null premises) || showTurnstile then [text "⋮" ] else []]
+             if not (null premises) || showTurnstile then ["⋮" ] else []]
        , tr_ [] [td_ [class_ "rule-cell rule-hypothetical-conclusion",colspan_ (pack $ show $ length premises + 1)] conclusion]
        ]
 entailment showTurnstile binders premises spacer ruleTitle conclusion =
-    multi $ (case ruleTitle of Just t  ->  [t, text ":",space] 
+    multi $ (case ruleTitle of Just t  ->  [t, ":",space] 
                                Nothing ->  [])
         ++ binders
         ++ [ context (intersperse comma premises ++ [spacer])
-           , if not (null premises) || showTurnstile then turnstile else text ""
+           , if not (null premises) || showTurnstile then turnstile else ""
            ] ++ conclusion 
                 
+editor typ act = editor' typ (Act act) UpdateInput Reset
 
+editor' typ act update reset n = form_
+   [class_ $ "editor editor-" <> typ, onSubmit act]
+   [ (if typ == "expanding" then expandingTextbox else textbox) "editor-textbox" update n
+   , submitButton "button-icon button-icon-blue" [typicon "tick-outline"]
+   , button "button-icon button-icon-grey" reset [typicon "times-outline"]
+   , focusHack "editor-textbox"
+   ] 
+
+editorWithTitle title typ act update reset n = form_
+   [class_ $ "editor editor-" <> typ, onSubmit act]
+   [ title
+   , (if typ == "expanding" then expandingTextbox else textbox) "editor-textbox" update n
+   , submitButton "button-icon button-icon-blue" [typicon "tick-outline"]
+   , button "button-icon button-icon-grey" reset [typicon "times-outline"]
+   , focusHack "editor-textbox"
+   ] 
+editableMath text view focus act extraActions selected 
+   | selected == Just focus = if null extraActions then ed else multi (ed:extraActions)
+   | otherwise              = button "editable editable-math" (SetFocus focus) [ view ]
+ where 
+   ed = editor "expanding" act text
 
 name [] = []
 name ('_':str) = placeholder : name str
 name (' ':str) = name str
 name str | (first, rest) <- span (`notElem` ("_ " :: [Char])) str = name' first ++ name rest
-
 name' s = let noPrimes = dropWhileEnd (== '\'') s
               bulk = dropWhileEnd (isDigit) noPrimes
               rest = drop (length bulk) noPrimes

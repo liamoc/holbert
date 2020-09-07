@@ -39,6 +39,7 @@ instance Control Item where
                    | HeadingAct (Action H.Heading)
                    | ParagraphAct (Action P.Paragraph)
                    deriving (Show, Eq)
+
   data Focus Item = RuleFocus (Focus R.Rule)
                   | HeadingFocus (Focus H.Heading)
                   | ParagraphFocus (Focus P.Paragraph)

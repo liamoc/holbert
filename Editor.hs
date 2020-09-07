@@ -65,12 +65,12 @@ after n = atraversalVL guts
 
 rulesSummary :: (Int, PT.Path) -> Document -> ([String], [(String, [(PT.RuleRef, Prp.Prop)])])
 rulesSummary (i,p) s = 
-                 let (lefts, I.Rule (R.R n prp (Just (R.PS pt c))): rights) = splitAt i s
-                     context = fst $ fromJust $ ipreview (PT.path p PT.%+ PT.step) pt
-                     lcls = zip (map PT.Local [0..]) (PT.locals context)
-                     ctx = PT.bound context
-                     rules = groupedRules lefts []
-                  in (ctx, filter (not . null . snd) (("Local Facts", lcls):rules))
+  let (lefts, I.Rule (R.R n prp (Just (R.PS pt c))): rights) = splitAt i s
+      context = fst $ fromJust $ ipreview (PT.path p PT.%+ PT.step) pt
+      lcls = zip (map PT.Local [0..]) (PT.locals context)
+      ctx = PT.bound context
+      rules = groupedRules lefts []
+   in (ctx, filter (not . null . snd) (("Local Facts", lcls):rules))
  where
    groupedRules :: Document -> [(String, [(PT.RuleRef, Prp.Prop)])] -> [(String, [(PT.RuleRef, Prp.Prop)])]
    groupedRules [] acc = acc 
@@ -86,8 +86,9 @@ processRenames :: [(String, String)] -> Document -> Either String Document
 processRenames rns doc = foldM processRename doc rns
   where
     names = concatMap defined doc
-    processRename doc (s,s') | s' `elem` names = Left "Cannot rename: Name already in use"
-                             | otherwise       = Right $ map (renamed (s,s')) doc
+    processRename doc (s,s') 
+      | s' `elem` names = Left "Cannot rename: Name already in use"
+      | otherwise       = Right $ map (renamed (s,s')) doc
 
 
 switchFocus :: EditorFocus -> Editor -> Editor
@@ -96,8 +97,8 @@ switchFocus f ed = ed { currentFocus = f, inputText = "" }
 
 runAction :: EditorAction -> Editor -> Editor
 runAction act ed = case runAction' act ed of
-                     Left e -> ed { message = Just $ MS.pack e }
-                     Right ed' -> ed'
+  Left e -> ed { message = Just $ MS.pack e }
+  Right ed' -> ed'
 
 runAction' :: EditorAction -> Editor -> Either String Editor
 runAction' Noop ed = pure ed
@@ -110,8 +111,8 @@ runAction' (ItemAction mi act) ed = do
   let doc'' = over (after index) (\(_,rest) -> (item, map (foldr (.) id (map invalidated inv)) rest))  doc' 
       ed' = ed { message = Nothing, document = doc'' }
       (leave, newFocus) = case mf of 
-                   Nothing -> (False, NoFocus)
-                   Just (leave,f)  -> (leave, ItemFocus index f)
+        Nothing        -> (False, NoFocus)
+        Just (leave,f) -> (leave, ItemFocus index f)
   (if leave then runAction' (SetFocus newFocus) else (pure . switchFocus newFocus)) ed'
 runAction' (SetFocus f) ed = case currentFocus ed of
     ItemFocus i f' -> do

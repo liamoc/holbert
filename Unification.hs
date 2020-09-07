@@ -65,7 +65,7 @@ proj sS s = case peelApTelescope (devar sS s) of
         (MetaVar f,bs) -> do
            var <- fresh
            bs' <- posM ( \ t -> case t of (LocalVar i) -> pure (i >= 0)
-                                          otherthing  -> throwError ("Non-pattern equation") ) bs
+                                          otherthing  -> throwError "Non-pattern equation" ) bs
            pure ((f , hnf bs var bs' ):sS)
 
 
