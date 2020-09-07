@@ -9,18 +9,18 @@ import ProofTree
 import Data.Char
 import qualified Data.Map as M
 
-axiomHeading i = div_ [class_ "axiomHeading"] [anchor i [text "Axiom."]]
-theoremHeading i = div_ [class_ "theoremHeading"] [anchor i [text "Theorem."]]
-metabinder v = span_ [ class_ "metabinder" ] (name v ++ [text "."])
+axiomHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i [text "Axiom."]]
+theoremHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i [text "Theorem."]]
+metabinder v = span_ [ class_ "rule-binder" ] (name v ++ [text "."])
 context [] = span_ [ ] []
-context v = span_ [class_ "context" ] v
+context v = span_ [ ] v
 space = span_ [class_ "space" ] [text " "] 
-turnstile = span_ [class_ "turnstile" ] [text "⊢"] 
-miniTurnstile = sub_ [class_ "mini"] [text "⊢"]
-comma = span_ [class_ "comma" ] [text ","] 
+turnstile = span_ [class_ "symbol symbol-turnstile symbol-bold" ] [text "⊢"] 
+miniTurnstile = sub_ [class_ "symbol-mini"] [text "⊢"]
+comma = span_ [class_ "symbol symbol-bold symbol-comma" ] [text ","] 
 placeholder = span_ [class_ "placeholder" ] [text "␣"] 
-localrule i = span_ [ class_ "localrule" ] [text (pack (show i))]
-renderRR (Defn d) = span_ [ class_ "definedrule" ] (name d)
+localrule i = span_ [ class_ "rule-rulename-local" ] [text (pack (show i))]
+renderRR (Defn d) = span_ [ class_ "rule-rulename-defined" ] (name d)
 renderRR (Local i) = localrule i
 anchor i = a_ [id_ $ "anchor" <> pack (show i)]
 button cls onClk = button_ [class_ cls, onClick onClk]
@@ -32,10 +32,13 @@ typicon icn = span_ [class_ $ "typcn typcn-" <> icn] []
 block cls is = div_ [class_ cls] is
 inline cls is = span_ [class_ cls] is
 multi = span_ []
-labelledBrackets content label = multi [inline "labelbracket" [text "⟨"], content, inline "labelbracket" [text "⟩"], sup_ [] [ label ]]
-parenthesise = ([inline "parens" [text "("]] ++) . (++ [inline "parens" [text ")"]])
+labelledBrackets content label = multi [inline "symbol symbol-bold" [text "⟨"], content, inline "symbol symbol-bold" [text "⟩"], sup_ [] [ label ]]
+parenthesise = ([inline "symbol" [text "("]] ++) . (++ [inline "symbol" [text ")"]])
+
+textbox i act n = input_ [id_ i, onInput act, value_ n]
 
 expandingTextbox i act n = input_ [id_ i, style_ (M.singleton "width" (pack (show $ (((fromIntegral (MS.length n) + 1) *16) / 30)) <> "em")) , onInput act, value_ n]
+
 expandingTextarea ids cls act textIn = multi
      [ textarea_ [ id_ ids, onInput act, class_ cls]  [text textIn]
      , script_ []  $ "it = document.getElementById('ta');" <>
@@ -46,13 +49,13 @@ expandingTextarea ids cls act textIn = multi
      ]
 
 inferrule binders premises spacer ruleTitle conclusion = 
-   table_ [class_ "rulestep", intProp "cellpadding" 0, intProp "cellspacing" 0 ]
-       [ tr_ [class_ "premises"] $
-             [td_ [class_ "binderbox", rowspan_ "2"] binders]
-          ++ map (td_ [class_ "premise"] . pure) premises
-          ++ [td_ [class_ "spacer"] [spacer]]
-          ++ [td_ [rowspan_ "2", class_ "rulebox"] [ruleTitle] ]
-       , tr_ [] [td_ [class_ "conclusion",colspan_ (pack $ show $ length premises + 1)] conclusion]
+   table_ [intProp "cellpadding" 0, intProp "cellspacing" 0 ]
+       [ tr_ [] $
+             [td_ [class_ "rule-cell rule-binderbox", rowspan_ "2"] binders]
+          ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
+          ++ [td_ [class_ "rule-cell rule-spacer"] [spacer]]
+          ++ [td_ [rowspan_ "2", class_ "rule-cell rule-rulebox"] [ruleTitle] ]
+       , tr_ [] [td_ [class_ "rule-cell rule-conclusion",colspan_ (pack $ show $ length premises + 1)] conclusion]
        ]
 
 name [] = []

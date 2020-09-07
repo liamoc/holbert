@@ -18,11 +18,11 @@ renderRule opts textIn selected i (R.R name prop mpt) = div_ []
            : renderPropNameE (Just (i,selected,textIn)) (Just (PT.Defn name)) [] ruleDOs prop 
            : case mpt of 
                Just ps ->  [proofHeading, 
-                           div_ [class_ "proofBox"] [renderProofTree opts i (ps ^. R.proofTree) 
+                           div_ [class_ "item-rule-proofbox"] [renderProofTree opts i (ps ^. R.proofTree) 
                                 (case selected of
                                     ItemFocus j (I.RuleFocus f) -> guard (i == j) >> pure (f, textIn)
                                     _ -> Nothing)]]
                Nothing ->  []
   where
     ruleDOs = RDO { termDisplayOptions = tDOs opts , showInitialMetas = showMetaBinders opts, showEmptyTurnstile = False, ruleStyle = compactRules opts } 
-    proofHeading = div_ [class_ "proofHeading"] [text "Proof."]
+    proofHeading = div_ [class_ "item-rule-proofheading"] [text "Proof."]

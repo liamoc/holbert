@@ -18,7 +18,7 @@ renderTermCtx context opts trm = renderTerm' True context trm
       | (x, ts, []) <- peelApTelescope' t = case x of 
            LocalVar j 
               | j >= length ctx -> boundName (show j)
-              | length ctx - j <= length context -> freevar (ctx !! j) -- , sub_ [] [text (pack $ show j)]]
+              | length ctx - j <= length context -> freevar (ctx !! j)
               | otherwise -> boundName (ctx !! j)
            MetaVar i -> metavar i (renderITelescope ts)
            Const s -> constant s
@@ -34,11 +34,11 @@ renderTermCtx context opts trm = renderTerm' True context trm
         infixTerms ('_':str) (x:xs) = renderTerm' False ctx x : infixTerms str xs 
         infixTerms str args | (first, rest) <- span (/='_') str = constant first : infixTerms rest args
 
-    freevar v = inline "freevar" (name v)
-    metavar v r = inline "metavar" (name ('?':v) ++ r)
-    constant v = inline "const" (name v)
-    boundName txt = inline "boundName" (name txt)
-    binder txt bdy = inline "binder" $ [boundName txt, text ".", space, bdy]
+    freevar v = inline "term-freevar" (name v)
+    metavar v r = inline "term-metavar" (name ('?':v) ++ r)
+    constant v = inline "term-const" (name v)
+    boundName txt = inline "term-bound" (name txt)
+    binder txt bdy = inline "term-binder" $ [boundName txt, text ".", space, bdy]
 
     renderITelescope ts = []
 

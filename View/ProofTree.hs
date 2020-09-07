@@ -40,8 +40,8 @@ renderProofTree opts idx pt selected = renderPT [] [] [] pt
                         _                     -> [conclusionTerm]
         in inferrule binders premises spacer ruleTitle conclusion
       where
-        addNix t = multi [t, button "nix" (ItemAction (Just idx) $ I.RuleAct $ R.Nix pth) [typicon "trash"] ]
-        rulebinder v = inline "rulebinder" [localrule v, miniTurnstile]
+        addNix t = multi [t, button "button-icon button-icon-red" (ItemAction (Just idx) $ I.RuleAct $ R.Nix pth) [typicon "trash"] ]
+        rulebinder v = multi [localrule v, miniTurnstile]
         rns' = map (Prop.raise (length sks)) rns ++ lcls
         ctx' = reverse sks ++ ctx
         numberedAssumptions numbers assumptions = context (intersperse comma $ zipWith renderPropLabelled numbers assumptions)
@@ -49,16 +49,16 @@ renderProofTree opts idx pt selected = renderPT [] [] [] pt
         
     metabinder' pth i n = case selected of
                              Just (R.ProofBinderFocus pth' i', n) | pth == pth', i == i' -> [metabinderEditor pth i n] 
-                             _ -> [button "proofMB" (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.ProofBinderFocus pth i) [ metabinder n ]]
-    metabinderEditor pth i n = form_ [ class_ "mbEditor", onSubmit (ItemAction (Just idx) $ I.RuleAct $ R.RenameProofBinder pth i) ] 
-                                     [ expandingTextbox "mbeditor" UpdateInput n
-                                     , submitButton "confirmButton" [typicon "tick-outline"]
-                                     , button "cancelButton" Reset [typicon "times-outline"] 
-                                     , focusHack "mbeditor"
+                             _ -> [button "editable editable-math" (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.ProofBinderFocus pth i) [ metabinder n ]]
+    metabinderEditor pth i n = form_ [ class_ "editor editor-expanding", onSubmit (ItemAction (Just idx) $ I.RuleAct $ R.RenameProofBinder pth i) ] 
+                                     [ expandingTextbox "editor-textbox" UpdateInput n
+                                     , submitButton "button-icon button-icon-blue" [typicon "tick-outline"]
+                                     , button "button-icon button-icon-grey" Reset [typicon "times-outline"] 
+                                     , focusHack "editor-textbox"
                                      ]
 
     
     goalButton pth = if Just (R.GoalFocus pth) == fmap fst selected then 
-                        focusedButton "selectedGoal" (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.GoalFocus pth) [typicon "location"]
+                        focusedButton "button-icon button-icon-active button-icon-goal" (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.GoalFocus pth) [typicon "location"]
                      else 
-                        button "goal" (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.GoalFocus pth) [typicon "location-outline"]
+                        button "button-icon button-icon-blue button-icon-goal" (SetFocus $ ItemFocus idx $ I.RuleFocus $ R.GoalFocus pth) [typicon "location-outline"]

@@ -10,236 +10,14 @@
   <title> Holbert 0.1 </title>
   <style>
 @font-face {
-font-family: 'NeoEulerMedium';
-font-style: normal;
-font-weight: normal;
-src: local('Neo Euler Medium'), url('euler.woff') format('woff');
+  font-family: 'NeoEulerMedium';
+  font-style: normal;
+  font-weight: normal;
+  src: local('Neo Euler Medium'), url('euler.woff') format('woff');
 }
-     td {
-      text-align: center;
-     }
-     .conclusion  {
-        border-top: 1px solid black;
-        padding: 2px;
-     }
-.logo > small {
-font-size:8pt;
-color:#CCCCCC;
-font-weight:normal;
-padding-right:8px;
-}
-.creditsText{
-padding: 10px;
-    text-align: left;
-    font-family: Computer Modern Sans;
-}
-.logo:hover {
-color:#AA00CC;
-cursor:pointer;
-}
-.proofBox { overflow-x: scroll }
-     .premise {
-       padding-left:6px;
-       padding-right:6px;
-       vertical-align:bottom;
-     }
-     .spacer {
-       vertical-align:bottom;
-     }
-     .metavar {
-       color: gray;
-       font-style:italic;
-     padding-right:4px;}
-     .metabinder {
-       color: #006600;
-       font-size:small;
-       padding-right:1px;
-     }
-button {
-font-size:1em;
-}
-.headingButton{
-    padding: 0;
-    border: 0;
-    font-family: Computer Modern Concrete;
-    background: white;
-    cursor: text;
-}
-.headingButton > h1:hover {
-    background: #CCCCFF;
-    border-radius: 5px;
-}
-.headingButton > h2:hover {
-    background: #CCCCFF;
-    border-radius: 5px;
-}
-.headingButton > h3:hover {
-    background: #CCCCFF;
-    border-radius: 5px;
-}
-.headingButton > h4:hover {
-    background: #CCCCFF;
-    border-radius: 5px;
-}
-.headingButton > h5:hover {
-    background: #CCCCFF;
-    border-radius: 5px;
-}
-.mbEditor {
-display:inline
-}
-.mbEditor > input {
-border: 1px solid #0000AA;
-border-radius:4px;
-background: #EEEEFF;
-font-family: 'Computer Modern Typewriter'
-}
-.proofMB {
-background:white;
-border: none;
-cursor:text;
-border-radius:4px;
-font-family: 'NeoEulerMedium';
-padding:0px;
-}
-.proofMB:hover {
-background:#CCCCFF
-}
-.displayOptions{
-flex: 0 1 auto;
-font-family: 'Computer Modern Sans';
-font-size: small;
-    display: block;
-    width: 100%;
-}
-.tmEditor {
-display:inline
-}
-.tmEditor > input {
-border: 1px solid #0000aa;
-border-radius:4px;
-background: #EEEEFF;
-font-family: 'Computer Modern Typewriter'
-}
-.headingEditor {
-}
-.headingEditor > input {
-border: 1px solid #0000aa;
-border-radius:4px;
-background: #EEEEFF;
-}
-.newRnEditor {
-margin-top:5px;
-border-top: 1px dotted #eeeeee;
-display: block;
-}
-.newRnEditor > input {
-border: 1px solid #0000aa;
-border-radius:4px;
-background: #EEEEFF;
-font-family: 'Computer Modern Typewriter'
-}
-.rnEditor {
-display:inline
-}
-.rnEditor > input {
-border: 1px solid #0000aa;
-border-radius:4px;
-background: #EEEEFF;
-font-family: 'Computer Modern Typewriter'
-}
-.ruleNameB {
-background:white;
-border: none;
-cursor:text;
-border-radius:4px;
-font-family: 'NeoEulerMedium';
-padding:0px;
-}
-.hypConclusion {
-font-family: 'NeoEulerMedium';
-}
-.addPremise {
-    padding: 0;
-    border: 0px;
-    background: white;
-    margin-bottom: 2px;
-    color:#0000CC;
-    cursor:pointer;
-}
-.addPremise:hover {
-    color:#AA00FF;
-}
-.addMB {
-background: white;
-    padding: 0;
-    border: 0;
-    color: #0000CC;
-    cursor:pointer;
-font-size:small;
-}
-.addMB:hover {
-    color:#AA00FF;
-}
-.boundName {
-color: #9343a7
-}
-.referent {
-color: #9343a7
-}
-.ruleNameB:hover {
-background:#CCCCFF;
-}
-.ruleTB:hover {
-background:#CCCCFF;
-}
-.ruleTB {
-background:white;
-border: none;
-cursor:text;
-border-radius:4px;
-font-family: 'NeoEulerMedium';
-padding:0px;
-}
-code{
-display:inline-block;
-}
-.inlineMath{
-display:inline-block;
-font-family: 'NeoEulerMedium';
-}
-.endofcontent{
-height:100px;
-}
-.lhs {
-border-right: 1px solid #eeeeee;
-}
-.editingHelp{
-width:100%;
-border-bottom: 1px solid #eeeeee;
-}
-.parabutto {
- margin-top:5px;
-margin-bottom:5px;
-}
-.paragraph {
-    white-space: break-spaces;
-    margin-right: 60px;
-    margin-top:7px;
-    margin-bottom:7px;
-    min-height:40px;
-    box-sizing: border-box;
-    width:100%;
-    display:block;
-}
-div.paragraph {
-    text-align: justify;
-}
-.indexSummary {
-font-family: Computer Modern Sans;
-padding-left:7px;
-margin-top:7px;
-}
+
+/* LINKS AND ANCHOR ANIMATIONS */
+
 a[href] {
    text-decoration:none;
    color:#0000CC
@@ -258,17 +36,10 @@ a[href]:active {
   -o-animation: target-fade 1s;
   animation: target-fade 1s;
 }
-
-/**
- * Keyframe animation definition
- * 
- * 1. Insert a color of your choice here
- */
 @-webkit-keyframes target-fade {
   from {
     background-color: #FFEE88;
   }
-  /* [1] */
   to {
     background-color: transparent;
   }
@@ -277,7 +48,6 @@ a[href]:active {
   from {
     background-color: #FFEE88;
   }
-  /* [1] */
   to {
     background-color: transparent;
   }
@@ -286,7 +56,6 @@ a[href]:active {
   from {
     background-color: #FFEE88;
   }
-  /* [1] */
   to {
     background-color: transparent;
   }
@@ -295,24 +64,392 @@ a[href]:active {
   from {
     background-color: #FFEE88;
   }
-  /* [1] */
   to {
     background-color: transparent;
   }
 }
 
-.outstandingGoalIndicator {
+/* SOME TOP-LEVEL STYLES */
+body {
+  margin:0px;
+  cursor: crosshair;
+  font-family: 'Computer Modern Concrete';
+}
+h1 {
+  margin-bottom:0px;
+  margin-top:0px;
+}
+h2 {
+  margin-bottom:0px;
+  margin-top:0px;
+}
+h3 {
+  margin-bottom:0px;
+  margin-top:5px;
+}
+h4 {
+  margin-bottom:0px;
+  margin-top:9px;
+}
+h5 {
+  margin-bottom:0px;
+  margin-top:12px;
+}
+
+/* EDITOR FORMS */
+
+.editor > input {
+  border: 1px solid #0000aa;
+  border-radius:4px;
+  background: #EEEEFF;
+}
+.editor-expanding {
+  display:inline
+}
+.editor-expanding > input {
+  font-family: 'Computer Modern Typewriter'
+}
+.editor-newrule {
+  margin-top:5px;
+  border-top: 1px dotted #eeeeee;
+  display: block;
+}
+.editor-newrule > input {
+  font-family: 'Computer Modern Typewriter'
+}
+.editor-heading > input {
+  width 80%;
+  font-family: 'Computer Modern Concrete';
+  font-weight:bold;
+  margin-top:5px;
+}
+.h0 > input {
+  font-size:2em;
+}
+.h1 > input {
+  font-size:1.5em;
+}
+.h2 > input {
+  font-size:1.17em;
+}
+.h3 > input {
+  font-size:1.33em;
+}
+.h4 > input {
+  font-size:0.83em;
+}
+/* BUTTONS */
+
+button {
+  font-size:1em;
+}
+.button-icon {
+  padding: 0;
+  background: white;
+  border: 0px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.button-icon-teal {
+  color: #0091aa;
+}
+.button-icon-blue {
+  color: #0000CC;
+}
+.button-icon-red {
+  color: #c30303;
+}
+.button-icon-grey {
+  color: #666666;
+}
+.button-icon-active {
+  color: #AA00CC;
+}
+.button-icon:hover {
+  color: #AA00CC;
+}
+.button-icon-insert {
+  right: 0;
+  position: absolute;
+  bottom: -0.54em;
+  z-index: 10000;
+}
+.button-icon-addbinder {
+  font-size:small;
+}
+.button-icon-addpremise {
+  margin-bottom: 2px;
+}
+.button-icon-goal {
+  display: inline-block;
+  margin-bottom: 2px;
+  font-size:20px;
+}
+.editable {
+  background:white;
+  border: none;
+  cursor:text;
+  border-radius:4px;
+  padding:0px;
+}
+.editable:hover {
+  background:#CCCCFF
+}
+.editable-math {
+  font-family: 'NeoEulerMedium';
+}
+.editable-heading {
+  font-family: 'Computer Modern Concrete';
+}
+.apply-option:hover {
+  border: 1px solid #CC00FF;
+  background: #FAEFFA;
+}
+.apply-option {
+  border: 1px solid #0000CC;
+  background: #EFEFFA;
+  border-radius: 5px;
+  white-space:nowrap;
+  cursor:pointer;
+  display:inline-block;
+  padding-left:9px;
+  padding-right:9px;
+  padding-top:9px;
+  margin-left:5px;
+  margin-top:5px;
+  margin-right:0px;
+  margin-bottom:0px;
+  font-family: 'NeoEulerMedium';
+}
+
+/* RULE TABLES */
+.rule {
+  font-family: 'NeoEulerMedium';
+}
+.rule-cell {
+  font-family: 'NeoEulerMedium';
+  vertical-align:bottom;
+  text-align: center;
+}
+.rule-conclusion  {
+  border-top: 1px solid black;
+  padding: 2px;
+}
+.rule-hypothetical-conclusion {
+  padding: 2px;
+}
+.rule-premise {
+  padding-left:6px;
+  padding-right:6px;
+}
+.rule-binderbox {
+  padding-bottom:3px;
+  padding-left:2px;
+  padding-right:2px;
+}
+.rule-rulebox {
+  padding-bottom:1.1em;
+  padding-left:2px;
+  padding-right:2px;
+}
+.rule-spacer {
+  height: 1em;
+}
+.rule-binders {
+  padding-right:4px;
+}
+.rule-binder {
+  color: #006600;
+  font-size:small;
+  padding-right:1px;
+}
+.rule-rulename-defined {
+  font-family: 'NeoEulerMedium';
+  font-weight: bold;
+  font-size: small;
+} 
+.rule-rulename-local {
+  font-family:'Computer Modern Typewriter';
+  color: #0000AA;
+}
+/* TERMS */
+.term-freevar {
+  color: #00AA00;
+  font-weight:bold;
+}
+.term-metavar {
+  color: gray;
+  font-style:italic;
+  padding-right:4px;
+}
+.term-bound {
+  color: #9343a7
+}
+/* SYMBOLS */
+.symbol {
+  color: #990000;
+}
+.symbol-bold {
+  font-weight: bold;
+}
+.symbol-turnstile {
+  padding-left:6px;
+  padding-right: 6px;
+}
+.symbol-comma {
+   padding-left:2px;
+   padding-right: 4px;
+}
+.symbol-mini {
+  font-size: x-small;
+  font-style: normal;
+}
+
+/* PARAGRAPH / PROSE ELEMENTS */
+code {
+  display:inline-block;
+  font-family: 'Computer Modern Typewriter';
+}
+.inline-math {
+  display:inline-block;
+  font-family: 'NeoEulerMedium';
+}
+.paragraph {
+  white-space: break-spaces;
+  margin-right: 60px;
+  margin-top:7px;
+  margin-bottom:7px;
+  min-height:40px;
+  box-sizing: border-box;
+  width:100%;
+  display:block;
+}
+div.paragraph {
+  text-align: justify;
+}
+textarea.paragraph {
+  font-family: 'Computer Modern Typewriter';
+  font-size:1em;
+  border: 1px solid #0000aa;
+  border-radius: 4px;
+  background: #EEEEFF;
+}
+
+
+/* DOCUMENT ITEMS */
+.item {
+  border-bottom:1px dotted #EEEEEE;
+  position:relative;
+  padding-top:5px;
+  padding-right:60px;
+}
+.item-inserting {
+  border-color:#AA00CC;
+}
+.item-options {
+  position:absolute;
+  right:0;
+  top:10px;
+}
+.item-options-bottom {
+  position:absolute;
+  right:0;
+  bottom:8px;
+}
+
+/* RULE ITEMS */
+.item-rule-proofbox { 
+  overflow-x: scroll 
+}
+.item-rule-proofheading {
+  font-style:italic;
+}
+.item-rule-theoremheading {
+  font-weight: bold;
+  display:inline-block;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+  width:30%;
+  overflow:scroll;
+  box-sizing:border-box;
+  height:100vh;
+  border-left: 1px solid #EEEEEE;
+  display:flex;
+  flex-flow:column;
+}
+.sidebar-main {
+  overflow:scroll;
+  flex: 1 1 auto;
+}
+.sidebar-header {
+  padding-left:3px;
+  font-family: 'Computer Modern Sans';
+  border-bottom: 1px solid #c9c9d8;
+  border-top: 1px solid #c9c9d8;
+  background:#EEEEEE;
+  padding-top:5px;
+}
+.sidebar-displayoptions {
+  flex: 0 1 auto;
+  font-family: 'Computer Modern Sans';
+  font-size: small;
+  display: block;
+  width: 100%;
+}
+.sidebar-errormessage {
+  flex: 0 1 auto;
+  font-family: 'Computer Modern Sans';
+  color: darkred;
+  background: #FFAAAA;
+  border-top: 1px solid #c9c9d8;
+  padding: 5px;
+  margin: 0px; 
+}
+.sidebar-credits {
+  padding: 10px;
+  text-align: left;
+  font-family: 'Computer Modern Sans';
+}
+/* LOGO */
+.sidebar-logo {
+  font-style: italic;
+  font-weight: bold;
+  padding-right: 10px;
+  color: brown;
+  text-align: right;
+  flex: 0 1 auto;
+}
+.sidebar-logo > small {
+  font-size:8pt;
+  color:#CCCCCC;
+  font-weight:normal;
+  padding-right:8px;
+}
+.sidebar-logo:hover {
+  color:#AA00CC;
+  cursor:pointer;
+}
+/* INDEX */
+.sidebar-index {
+  font-family: 'Computer Modern Sans';
+  padding-left:7px;
+  margin-top:7px;
+}
+.sidebar-index-unsolved {
   color: #FFAA00;
 }
-.noGoalIndicator {
+.sidebar-index-solved {
   color: #00AA66;
 }
-ul.indexSummary li {
+ul.sidebar-index li {
   list-style: none;
   position: relative;
   padding-left:15px;
 }
-ul.indexSummary li::before {
+ul.sidebar-index li::before {
   content: "";
   position: absolute;
   left: 0;
@@ -323,383 +460,66 @@ ul.indexSummary li::before {
   border-width: 2px 2px 0 0;
   transform: rotate(45deg);
 }
-
-ul.indexSummary ul {
+ul.sidebar-index ul {
   padding-left:20px;
 }
-code {
-font-family: Computer Modern Typewriter;
+
+/* INSERTING ITEMS */
+.sidebar-insert:hover {
+  background: #FFEEFF;
 }
-textarea.paragraph {
-font-family: Computer Modern Typewriter;
-font-size:1em;
-border: 1px solid #0000aa;
-    border-radius: 4px;
-    background: #EEEEFF;
+.sidebar-insert {
+  font-family: Computer Modern Concrete;
+  width: 100%;
+  text-align: left;
+  cursor:pointer;
+  border: 0;
+  background: #EEEEFF; 
+  display:block;
 }
-.optionsGroup {
-padding-bottom:5px;
-padding-right:5px;
+.sidebar-insert-paragraph {
+  margin-top:5px;
+  margin-bottom:5px;
 }
-.errorMessage {
-flex: 0 1 auto;
-   font-family: 'Computer Modern Sans';
-    color: darkred;
-    background: #FFAAAA;
-    border-top: 1px solid #c9c9d8;
-    padding: 5px;
-    margin: 0px; 
+/* EDITING HELP */
+.sidebar-paragraph-editing {
+  text-align:center;
+  width:100%;
+  border-bottom: 1px solid #EEEEEE;
 }
-     .definedrule {
-   font-family: 'NeoEulerMedium';
-       font-weight: bold;
-       font-size: small;
-     } 
-     .localrule {
-       font-family:monospace;
-       color: #0000AA;
-     }
-     .comma {
-       color: #990000;
-       font-weight: bold;
-     }
-     .labelbracket {
-       color: #990000;
-       font-weight: bold;
-     }
-     .parens {
-       color: #990000;
-     }
-     .turnstile {
-       color: #990000;
-       font-weight: bold;
-       padding-left:6px;
-       padding-right: 6px;
-     }
-     .equals {
-       color: #990000;
-       font-weight: bold;
-       padding-left:6px;
-       padding-right: 6px;
-     }
-.mainpanel {
-   overflow:scroll;
-width:70%;
-height:100vh;
-padding-left:20px;
-padding-right:9px;
-padding-top:0px;
-   white-space:nowrap;
-box-sizing:border-box;
+.sidebar-paragraph-editing-lhs {
+  border-right: 1px solid #EEEEEE;
 }
-.insertItemOption:hover {
-    background: #FFEEFF;
-}
-.insertItemHeader {
-padding-left:3px;
-    font-family: Computer Modern Sans;
-  border-bottom: 1px solid #c9c9d8;
-  border-top: 1px solid #c9c9d8;
-background:#EEEEEE;
-padding-top:5px;
-}
-.insertItemOption {
-    font-family: Computer Modern Concrete;
-    width: 100%;
-    text-align: left;
-    cursor:pointer;
-    border: 0;
-    background: #EEEEFF; 
-    display:block;
-}
-#hdeditor {
-width 80%;
-    font-family: Computer Modern Concrete;
-font-weight:bold;
-margin-top:5px;
-}
-.h0 > #hdeditor {
- font-size:2em;
-}
-.h1 > #hdeditor {
- font-size:1.5em;
-}
-.h2 > #hdeditor {
- font-size:1.17em;
-}
-.h3 > #hdeditor {
- font-size:1.33em;
-}
-.h4 > #hdeditor {
- font-size:0.83em;
-}
-.topdiv {
-display:flex;
-flex-direction:row;
-}
-.gutter {
-cursor:col-resize;
-}
-.gutter:hover {
-background:#FFee88
-}
-.sidebar {
-width:30%;
-/*position: absolute;
-right:0;
-top:0;*/
-   overflow:scroll;
-box-sizing:border-box;
-height:100vh;
-border-left: 1px solid #EEEEEE;
-display:flex;
-flex-flow:column;
-}
-.sidebarmain {
-overflow:scroll;
-flex: 1 1 auto;
-}
-.logo {
-font-style: italic;
-    font-weight: bold;
-    padding-right: 10px;
-    color: brown;
-    text-align: right;
-flex: 0 1 auto;
-}
-.precontext {
-padding-right:4px;
-}
-     .freevar {
-       color: #00AA00;
-       font-weight:bold;
-     }
-     .spacer {
-       height: 1em;
-     }
-     .rulestep {
-     }
-.flexflex{
-   padding:5px;
-   font-family: 'NeoEulerMedium';
-}
-.ruleOption:hover {
-    border: 1px solid #CC00FF;
-    background: #FAEFFA;
-}
-.ruleOption {
-    border: 1px solid #0000CC;
-    background: #EFEFFA;
-    border-radius: 5px;
-white-space:nowrap;
-cursor:pointer;
- display:inline-block;
-padding:9px;
-margin-left:5px;
-margin-top:5px;
-margin-right:0px;
-margin-bottom:0px;
-   font-family: 'NeoEulerMedium';
-}
-body {
-margin:0px;
-cursor: crosshair;
-font-family: 'Computer Modern Concrete';
-}
-.nix:hover {
-    color: #AA00FF;
-}
-.proofHeading {
-   font-style:italic;
-}
-.theoremHeading {
-   font-weight: bold;
-display:inline-block;
-}
-.axiomHeading {
-display:inline-block;
-   font-weight: bold;
-}
-h1 {
-   margin-bottom:0px;
-   margin-top:0px;
-}
-h2 {
-   margin-bottom:0px;
-   margin-top:0px;
-}
-h3 {
-   margin-bottom:0px;
-   margin-top:5px;
-}
-h4 {
-   margin-bottom:0px;
-   margin-top:9px;
-}
-h5 {
-   margin-bottom:0px;
-   margin-top:12px;
-}
-.nix {
-    padding: 0;
-    background: white;
-    border: 0px;
-    font-size: 16px;
-    color: #c30303;
-    cursor: pointer;
-}
-.insertButton:hover {
-    color: #AA00CC;
-}
-.itemBlock {
-    border-bottom:1px dotted #EEEEEE;
-    position:relative;
-    padding-top:5px;
-    padding-right:60px;
-}
-.inserting {
-    border-color:#AA00CC;
-}
-.insertButtonActive {
-    right: 0;
-    position: absolute;
-    bottom: -0.54em;
-    padding: 0;
-    background: white;
-    border: 0px;
-    font-size: 16px;
-    z-index:10000;
-    color: #AA00CC;
-    cursor: pointer;
-}
-.insertButton {
-    right: 0;
-    position: absolute;
-    z-index:10000;
-    bottom: -0.54em;
-    padding: 0;
-    background: white;
-    border: 0px;
-    font-size: 16px;
-    color: #0000CC;
-    cursor: pointer;
-}
-.itemOptions {
-position:absolute;
-right:0;
-top:10px;
-}
-.moreItemOptions {
-position:absolute;
-right:0;
-bottom:8px;
+/* APPLYING RULES */
+.sidebar-apply-group {
+  padding-bottom:5px;
+  padding-right:5px;
 }
 
-.movementButton:hover {
-    color: #AA00CC;
+/* TOP-LEVEL LAYOUT */
+.container {
+  display:flex;
+  flex-direction:row;
 }
-.movementButton {
-    padding: 0;
-    background: white;
-    border: 0px;
-    font-size: 16px;
-    color: #0091aa;
-    cursor: pointer;
+.document {
+  overflow:scroll;
+  width:70%;
+  height:100vh;
+  padding-left:20px;
+  padding-right:9px;
+  padding-top:0px;
+  white-space:nowrap;
+  box-sizing:border-box;
 }
-.editButton:hover {
-    color: #AA00CC;
+.document-endofcontent {
+  height:100px;
 }
-.editButton {
-    padding: 0;
-    background: white;
-    border: 0px;
-    font-size: 16px;
-    color: #0000CC;
-    cursor: pointer;
+.gutter {
+  cursor:col-resize;
 }
-.confirmButton:hover {
-    color: #AA00CC;
+.gutter:hover {
+  background:#FFEE88
 }
-.confirmButton {
-    padding: 0;
-    background: white;
-    border: 0px;
-    font-size: 16px;
-    color: #0000CC;
-    cursor: pointer;
-}
-.cancelButton:hover {
-    color: #AA00FF;
-} 
-.cancelButton {
-    padding: 0;
-    background: white;
-    border: 0px ;
-    font-size: 16px;
-    color: #666666;
-    cursor: pointer;
-}
-.goal:hover {
-  color:#AA00FF
-}
-.goal {
-    color: #0000CC;
-    cursor: pointer;
-    background: white;
-    border: 0px;
-    display: inline-block;
-    margin-bottom: 2px;
-font-size:20px;
-    padding: 0px;
-}
-.selectedGoal {
-    color: #AA00FF;
-    cursor: pointer;
-    background: white;
-    border: 0px;
-    display: inline-block;
-font-size:20px;
-    margin-bottom: 2px;
-    padding: 0px;
-}
-.conclusion {
-   font-family: 'NeoEulerMedium';
-}
-.comma {
-   padding-left:2px;
-   padding-right: 4px;
-}
-.prop {
-   font-family: 'NeoEulerMedium';
-}
-..hypconclusion {
-   font-family: 'NeoEulerMedium';
-        padding: 2px;
-}
-     .rulebox {
-       vertical-align:bottom;
-       padding-bottom:1.1em;
-       padding-left:2px;
-       padding-right:2px;
-   font-family: 'NeoEulerMedium';
-     }
-.mini {
-font-size: x-small;
-font-style: normal;
-}
-     .binderbox {
-       vertical-align:bottom;
-       padding-bottom:3px;
-       padding-left:2px;
-       padding-right:2px;
-   font-family: 'NeoEulerMedium';
-     }
-.placeholder {
-padding-left:1px;
-padding-right:1px;
-}
-     .goalstep {
-     }
   </style> 
   </head>
   <body>

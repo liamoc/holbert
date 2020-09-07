@@ -25,18 +25,18 @@ renderText txt = normalText txt
                                          (ctx,crest) | Just (_,rest) <- MS.uncons crest -> (map MS.unpack (MS.words ctx), rest)
                         in case fromSexps ctx (MS.unpack txt') of
                              Left _ ->  [text "$", text txt, text "$"]
-                             Right t -> [span_ [class_ "inlineMath"] [renderTermCtx ctx (TDO True True) t]]
+                             Right t -> [inline "inline-math" [renderTermCtx ctx (TDO True True) t]]
 
 renderParagraph textIn selected i (P.Paragraph txt) = 
-   block "paragraphBlock" $ case selected of 
+   block "" $ case selected of 
       ItemFocus i' (I.ParagraphFocus _) | i == i' ->
-         [ block "moreItemOptions" 
-            [ button "confirmButton" (ItemAction (Just i) (I.ParagraphAct P.Edit)) [typicon "tick-outline"]
-            , button "cancelButton" Reset [ typicon "times-outline"]
+         [ block "item-options-bottom" 
+            [ button "button-icon button-icon-blue" (ItemAction (Just i) (I.ParagraphAct P.Edit)) [typicon "tick-outline"]
+            , button "button-icon button-icon-grey" Reset [typicon "times-outline"]
             ]
          , expandingTextarea "ta" "paragraph" UpdateInput textIn
          ]
-      _ -> [ block "moreItemOptions" 
-              [ button "editButton" (SetFocus (ItemFocus i (I.ParagraphFocus P.Select))) [typicon "edit"]]
+      _ -> [ block "item-options-bottom" 
+              [ button "button-icon button-icon-blue" (SetFocus (ItemFocus i (I.ParagraphFocus P.Select))) [typicon "edit"]]
            , block "paragraph" (renderText txt)
            ] 
