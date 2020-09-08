@@ -20,6 +20,9 @@ renderProofTree opts pt selected = renderPT [] [] [] pt
     termDOs = tDOs opts
     ruleDOs = RDO {termDisplayOptions = termDOs, showInitialMetas = True, ruleStyle = Turnstile}
 
+    renderRR (Defn d) = definedrule d
+    renderRR (Local i) = localrule i
+
     renderPT rns ctx pth (PT sks lcls prp msgs) =
       let binders = (if showMetaBinders opts then concat (zipWith (metabinder' pth) [0 ..] sks) else [])
                  ++ (if assumptionsMode opts == Hidden then map rulebinder [length rns .. length rns + length lcls - 1] else [])
@@ -46,7 +49,10 @@ renderProofTree opts pt selected = renderPT [] [] [] pt
         rns' = map (Prop.raise (length sks)) rns ++ lcls
         ctx' = reverse sks ++ ctx
 
-        numberedAssumptions numbers assumptions = context (intersperse comma $ zipWith renderPropLabelled numbers assumptions)
+        numberedAssumptions numbers assumptions = wrap (intersperse comma $ zipWith renderPropLabelled numbers assumptions)
+          where wrap [] = multi []
+                wrap cs = inline "rule-context" cs
+
         renderPropLabelled i p = labelledBrackets (renderProp ctx' ruleDOs p) (localrule i)
 
     metabinder' pth i n = case selected of

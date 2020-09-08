@@ -54,6 +54,9 @@ renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (rul
       Just (selected, n) -> editableMath n (renderRR rr) R.NameFocus R.Rename [] selected
       Nothing -> renderRR rr
 
+    renderRR (Defn d) = definedrule d
+    renderRR (Local i) = localrule i
+
     isSelectedOrBinders pth = case editable of
       Just (selected, n) -> case selected of
         Just (R.RuleTermFocus pth')      | pth == pth' -> True

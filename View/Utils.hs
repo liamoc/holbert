@@ -5,36 +5,47 @@ import Miso
 import Miso.String (pack, unpack)
 import qualified Miso.String as MS
 import Data.List (intersperse, dropWhileEnd, groupBy)
-import ProofTree
 import Data.Char
 import Data.Maybe (fromMaybe)
 import qualified Data.Map as M
+
 data LocalAction f a = UpdateInput MS.MisoString | Reset | Act a | SetFocus f deriving (Show, Eq)
 
+mapLocalAction :: (a -> a')-> (b -> b') -> LocalAction a b -> LocalAction a' b'
+mapLocalAction f g (UpdateInput s) = UpdateInput s
+mapLocalAction f g Reset = Reset
+mapLocalAction f g (Act a) = Act (g a)
+mapLocalAction f g (SetFocus b) = SetFocus (f b)
+
+
+anchor i = a_ [id_ $ "anchor" <> pack (show i)]
 axiomHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i ["Axiom."]]
 theoremHeading i = div_ [class_ "item-rule-theoremheading"] [anchor i ["Theorem."]]
 metabinder v = span_ [ class_ "rule-binder" ] (name v ++ ["."])
-context [] = span_ [ ] []
-context v = span_ [class_ "rule-context" ] v
+
 space = span_ [class_ "space" ] [" "] 
 turnstile = span_ [class_ "symbol symbol-turnstile symbol-bold" ] ["⊢"] 
 miniTurnstile = sub_ [class_ "symbol-mini"] ["⊢"]
 comma = span_ [class_ "symbol symbol-bold symbol-comma" ] [","] 
 placeholder = span_ [class_ "placeholder" ] ["␣"] 
+
 localrule i = span_ [ class_ "rule-rulename-local" ] [text (pack (show i))]
-renderRR (Defn d) = span_ [ class_ "rule-rulename-defined" ] (name d)
-renderRR (Local i) = localrule i
-anchor i = a_ [id_ $ "anchor" <> pack (show i)]
+definedrule d =  span_ [ class_ "rule-rulename-defined" ] (name d)
+
 button cls onClk = button_ [class_ cls, type_ "button", onClick onClk]
 submitButton cls = button_ [class_ cls]
 focusedButton cls onClk content = multi [button_ [class_ cls, type_ "button", id_ "focusedButton", onClick onClk ] content
                                 , script_ [] "document.getElementById('focusedButton').focus();"]
+
 focusHack i = script_ [] $ "document.getElementById('" <> i <> "').focus(); document.getElementById('" <> i <> "').select();"
+
 typicon icn = span_ [class_ $ "typcn typcn-" <> icn] [] 
 block cls is = div_ [class_ cls] is
 inline cls is = span_ [class_ cls] is
 multi = span_ []
+
 labelledBrackets content label = multi [inline "symbol symbol-bold" ["⟨"], content, inline "symbol symbol-bold" ["⟩"], sup_ [] [ label ]]
+
 parenthesise = ([inline "symbol" ["("]] ++) . (++ [inline "symbol" [")"]])
 
 textbox i act n = input_ [id_ i, onInput act, value_ n]
@@ -83,7 +94,7 @@ editor typ act = editor' typ (Act act) UpdateInput Reset
 
 editor' typ act update reset n = form_
    [class_ $ "editor editor-" <> typ, onSubmit act]
-   [ (if typ == "expanding" then expandingTextbox else textbox) "editor-textbox" update n
+   [ (if typ `elem` ["expanding","newrule"] then expandingTextbox else textbox) "editor-textbox" update n
    , submitButton "button-icon button-icon-blue" [typicon "tick-outline"]
    , button "button-icon button-icon-grey" reset [typicon "times-outline"]
    , focusHack "editor-textbox"
