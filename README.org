@@ -1,0 +1,62 @@
+* Holbert
+
+Holbert is an interactive theorem prover, or proof assistant, based on higher order logic and natural deduction. 
+Furthermore, Holbert is graphical. It presents proofs and rules using conventional inference rule notation and proof trees. It is designed to be used by students, without
+any expertise on using a theorem prover. It does not feature proof scripts (in the traditional sense), tactics, or other such complications.
+
+You can try Holbert out by trying the live demo [[http://liamoc.net/holbert][here]] (this version may not be the latest one available from GitHub). This Holbert instance explains
+more about the rationale behind its design and my intended goals with it.
+
+Like Isabelle, Holbert is just a pure meta-logic. It does not define any connectives (like conjunction or disjunction) itself, although all can be defined within
+the system. For binding structures and quantifiers, higher order abstract syntax can be used.
+
+Unlike conventional theorem provers, Holbert's term language is just the untyped lambda calculus. While this technically makes the logic 
+unsound, it is much simpler to use as a pedagogical tool.
+
+Holbert is intended as a tool for education, and not as an industrial-strength proof assistant where theorems must be trusted. So, just avoid writing fixed point combinators
+and you should be fine.
+
+** Building, Installing
+
+Holbert is written in GHC Haskell, intended to be compiled with ~ghcjs~. It uses the Miso framework and the ~optics-core~ library. Acquiring GHCJS can be difficult,
+but I was able to follow the instructions on the [[https://github.com/dmjio/miso/blob/master/README.md][Miso readme]] to install it using ~nix~, and then I just used ~cabal~ from then on once 
+I had the ~ghcjs~ binaries. 
+
+Once it is set up, make sure that the ~OUTPUT~ variable in the ~Makefile~ points to wherever ~cabal~ builds the ~jsexe~ directory for the compiled app. To find out what this is, you can type:
+#+BEGIN_EXAMPLE
+cabal configure --ghcjs
+cabal build
+#+END_EXAMPLE
+The correct directory to set ~OUTPUT~ to will be listed as the last line in the build log (~Linking ...~), but you can also find it by typing:
+#+BEGIN_EXAMPLE
+find . | grep jsexe | head -1
+#+END_EXAMPLE
+
+Once the ~OUTPUT~ directory is set, you can build Holbert properly (including all resources) by typing:
+#+BEGIN_EXAMPLE
+make
+#+END_EXAMPLE
+And on Mac there is a shortcut to open the built app with
+#+BEGIN_EXAMPLE
+make open
+#+END_EXAMPLE
+
+** Licenses 
+
+Holbert is released under the BSD3 license. It includes the following free projects:
+- Computer Modern font families, released under the SIL Open Font License.
+- The Neo Euler font, also released under the SIL Open Font License.
+- The Typicons icon font, also released under the SIL Open Font License.
+
+Some code for the unification engine were taken from Tobias Nipkow's paper on the topic, as well as from Daniel Gratzer's higher order unification implementation in Haskell.
+
+** Future work
+
+- Support for user-directed instantiation of metavariables
+- Support for unresolved proof steps with deferred unification constraints
+- Saving and loading to an online server
+- "Books", multiple interlinked documents.
+- Support for deferred proof steps to lemmas.
+- (Built-in) support for equality
+- (Built-in) support for induction
+- And much much more!

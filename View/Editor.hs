@@ -51,7 +51,8 @@ viewEditor x =
       , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p)) rs
       ]
 
-    logo = div_ [class_ "sidebar-logo", onClick (SetFocus CreditsFocus)] [small_ [] ["click for credits"], "Holbert 0.1"]
+    logo = div_ [class_ "sidebar-logo", onClick (SetFocus CreditsFocus)]
+                [small_ [] ["click for credits"], inline "logo-text" ["Holbert"], space, "0.1"]
 
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]

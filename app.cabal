@@ -2,6 +2,8 @@
 version:             0.1.0.0
 synopsis:            An interactive proof assistant
 category:            Web
+license:             BSD3
+license-file:        LICENSE
 build-type:          Simple
 cabal-version:       >=1.10
 
