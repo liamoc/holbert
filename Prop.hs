@@ -1,5 +1,5 @@
 {-# LANGUAGE TupleSections, FlexibleContexts, GADTs #-}
-module Prop where 
+module Prop where
 import Control.Monad
 import Unification
 import qualified Terms as T
@@ -11,9 +11,16 @@ import StringRep
 import Optics.Indexed.Core
 import Optics.IxAffineTraversal
 import Optics.Lens
-import Optics.Iso 
+import Optics.Iso
 import Optics.Core
 
+type RuleName = String
+
+data RuleRef = Defn RuleName
+             | Local Int
+             deriving (Eq, Show)
+
+type NamedProp = (RuleRef, Prop)
 data Prop = Forall [String] [Prop] T.Term deriving (Eq, Ord, Show)
 
 type Path = [Int]
@@ -27,22 +34,22 @@ premise :: Int -> IxAffineTraversal' RuleContext Prop Prop
 premise n = premises % ix n
 
 path :: [Int] -> IxAffineTraversal' RuleContext Prop Prop
-path [] = iatraversal (Right . ([],)) (const id) 
+path [] = iatraversal (Right . ([],)) (const id)
 path (x:xs) = path xs %. premise x
 
 premises :: IxLens' RuleContext Prop [Prop]
-premises = ilens (\(Forall xs lcls _) -> (reverse xs, lcls)) 
+premises = ilens (\(Forall xs lcls _) -> (reverse xs, lcls))
                  (\(Forall xs _    t) lcls -> Forall xs lcls t)
 
-conclusion :: IxLens' RuleContext Prop T.Term 
-conclusion = ilens (\(Forall xs _    t) -> (reverse xs, t)) 
+conclusion :: IxLens' RuleContext Prop T.Term
+conclusion = ilens (\(Forall xs _    t) -> (reverse xs, t))
                    (\(Forall xs lcls _) t -> Forall xs lcls t)
 
-metabinders :: Lens' Prop [T.Id] 
-metabinders = lens (\(Forall xs _    _) -> xs) 
+metabinders :: Lens' Prop [T.Id]
+metabinders = lens (\(Forall xs _    _) -> xs)
                    (\(Forall _  lcls t) xs -> Forall xs lcls t)
 
-blank :: Prop 
+blank :: Prop
 blank = Forall [] [] (T.Const "???")
 
 removePremise :: Int -> Prop -> Prop
@@ -53,17 +60,17 @@ addBinder :: T.Id -> Prop -> Prop
 addBinder new (Forall vs lcls g) =  Forall (vs ++ [new]) (map (raise 1) lcls) (T.raise 1 g)
 
 isBinderUsed :: Int -> Prop -> Bool
-isBinderUsed x (Forall vs lcls g) = let 
+isBinderUsed x (Forall vs lcls g) = let
      dbi = length vs - x - 1
      used = T.isUsed dbi g || any (isUsed dbi) lcls
   in used
 
 removeBinder :: Int -> Prop -> Prop
-removeBinder x (Forall vs lcls g) = let 
+removeBinder x (Forall vs lcls g) = let
     dbi = length vs - x - 1
     (first,_:last) = splitAt x vs
     g' = T.subst (T.Const "???") dbi g
-    lcls' = map (subst (T.Const "???") dbi) lcls 
+    lcls' = map (subst (T.Const "???") dbi) lcls
  in Forall (first ++ last) lcls' g'
 
 isUsed :: Int -> Prop -> Bool
@@ -74,9 +81,9 @@ raise = raise' 0
 
 raise' :: Int -> Int -> Prop -> Prop
 raise' l n (Forall xs ps g) = Forall xs (map (raise' (l + length xs) n) ps) (T.raise' (l + length xs) n g )
- 
-subst :: T.Term -> Int -> Prop -> Prop 
-subst t n (Forall xs rls g) = let 
+
+subst :: T.Term -> Int -> Prop -> Prop
+subst t n (Forall xs rls g) = let
      t' = T.raise (length xs) t
      n' = n + length xs
      rls' = map (subst t' n') rls
@@ -94,6 +101,6 @@ getConclusionString p prp = let (ctx, trm) = fromJust (ipreview (path p %. concl
 
 setConclusionString :: Path -> String -> Prop -> Either String Prop
 setConclusionString p txt prp = iatraverseOf (path p %. conclusion) Right parse prp
-  where 
+  where
     parse ctx _ = fromSexps ctx txt
 

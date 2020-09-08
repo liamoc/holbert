@@ -11,7 +11,7 @@ instance Control Heading where
   data Action Heading = Edit
     deriving (Show, Eq)
 
-  editable Select (Heading i s) = Just s 
+  editable Select (Heading i s) = Just s
 
   leaveFocus _ = pure
 

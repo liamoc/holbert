@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module View.Term where
-
+import Miso
 import Terms
 import Editor 
 import View.Utils
-import Miso hiding (on)
-import Data.List (intersperse, dropWhileEnd, groupBy)
+import Data.List (intersperse)
 
 renderTerm = renderTermCtx []
 

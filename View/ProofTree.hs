@@ -1,27 +1,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 module View.ProofTree where
-
-import Terms
-import Prop
+import Miso
+import qualified Miso.String as MS
+import Data.List (intersperse)
+import Editor (DisplayOptions (..), RuleStyle (..), AssumptionsMode (..))
+import qualified Item as I
+import qualified Rule as R
+import qualified Prop as P
 import ProofTree
 import View.Prop
 import View.Utils
 import View.Term
-import Miso hiding (on)
-import Data.List (intersperse, dropWhileEnd, groupBy)
-import qualified Miso.String as MS
-import qualified Data.Map as M
-import qualified Item as I
-import qualified Rule as R
-import Editor (DisplayOptions (..), RuleStyle (..), AssumptionsMode (..))
 
 renderProofTree opts pt selected = renderPT [] [] [] pt
   where
     termDOs = tDOs opts
     ruleDOs = RDO {termDisplayOptions = termDOs, showInitialMetas = True, ruleStyle = Turnstile}
 
-    renderRR (Defn d) = definedrule d
-    renderRR (Local i) = localrule i
+    renderRR (P.Defn d) = definedrule d
+    renderRR (P.Local i) = localrule i
 
     renderPT rns ctx pth (PT sks lcls prp msgs) =
       let binders = (if showMetaBinders opts then concat (zipWith (metabinder' pth) [0 ..] sks) else [])
@@ -46,7 +43,7 @@ renderProofTree opts pt selected = renderPT [] [] [] pt
 
         rulebinder v = multi [localrule v, miniTurnstile]
 
-        rns' = map (Prop.raise (length sks)) rns ++ lcls
+        rns' = map (P.raise (length sks)) rns ++ lcls
         ctx' = reverse sks ++ ctx
 
         numberedAssumptions numbers assumptions = wrap (intersperse comma $ zipWith renderPropLabelled numbers assumptions)

@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Terms 
+module Terms
   ( Term (..), Masked (..), Id
   , raise, raise'
   , isUsed
@@ -18,10 +18,10 @@ import Data.Char (isSpace)
 
 -- Judge equality of terms modulo alpha equivalence.
 -- we do this by hiding names from the Eq instance.
-type Id = String 
-newtype Masked a = M a 
-instance Eq (Masked a) where 
-   _ == _ = True 
+type Id = String
+newtype Masked a = M a
+instance Eq (Masked a) where
+   _ == _ = True
 instance Show a => Show (Masked a) where
   show (M a) = show a
 instance Ord (Masked a) where

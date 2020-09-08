@@ -1,12 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Unification (unifier, fresh, UnifyM, runUnifyM, UnifyError) where
-import           Control.Monad
-import           Control.Monad.State
-import           Control.Monad.Trans
+import Control.Monad
+import Control.Monad.State
+import Control.Monad.Trans
 import Control.Monad.Except
 import qualified Data.Map.Strict     as M
-import           Data.Maybe
-import           Data.Foldable
+import Data.Maybe
+import Data.Foldable
 import qualified Data.Set            as S
 
 import Terms
@@ -23,7 +23,7 @@ lams [] t = t
 hnf xs f ss = lams xs (applyApTelescope f ss)
 
 occ f sS (MetaVar g) = (f == g)  || (case lookup g sS of
-                                      Just s -> occ f sS s 
+                                      Just s -> occ f sS s
                                       Nothing -> False)
 occ f sS (Ap s t) = occ f sS s || occ f sS t
 occ f sS (Lam _ t) = occ f sS t
@@ -41,7 +41,7 @@ incr = mapbnd (+1)
 red (Lam _ s) (LocalVar i : bs) js = red s bs (i:js)
 red s         bs                js = applyApTelescope (mapbnd (js !!) s) bs;
 
-devar sS s | (MetaVar f, is) <- peelApTelescope s   
+devar sS s | (MetaVar f, is) <- peelApTelescope s
            , Just t <- lookup f sS = devar sS (red t is [])
 devar sS s = s
 
@@ -69,8 +69,8 @@ proj sS s = case peelApTelescope (devar sS s) of
            pure ((f , hnf bs var bs' ):sS)
 
 
-flexflex1 f ym zn sS 
-    | ym == zn =  pure $ sS 
+flexflex1 f ym zn sS
+    | ym == zn =  pure $ sS
     | otherwise = do
        var <- fresh
        pure ((f, hnf ym var (pos (uncurry (==)) (zip ym zn))) : sS)
@@ -82,22 +82,22 @@ subset as bs = all (`elem` bs) as
 intersection :: (Eq a) => [a] -> [a] -> [a]
 intersection xs ys = filter (`elem` ys) xs
 
-flexflex2 f im g jn sS  
+flexflex2 f im g jn sS
     | im `subset` jn = pure $ ((g, lam' jn (MetaVar f) im) : sS )
     | jn `subset` im = pure $ ((f, lam' im (MetaVar g) jn) : sS)
     | otherwise = do
-         let kl = im `intersection` jn 
+         let kl = im `intersection` jn
          h <- fresh
          pure ((f, lam' im h kl ) : (g, lam' jn h kl ) : sS)
-  where 
+  where
     lam' im g jn = hnf im g (map (idx im) jn)
 
 
-flexflex f ym g zn sS 
-  | f == g = flexflex1 f ym zn sS 
+flexflex f ym g zn sS
+  | f == g = flexflex1 f ym zn sS
   | otherwise = flexflex2 f ym g zn sS
 
-flexrigid f im t sS 
+flexrigid f im t sS
   | occ f sS t = throwError "Unification failure (occurs check)"
   | otherwise  = let u = mapbnd (\i -> let (LocalVar n) = idx im (LocalVar i) in n) t
                   in proj((f,lams im u):sS) u
@@ -114,7 +114,7 @@ cases sS (s,t) = case (peelApTelescope s,peelApTelescope t) of
         (_,(MetaVar f,ym)) -> flexrigid f ym s sS
         ((a,sm),(b,tn)) -> rigidrigid a sm b tn sS
 
-rigidrigid a ss b ts sS 
+rigidrigid a ss b ts sS
   | a == b, length ss == length ts  = foldlM unif sS (zip ss ts)
   | otherwise = throwError "Unification Error (rigid, rigid)"
 
@@ -126,4 +126,4 @@ unifier :: Term-> Term -> UnifyM Subst
 unifier t1 t2 = fromUnifier <$> unif [] (t1,t2)
 
 
-runUnifyM = runState . runExceptT 
+runUnifyM = runState . runExceptT

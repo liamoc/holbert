@@ -1,17 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module View.Prop where
+import Miso
+import qualified Miso.String as MS
+import Editor (TermDisplayOptions(..),RuleStyle (..))
+import qualified Rule as R
 import Terms
-import ProofTree
 import Prop
 import View.Utils
 import View.Term
-import Miso hiding (on)
-import Data.List (intersperse, dropWhileEnd, groupBy)
-import Control.Monad
-import Editor (TermDisplayOptions(..),RuleStyle (..))
-import qualified Miso.String as MS
-import qualified Data.Map as M
-import qualified Rule as R
 
 data RuleDisplayOptions = RDO { termDisplayOptions :: TermDisplayOptions, showInitialMetas :: Bool, ruleStyle :: RuleStyle } 
 

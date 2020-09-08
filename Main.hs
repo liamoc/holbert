@@ -1,10 +1,8 @@
 {-# LANGUAGE RecordWildCards #-}
 module Main where
 import Miso
-import Controller
-import Editor
-import View.Editor
-
+import Editor (runAction, EditorAction (Reset), Editor, initialEditor)
+import View.Editor (viewEditor)
 
 main :: IO ()
 main = startApp App {..}
@@ -19,5 +17,5 @@ main = startApp App {..}
     logLevel      = Off
 
 updateModel :: EditorAction -> Editor -> Effect EditorAction Editor
-updateModel act ed = noEff $ runAction act ed
+updateModel act = noEff . runAction act
 
