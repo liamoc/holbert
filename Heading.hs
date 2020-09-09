@@ -1,9 +1,12 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, DeriveAnyClass, DeriveGeneric #-}
 module Heading where
 import Controller
 import Miso.String
+import GHC.Generics(Generic)
+import Data.Aeson (ToJSON,FromJSON)
 
-data Heading = Heading Int MisoString deriving (Show, Eq)
+data Heading = Heading Int MisoString 
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance Control Heading where
   data Focus Heading = Select

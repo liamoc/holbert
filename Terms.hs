@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, DeriveGeneric, DeriveAnyClass #-}
 module Terms
   ( Term (..), Masked (..), Id
   , raise, raise'
@@ -15,11 +15,12 @@ import qualified Data.Map as M
 import Data.String
 import Data.List (foldl')
 import Data.Char (isSpace)
-
+import GHC.Generics (Generic)
+import Data.Aeson (ToJSON, FromJSON)
 -- Judge equality of terms modulo alpha equivalence.
 -- we do this by hiding names from the Eq instance.
 type Id = String
-newtype Masked a = M a
+newtype Masked a = M a deriving (Generic, ToJSON, FromJSON)
 instance Eq (Masked a) where
    _ == _ = True
 instance Show a => Show (Masked a) where
@@ -35,7 +36,7 @@ data Term = LocalVar Index
           | Ap Term Term
           | Const String
           | Lam (Masked Id) Term
-          deriving (Show, Eq, Ord)
+          deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 invalidName "" = Just "Name cannot be empty"
 invalidName s | any isSpace s = Just "Name contains spaces"

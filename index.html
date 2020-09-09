@@ -7,6 +7,7 @@
 <link rel="stylesheet" type="text/css" href="typicons.min.css">
 <link rel="stylesheet" type="text/css" href="cmunfonts/fonts.css">
 <script src="split.min.js"></script>
+<script src="FileSaver.min.js"></script>
   <title> Holbert 0.1 </title>
   <style>
 @font-face {
@@ -117,8 +118,18 @@ h5 {
 .editor-newrule > input {
   font-family: 'Computer Modern Typewriter'
 }
+.editor-importbox {
+  padding:20px;
+}
+.editor-importbox > input {
+  width:100%;
+  font-family: 'Computer Modern Typewriter'
+}
+.editor-importbox > button {
+  float:right;
+}
 .editor-heading > input {
-  width 80%;
+  width: 80%;
   font-family: 'Computer Modern Concrete';
   font-weight:bold;
   margin-top:5px;
@@ -133,7 +144,7 @@ h5 {
   font-size:1.17em;
 }
 .h3 > input {
-  font-size:1.33em;
+  font-size:1em;
 }
 .h4 > input {
   font-size:0.83em;
@@ -285,6 +296,9 @@ button {
 .term-bound {
   color: #9343a7
 }
+.placeholder {
+  color: #AAA;
+}
 /* SYMBOLS */
 .symbol {
   color: #990000;
@@ -416,6 +430,7 @@ textarea.paragraph {
 /* LOGO */
 .logo-text {
   color: #c9dec9;
+  float:right;
   font-weight:normal;
   font-family:'NeoEulerMedium';
   font-style:normal;
@@ -425,12 +440,16 @@ textarea.paragraph {
   text-shadow: #006600 0px 0px 1px,   #006600 0px 0px 1px,   #006600 0px 0px 1px,
              #006600 0px 0px 1px,   #006600 0px 0px 1px,   #006600 0px 0px 1px;
 }
+.big-icon-link {
+  font-size:32px;
+}
 .sidebar-logo {
   font-style: italic;
   font-weight: bold;
+  padding-top:2px;
   padding-right: 10px;
+  padding-left: 10px;
   color: #CCCCCC;
-  text-align: right;
   flex: 0 1 auto;
 }
 .sidebar-logo > small {
@@ -438,10 +457,6 @@ textarea.paragraph {
   color:#CCCCCC;
   font-weight:normal;
   padding-right:8px;
-}
-.sidebar-logo:hover {
-  color:#AA00CC;
-  cursor:pointer;
 }
 /* INDEX */
 .sidebar-index {

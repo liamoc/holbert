@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, DeriveAnyClass, DeriveGeneric #-}
 module Rule where
 import qualified ProofTree as PT
 import qualified Prop as P
@@ -10,11 +10,15 @@ import Optics.Core
 import StringRep
 import Control.Monad(when)
 import Data.Maybe(fromMaybe)
+import GHC.Generics(Generic)
+import Data.Aeson (ToJSON,FromJSON)
 
-data Rule = R P.RuleName P.Prop (Maybe ProofState) deriving (Show, Eq)
+data Rule = R P.RuleName P.Prop (Maybe ProofState) 
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type Counter = Int
-data ProofState = PS PT.ProofTree Counter deriving (Show, Eq)
+data ProofState = PS PT.ProofTree Counter 
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 name :: Lens' Rule P.RuleName
 name = lensVL $ \act (R n prp m) -> (\n' -> R n' prp m) <$> act n

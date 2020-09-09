@@ -36,9 +36,9 @@ Once the ~OUTPUT~ directory is set, you can build Holbert properly (including al
 #+BEGIN_EXAMPLE
 make
 #+END_EXAMPLE
-And on Mac there is a shortcut to open the built app with
+And if you have ~python3~ there is a shortcut to start a server with the app with
 #+BEGIN_EXAMPLE
-make open
+make server
 #+END_EXAMPLE
 
 ** Licenses 
@@ -49,6 +49,11 @@ Holbert is released under the BSD3 license. It includes the following free proje
 - The Typicons icon font, also released under the SIL Open Font License.
 
 Some code for the unification engine were taken from Tobias Nipkow's paper on the topic, as well as from Daniel Gratzer's higher order unification implementation in Haskell.
+
+The following MIT licensed JS libraries are used:
+
+- [[https://github.com/nathancahill/split][Split.js]] by Nathan Cahill
+- [[https://github.com/eligrey/FileSaver.js][FileSaver.js]] by Eli Grey
 
 ** Future work
 

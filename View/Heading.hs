@@ -9,7 +9,7 @@ import View.Utils
 
 renderHeading i textIn selected (H.Heading l txt) = case selected of
   Just _ -> anchor i [editor ("heading h" <> (MS.pack $ show l)) H.Edit textIn]
-  _ -> button "editable editable-heading" (SetFocus H.Select)
+  _ -> button "editable editable-heading" "" (SetFocus H.Select)
     [ case l of
         0 -> h1_ [] [anchor i [text txt]]
         1 -> h2_ [] [anchor i [text txt]]

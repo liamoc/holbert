@@ -13,13 +13,15 @@ import View.Term
 import View.Prop
 import View.Utils hiding (LocalAction (..))
 
+version = "0.2"
+
 viewEditor :: Editor -> View EditorAction
 viewEditor x =
   div_ [class_ "container", onKeyDown (\(KeyCode kc) -> if kc == 27 then Reset else Noop)] $
-    [ div_ [class_ "document", id_ "document"] 
+    [ div_ [class_ "document", id_ "document"]
       $ renderDoc (inputText x) (displayOptions x) (currentFocus x) (document x) ++ [block "document-endofcontent" []]
-    , div_ [class_ "sidebar", id_ "sidebar"] 
-      $ logo
+    , div_ [class_ "sidebar", id_ "sidebar"]
+      $ toolbar
       : maybe id (\m -> (block "sidebar-errormessage" [text m] :)) (message x)
         [ block "sidebar-main" mainSidebar
         , renderDisplayOptions (displayOptions x)
@@ -33,15 +35,20 @@ viewEditor x =
          in concatMap (renderPropGroup i p ctx) rs
       NewItemFocus i -> newItemMenu i
       ItemFocus i (I.ParagraphFocus _) -> editingHelp
+      ImportFocus -> importForm
       CreditsFocus ->
         [ block "sidebar-header" ["Credits"]
         , block "sidebar-credits"
-          [ "Holbert is made by "
-          , a_ [href_ "http://liamoc.net"] ["Liam O'Connor"]
-          , ", a lecturer at the University of Edinburgh,"
-          , "using GHCJS and the Miso framework. Some icons are from the Typicons icon set by Stephen Hutchings."
-          , " It (will be) released under the BSD3 license."
-          , " Some code is based on work by Daniel Gratzer and Tobias Nipkow."
+          [ a_ [class_ "big-icon-link", title_ "github", href_ "https://github.com/liamoc/holbert"] [typicon "social-github-circular" ]
+          , a_ [class_ "big-icon-link", title_ "twitter", href_ "https://twitter.com/kamatsu8"] [typicon "social-twitter-circular" ]
+          , br_ [], small_ [] ["version ", text version] 
+          , p_ []
+            [ "Holbert is made by "
+            , a_ [href_ "http://liamoc.net"] ["Liam O'Connor"]
+            , ", a lecturer at the University of Edinburgh."
+            ]
+          , p_ [] [" It is released under the BSD3 license."]
+          , p_ [] ["Some icons are from the Typicons icon set by Stephen Hutchings."]
           ]
         ]
       _ -> [block "sidebar-header" ["Facts Summary:"], renderIndex $ document x]
@@ -51,19 +58,27 @@ viewEditor x =
       , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p)) rs
       ]
 
-    logo = div_ [class_ "sidebar-logo", onClick (SetFocus CreditsFocus)]
-                [small_ [] ["click for credits"], inline "logo-text" ["Holbert"], space, "0.1"]
+    toolbar = block "sidebar-logo"
+      [ iconButton "teal" "Download document" "download-outline" Download
+      , iconButton "teal" "Import from URL" "cloud-storage-outline" (SetFocus ImportFocus)
+      , iconButton "grey" "About Holbert" "info-large-outline" (SetFocus CreditsFocus)
+      , inline "logo-text" ["Holbert"]
+      ]
 
+    importForm =
+      [ block "sidebar-header" ["Import from URL"]
+      , editor' "importbox" Import UpdateInput Reset (inputText x)
+      ]
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]
-      , button "sidebar-insert" (SetFocus $ InsertingPropositionFocus False i) [block "item-rule-theoremheading" ["Axiom."]]
-      , button "sidebar-insert" (SetFocus $ InsertingPropositionFocus True i) [block "item-rule-theoremheading" ["Theorem."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus False i) [block "item-rule-theoremheading" ["Axiom."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus True i) [block "item-rule-theoremheading" ["Theorem."]]
       , block "sidebar-header" ["Text elements:"]
-      , button "sidebar-insert" (insertHeading i 1) [h2_ [] ["Heading 1"]]
-      , button "sidebar-insert" (insertHeading i 2) [h3_ [] ["Heading 2"]]
-      , button "sidebar-insert" (insertHeading i 3) [h4_ [] ["Heading 3"]]
-      , button "sidebar-insert" (insertHeading i 4) [h5_ [] ["Heading 4"]]
-      , button "sidebar-insert" (InsertItem i (I.Paragraph $ P.Paragraph "")) [block "sidebar-insert-paragraph" ["Paragraph"]]
+      , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
+      , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]
+      , button "sidebar-insert" "" (insertHeading i 3) [h4_ [] ["Heading 3"]]
+      , button "sidebar-insert" "" (insertHeading i 4) [h5_ [] ["Heading 4"]]
+      , button "sidebar-insert" "" (InsertItem i (I.Paragraph $ P.Paragraph "")) [block "sidebar-insert-paragraph" ["Paragraph"]]
       ]
     editingHelp =
       [ block "sidebar-header" ["Editing Help"]
@@ -119,16 +134,16 @@ renderDoc textIn opts selected script = zipWith go [0 ..] script
           inserting = selected == NewItemFocus i
           itemOptions
             | i > 0 =
-              block "item-options" 
-                $  [button "button-icon button-icon-red" (DeleteItem i) [typicon "trash"]]
-                ++ (if i > 1              then [button "button-icon button-icon-teal" (ShiftDown $ i -1) [typicon "arrow-up-outline"]] else [])
-                ++ (if i < scriptSize - 1 then [button "button-icon button-icon-teal" (ShiftDown i) [typicon "arrow-down-outline"]] else [])
+              block "item-options"
+                $  [iconButton "red" "Delete element" "trash" (DeleteItem i)]
+                ++ (if i > 1              then [iconButton "teal" "Shift element up" "arrow-up-outline" (ShiftDown $ i -1) ] else [])
+                ++ (if i < scriptSize - 1 then [iconButton "teal" "Shift element down" "arrow-down-outline" (ShiftDown i) ] else [])
             | otherwise = ""
           insertButton =
             let (cls, icn) = if inserting
-                  then ("button-icon button-icon-insert button-icon-active", "plus")
-                  else ("button-icon button-icon-insert button-icon-blue", "plus-outline")
-             in button cls (SetFocus $ NewItemFocus i) [typicon icn]
+                  then ("insert button-icon-active", "plus")
+                  else ("insert button-icon-blue", "plus-outline")
+             in iconButton cls "Insert new element" icn (SetFocus $ NewItemFocus i)
                   : case selected of
                     InsertingPropositionFocus isT i' | i == i' ->
                       [editorWithTitle (if isT then theoremHeading i else axiomHeading i) "newrule" (InsertProposition i isT) UpdateInput Reset textIn]
@@ -136,7 +151,7 @@ renderDoc textIn opts selected script = zipWith go [0 ..] script
        in block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton
 
 renderAvailableRule ctx opts (i, p) (rr, r) =
-  button "apply-option" (ItemAction (Just i) $ I.RuleAct $ R.Apply (rr, r) p) 
+  button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ R.Apply (rr, r) p)
     [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
   where
     ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}

@@ -1,0 +1,10 @@
+* Version 0.2
+- New feature: Tooltips are now on all icons
+- New feature: Can now download documents as a JSON blob
+- New feature: Can now load documents from a JSON blob via XHR
+- Change: Now loads index.holbert on startup
+- Bug fix: Does not display trash can on the base conclusion of a rule.
+- Bug fix: Fixed font sizes for heading editors
+
+* Version 0.1
+Pre-release version.

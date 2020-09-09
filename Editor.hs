@@ -50,6 +50,7 @@ data EditorFocus
   | NewItemFocus ItemIndex
   | InsertingPropositionFocus Bool ItemIndex
   | CreditsFocus
+  | ImportFocus
   deriving (Show, Eq)
 
 data EditorAction
@@ -63,12 +64,16 @@ data EditorAction
   | NewItemMenu ItemIndex
   | UpdateInput MS.MisoString
   | InsertItem ItemIndex I.Item
-  | InsertProposition ItemIndex Bool
+  | InsertProposition ItemIndex Bool  
+  | Download
+  | Import
+  | LoadDocument Document
+  | DisplayError MS.MisoString
   deriving (Show, Eq)
 
 initialEditor :: Editor
 initialEditor =
-  Editor [I.Heading $ H.Heading 0 "Holbert Playground"] NoFocus "" Nothing (O True Cumulative BarTurnstile (TDO True True))
+  Editor [I.Heading $ H.Heading 4 "Loading..."] NoFocus "index.holbert" Nothing (O True New BarTurnstile (TDO False True))
 
 after :: Int -> AffineTraversal' [a] (a, [a])
 after n = atraversalVL guts
@@ -167,3 +172,6 @@ runAction' (InsertProposition idx b) ed =
         "" -> Left "Name cannot be empty"
         _ | n `elem` concatMap defined (document ed) -> Left "Name already in use"
         _ -> runAction' (InsertItem idx (I.Rule item)) ed
+
+runAction' (LoadDocument m) ed = Right $ ed { document = m, currentFocus = NoFocus, message = Nothing}
+runAction' (DisplayError e) ed = Left (MS.unpack e)

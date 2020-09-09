@@ -1,17 +1,18 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, DeriveGeneric, DeriveAnyClass #-}
 module Item where
 
 import qualified Rule as R
 import qualified Heading as H
 import qualified Paragraph as P
 import Controller
-
+import GHC.Generics(Generic)
+import Data.Aeson (ToJSON,FromJSON)
 import Optics.Core
 
 data Item = Rule R.Rule
           | Heading H.Heading
           | Paragraph P.Paragraph
-          deriving (Show, Eq)
+          deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 
 rule :: Prism' Item R.Rule

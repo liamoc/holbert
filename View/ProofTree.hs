@@ -39,7 +39,7 @@ renderProofTree opts pt selected = renderPT [] [] [] pt
        in inferrule binders premises spacer ruleTitle conclusion
 
       where
-        addNix t = multi [t, button "button-icon button-icon-red" (Act $ R.Nix pth) [typicon "trash"]]
+        addNix t = multi [t, iconButton "red" "Delete proof subtree" "trash" (Act $ R.Nix pth)]
 
         rulebinder v = multi [localrule v, miniTurnstile]
 
@@ -54,11 +54,11 @@ renderProofTree opts pt selected = renderPT [] [] [] pt
 
     metabinder' pth i n = case selected of
       Just (R.ProofBinderFocus pth' i', n) | pth == pth', i == i' -> [metabinderEditor pth i n]
-      _ -> [button "editable editable-math" (SetFocus $ R.ProofBinderFocus pth i) [metabinder n]]
+      _ -> [button "editable editable-math" "" (SetFocus $ R.ProofBinderFocus pth i) [metabinder n]]
 
     metabinderEditor pth i n = editor "expanding" (R.RenameProofBinder pth i) n
 
     goalButton pth =
       if Just (R.GoalFocus pth) == fmap fst selected
-      then focusedButton "button-icon button-icon-active button-icon-goal" (SetFocus $ R.GoalFocus pth) [typicon "location"]
-      else button "button-icon button-icon-blue button-icon-goal" (SetFocus $ R.GoalFocus pth) [typicon "location-outline"]
+      then focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth) [typicon "location"]
+      else button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (SetFocus $ R.GoalFocus pth) [typicon "location-outline"]

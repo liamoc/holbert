@@ -1,13 +1,11 @@
-{-# LANGUAGE TupleSections, FlexibleContexts, GADTs #-}
+{-# LANGUAGE TupleSections, FlexibleContexts, GADTs, DeriveAnyClass, DeriveGeneric #-}
 module Prop where
-import Control.Monad
 import Unification
-import qualified Terms as T
-import Data.Maybe
-import Data.List
-import Debug.Trace
 import StringRep
-
+import qualified Terms as T
+import GHC.Generics(Generic)
+import Data.Aeson (ToJSON,FromJSON)
+import Data.Maybe (fromJust)
 import Optics.Indexed.Core
 import Optics.IxAffineTraversal
 import Optics.Lens
@@ -18,10 +16,10 @@ type RuleName = String
 
 data RuleRef = Defn RuleName
              | Local Int
-             deriving (Eq, Show)
+             deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 type NamedProp = (RuleRef, Prop)
-data Prop = Forall [String] [Prop] T.Term deriving (Eq, Ord, Show)
+data Prop = Forall [String] [Prop] T.Term deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 type Path = [Int]
 

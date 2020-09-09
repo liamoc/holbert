@@ -35,13 +35,18 @@ placeholder = inline "placeholder" ["␣"]
 localrule i = inline "rule-rulename-local" [text (MS.pack (show i))]
 definedrule d = inline "rule-rulename-defined" (name d)
 
-button cls onClk = button_ [class_ cls, type_ "button", onClick onClk]
-submitButton cls = button_ [class_ cls]
-focusedButton cls onClk content =
+button cls title onClk 
+  | MS.null title = button_ [class_ cls, type_ "button", onClick onClk]
+  | otherwise     = button_ [class_ cls, type_ "button", title_ title, onClick onClk]
+
+submitButton cls title = button_ [class_ cls, title_ title]
+focusedButton cls title onClk content =
   multi
-    [ button_ [class_ cls, type_ "button", id_ "focusedButton", onClick onClk] content
+    [ button_ [class_ cls, title_ title, type_ "button", id_ "focusedButton", onClick onClk] content
     , script_ [] "document.getElementById('focusedButton').focus();"
     ]
+
+iconButton typ title icn act = button ("button-icon button-icon-" <> typ) title act [typicon icn] 
 
 focusHack i = script_ []
   $  "document.getElementById('" <> i <> "').focus();"
@@ -115,8 +120,8 @@ editor' typ act update reset n =
   form_
     [class_ $ "editor editor-" <> typ, onSubmit act]
     [ (if typ `elem` ["expanding", "newrule"] then expandingTextbox else textbox) "editor-textbox" update n
-    , submitButton "button-icon button-icon-blue" [typicon "tick-outline"]
-    , button "button-icon button-icon-grey" reset [typicon "times-outline"]
+    , submitButton "button-icon button-icon-blue" "Confirm" [typicon "tick-outline"]
+    , iconButton "grey" "Cancel" "times-outline" reset 
     , focusHack "editor-textbox"
     ]
 
@@ -125,14 +130,14 @@ editorWithTitle title typ act update reset n =
     [class_ $ "editor editor-" <> typ, onSubmit act]
     [ title
     , (if typ == "expanding" then expandingTextbox else textbox) "editor-textbox" update n
-    , submitButton "button-icon button-icon-blue" [typicon "tick-outline"]
-    , button "button-icon button-icon-grey" reset [typicon "times-outline"]
+    , submitButton "button-icon button-icon-blue" "Confirm" [typicon "tick-outline"]
+    , iconButton "grey" "Cancel" "times-outline" reset
     , focusHack "editor-textbox"
     ]
 
 editableMath text view focus act extraActions selected
   | selected == Just focus = if null extraActions then ed else multi (ed : extraActions)
-  | otherwise = button "editable editable-math" (SetFocus focus) [view]
+  | otherwise = button "editable editable-math" "" (SetFocus focus) [view]
   where
     ed = editor "expanding" act text
 

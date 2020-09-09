@@ -1,4 +1,4 @@
-{-# LANGUAGE TupleSections, FlexibleContexts, GADTs #-}
+{-# LANGUAGE TupleSections, FlexibleContexts, GADTs, DeriveGeneric, DeriveAnyClass #-}
 module ProofTree where
 
 import Data.Maybe
@@ -6,6 +6,8 @@ import Data.List
 import Control.Monad
 import Control.Monad.Writer (WriterT (..), tell)
 import Control.Monad.Trans (lift)
+import GHC.Generics(Generic)
+import Data.Aeson (ToJSON,FromJSON)
 import qualified Prop as P
 import qualified Terms as T
 import StringRep
@@ -13,7 +15,7 @@ import Unification
 import Optics.Core
 
 data ProofTree = PT [T.Id] [P.Prop] T.Term (Maybe (P.RuleRef, [ProofTree]))
-               deriving (Eq, Show)
+               deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 type Path = [Int]
 

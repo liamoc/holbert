@@ -22,7 +22,7 @@ renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (rul
           Just (selected, n) -> case selected of
             Just (R.NewRuleBinderFocus pth') | pth == pth' -> [editor "expanding" (R.AddRuleBinder pth) n]
             Just (R.RuleTermFocus pth') | pth == pth' ->
-                [ button "button-icon button-icon-blue button-icon-addbinder" (SetFocus $ R.NewRuleBinderFocus pth) [typicon "plus"]
+                [ iconButton "blue button-icon-addbinder" "Add Variable" "plus" (SetFocus $ R.NewRuleBinderFocus pth)
                 , inline "metabinder" ["."]
                 ]
             _ -> []
@@ -34,14 +34,14 @@ renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (rul
     metabinder' pth i n = case editable of
       Just (selected, n') ->
         editableMath n' (metabinder n) (R.RuleBinderFocus pth i) (R.RenameRuleBinder pth i)
-          [button "button-icon button-icon-red" (Act $ R.DeleteRuleBinder pth i) [typicon "trash"]]
+          [iconButton "red" "Remove Variable" "trash" (Act $ R.DeleteRuleBinder pth i)]
           selected
       Nothing -> metabinder n
 
     renderTerm' ctx pth trm = case editable of
       Just (selected, n) ->
         editableMath n (renderTermCtx ctx (termDisplayOptions opts) trm) (R.RuleTermFocus pth) (R.UpdateTerm pth)
-          [button "button-icon button-icon-red" (Act $ R.DeletePremise pth) [typicon "trash"]]
+          (if null pth then [] else [iconButton "red" "Delete Premise" "trash" (Act $ R.DeletePremise pth)])
           selected
       Nothing -> renderTermCtx ctx (termDisplayOptions opts) trm
 
@@ -77,7 +77,7 @@ renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (rul
           premises = zipWith renderNext (map (: pth) [0 ..]) lcls
           spacer =
             if isSelected pth
-              then button "button-icon button-icon-blue button-icon-addpremise" (Act $ R.AddPremise pth) [typicon "plus-outline"]
+              then iconButton "blue button-icon-addpremise" "Add Premise" "plus-outline" (Act $ R.AddPremise pth)
               else ""
           ruleTitle = fmap renderRR' title
           conclusion = [renderTerm' ctx' pth g]

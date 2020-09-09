@@ -33,13 +33,13 @@ renderParagraph textIn selected (P.Paragraph txt) =
   block "" $ case selected of
     Just P.Select ->
       [ block "item-options-bottom"
-        [ button "button-icon button-icon-blue" (Act P.Edit) [typicon "tick-outline"]
-        , button "button-icon button-icon-grey" Reset [typicon "times-outline"]
+        [ iconButton "blue" "Confirm edits" "tick-outline" (Act P.Edit)
+        , iconButton "grey" "Cancel edits" "times-outline" Reset
         ]
       , expandingTextarea "ta" "paragraph" UpdateInput textIn
       ]
     Nothing ->
       [ block "item-options-bottom"
-        [button "button-icon button-icon-blue" (SetFocus P.Select) [typicon "edit"]]
+        [ iconButton "blue" "Edit paragraph" "edit" (SetFocus P.Select)]
       , block "paragraph" (renderText txt)
       ]            

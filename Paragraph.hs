@@ -1,8 +1,10 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, DeriveGeneric, DeriveAnyClass #-}
 module Paragraph where
 import Miso.String
 import Controller
-data Paragraph = Paragraph MisoString deriving (Show, Eq)
+import GHC.Generics(Generic)
+import Data.Aeson (ToJSON,FromJSON)
+data Paragraph = Paragraph MisoString deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance Control Paragraph where
   data Focus Paragraph = Select
