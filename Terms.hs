@@ -19,7 +19,7 @@ import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
 -- Judge equality of terms modulo alpha equivalence.
 -- we do this by hiding names from the Eq instance.
-type Id = String
+type Id = Int
 newtype Masked a = M a deriving (Generic, ToJSON, FromJSON)
 instance Eq (Masked a) where
    _ == _ = True
@@ -35,7 +35,7 @@ data Term = LocalVar Index
           | MetaVar Id
           | Ap Term Term
           | Const String
-          | Lam (Masked Id) Term
+          | Lam (Masked String) Term
           deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 invalidName "" = Just "Name cannot be empty"
@@ -109,7 +109,7 @@ instance Monoid Subst where
 applySubst :: Subst -> Term -> Term
 applySubst (S s) t = reduce $ M.foldrWithKey (\mv sol t -> substMV sol mv t) t s
 
-fromUnifier :: [(String,Term)] -> Subst
+fromUnifier :: [(Id,Term)] -> Subst
 fromUnifier [] = mempty
 fromUnifier ((x,v):ts) = let S s = fromUnifier ts
                           in S $ M.insert x v (substMV v x <$> s)

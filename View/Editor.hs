@@ -13,7 +13,7 @@ import View.Term
 import View.Prop
 import View.Utils hiding (LocalAction (..))
 
-version = "0.2"
+version = "0.3"
 
 viewEditor :: Editor -> View EditorAction
 viewEditor x =

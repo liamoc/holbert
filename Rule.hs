@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, DeriveAnyClass, DeriveGeneric #-}
+{-# LANGUAGE TypeFamilies, DeriveAnyClass, DeriveGeneric, OverloadedStrings #-}
 module Rule where
 import qualified ProofTree as PT
 import qualified Prop as P
@@ -22,7 +22,6 @@ data ProofState = PS PT.ProofTree Counter
 
 name :: Lens' Rule P.RuleName
 name = lensVL $ \act (R n prp m) -> (\n' -> R n' prp m) <$> act n
-
 
 blankAxiom :: P.RuleName -> Rule
 blankAxiom n = (R n P.blank Nothing)
@@ -76,6 +75,7 @@ instance Control Rule where
                   | NewRuleBinderFocus P.Path
                   | RuleTermFocus P.Path
                   | NameFocus
+                  | MetavariableFocus Int
                   deriving (Show, Eq)
 
   data Action Rule = Apply P.NamedProp PT.Path
@@ -88,6 +88,7 @@ instance Control Rule where
                    | AddPremise P.Path
                    | DeletePremise P.Path
                    | Rename
+                   | InstantiateMetavariable Int
                    deriving (Show, Eq)
 
   defined (R n _ _) = [n]
@@ -101,6 +102,7 @@ instance Control Rule where
   editable (ProofBinderFocus pth i) = fmap pack . preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
   editable (RuleBinderFocus pth i) = fmap pack . preview (prop % P.path pth % P.metabinders % ix i)
   editable (RuleTermFocus pth) = Just . pack . P.getConclusionString pth . view prop
+  editable (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
   editable NameFocus = fmap pack . preview name
   editable _ = const Nothing
 
@@ -164,6 +166,12 @@ instance Control Rule where
          case pth of [] -> clearFocus
                      (_:pth') -> setFocus (RuleTermFocus pth')
          pure $ over propUpdate id state' --hack..
+  handle (InstantiateMetavariable i) state = do 
+    new <- textInput 
+    case fromSexps [] new of 
+      Left e -> errorMessage $ "Parse error: " ++ e 
+      Right obj -> do 
+         pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
 
   handle (AddPremise pth) state = do
      invalidate (view name state)

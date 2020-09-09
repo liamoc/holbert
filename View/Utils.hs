@@ -14,6 +14,8 @@ mapLocalAction f g Reset = Reset
 mapLocalAction f g (Act a) = Act (g a)
 mapLocalAction f g (SetFocus b) = SetFocus (f b)
 
+noActionsCoerce :: View a -> View b 
+noActionsCoerce = fmap (const $ error "Actions triggered on a noActionsCoerce node!")
 
 block cls is = div_ [class_ cls] is
 inline cls is = span_ [class_ cls] is

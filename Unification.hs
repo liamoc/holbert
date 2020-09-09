@@ -55,7 +55,7 @@ idx (b:bs) b' = if b==b' then LocalVar(length bs) else idx bs b'
 idx [] _ = LocalVar(-10000)
 
 
-fresh = MetaVar . show <$> lift gen
+fresh = MetaVar <$> lift gen
 
 proj sS s = case peelApTelescope (devar sS s) of
         (Lam _ t,_) -> proj sS t

@@ -12,7 +12,7 @@ import View.Prop
 import View.Utils
 import View.Term
 
-renderProofTree opts pt selected = renderPT [] [] [] pt
+renderProofTree opts pt selected textIn = renderPT [] [] [] pt
   where
     termDOs = tDOs opts
     ruleDOs = RDO {termDisplayOptions = termDOs, showInitialMetas = True, ruleStyle = Turnstile}
@@ -30,7 +30,13 @@ renderProofTree opts pt selected = renderPT [] [] [] pt
 
           ruleTitle = Just $ maybe "?" (addNix . renderRR . fst) msgs
 
-          conclusionTerm = renderTermCtx ctx' termDOs prp
+          conclusionTerm = renderTermCtxEditable 
+              (Just 
+                ( textIn
+                , R.MetavariableFocus
+                , R.InstantiateMetavariable
+                , selected
+                )) ctx' termDOs prp
 
           conclusion = case assumptionsMode opts of
             New | not (null lcls) -> [numberedAssumptions [length rns ..] lcls, turnstile, conclusionTerm]
@@ -50,15 +56,15 @@ renderProofTree opts pt selected = renderPT [] [] [] pt
           where wrap [] = multi []
                 wrap cs = inline "rule-context" cs
 
-        renderPropLabelled i p = labelledBrackets (renderProp ctx' ruleDOs p) (localrule i)
+        renderPropLabelled i p = labelledBrackets (renderPropNameE (InProofTree (selected, textIn)) Nothing ctx' ruleDOs p) (localrule i)
 
     metabinder' pth i n = case selected of
-      Just (R.ProofBinderFocus pth' i', n) | pth == pth', i == i' -> [metabinderEditor pth i n]
+      Just (R.ProofBinderFocus pth' i') | pth == pth', i == i' -> [metabinderEditor pth i textIn]
       _ -> [button "editable editable-math" "" (SetFocus $ R.ProofBinderFocus pth i) [metabinder n]]
 
     metabinderEditor pth i n = editor "expanding" (R.RenameProofBinder pth i) n
 
     goalButton pth =
-      if Just (R.GoalFocus pth) == fmap fst selected
+      if Just (R.GoalFocus pth) == selected
       then focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth) [typicon "location"]
       else button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (SetFocus $ R.GoalFocus pth) [typicon "location-outline"]

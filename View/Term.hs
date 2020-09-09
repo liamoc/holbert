@@ -5,10 +5,16 @@ import Terms
 import Editor 
 import View.Utils
 import Data.List (intersperse)
+import qualified Miso.String as MS
+renderTerm opts trm = renderTermCtx [] opts trm
 
-renderTerm = renderTermCtx []
+renderTermCtx :: [String] -> TermDisplayOptions -> Term -> View a
+renderTermCtx context opts trm = noActionsCoerce $ (renderTermCtxEditable Nothing context opts trm :: View (LocalAction Bool Bool))
 
-renderTermCtx context opts trm = renderTerm' True context trm
+renderTermCtxEditable :: (Eq focus, Eq action) 
+                      => Maybe (MS.MisoString, Int -> focus, Int -> action, Maybe focus) 
+                      -> [String] -> TermDisplayOptions -> Term -> View (LocalAction focus action)
+renderTermCtxEditable editable context opts trm = renderTerm' True context trm
   where
     renderTerm' outer ctx (Lam (M v) t) = binder v (renderTerm' True (v : ctx) t)
     renderTerm' outer ctx other = renderTerm'' outer ctx other
@@ -19,7 +25,9 @@ renderTermCtx context opts trm = renderTerm' True context trm
           | j >= length ctx -> boundName (show j)
           | length ctx - j <= length context -> freevar (ctx !! j)
           | otherwise -> boundName (ctx !! j)
-        MetaVar i -> metavar i
+        MetaVar i -> case editable of 
+          Nothing -> metavar i
+          Just (textIn, focus, act, selected) -> editableMath textIn (metavar i) (focus i) (act i) [] selected
         Const s -> constant s
 
       | (Const n, [], args) <- peelApTelescope' t
@@ -37,7 +45,7 @@ renderTermCtx context opts trm = renderTerm' True context trm
         infixTerms str args | (first, rest) <- span (/= '_') str = constant first : infixTerms rest args
 
     freevar v = inline "term-freevar" (name v)
-    metavar v = inline "term-metavar" (name ('?' : v))
+    metavar v = inline "term-metavar" (name ('?' : show v))
     constant v = inline "term-const" (name v)
     boundName txt = inline "term-bound" (name txt)
     binder txt bdy = inline "term-binder" $ [boundName txt, ".", space, bdy]

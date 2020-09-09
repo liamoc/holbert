@@ -57,11 +57,8 @@ The following MIT licensed JS libraries are used:
 
 ** Future work
 
-- Support for user-directed instantiation of metavariables
-- Support for unresolved proof steps with deferred unification constraints
-- Saving and loading to an online server
-- "Books", multiple interlinked documents.
 - Support for deferred proof steps to lemmas.
+- "Books", multiple interlinked documents.
 - (Built-in) support for equality
 - (Built-in) support for induction
 - And much much more!

@@ -1,3 +1,8 @@
+* Version 0.3
+- New feature: Can now instantiate metavariables in proofs
+- Improvement: Metavariables are represented numerically for efficiency.
+- Bug fix: Incorrect version number in HTML title 
+
 * Version 0.2
 - New feature: Tooltips are now on all icons
 - New feature: Can now download documents as a JSON blob

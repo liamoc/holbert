@@ -14,11 +14,11 @@ import qualified Prop as P
 
 renderRule i opts textIn selected (R.R name prop mpt) = div_ []
   $ (if isNothing mpt then axiomHeading else theoremHeading) i
-  : block "rule" [renderPropNameE (Just (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
+  : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
   : case mpt of 
       Just ps -> 
         [ proofHeading
-        , block "item-rule-proofbox" [renderProofTree opts (ps ^. R.proofTree) (fmap (, textIn) selected)]
+        , block "item-rule-proofbox" [renderProofTree opts (ps ^. R.proofTree) selected textIn]
         ]
       Nothing ->  []
   where

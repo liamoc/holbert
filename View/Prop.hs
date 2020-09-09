@@ -12,14 +12,17 @@ import View.Term
 data RuleDisplayOptions = RDO { termDisplayOptions :: TermDisplayOptions, showInitialMetas :: Bool, ruleStyle :: RuleStyle } 
 
 renderProp = renderPropName Nothing
-renderPropName = renderPropNameE Nothing
+renderPropName = renderPropNameE NotEditable
+data EditableMode = NotEditable
+                  | Editable (Maybe (R.Focus R.Rule), MS.MisoString)
+                  | InProofTree (Maybe (R.Focus R.Rule), MS.MisoString)
 
 renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (ruleStyle opts) ctx [] prp
   where
     metabinders pth vs = wrap $
       zipWith (metabinder' pth) [0 ..] vs ++
         case editable of
-          Just (selected, n) -> case selected of
+          Editable (selected, n) -> case selected of
             Just (R.NewRuleBinderFocus pth') | pth == pth' -> [editor "expanding" (R.AddRuleBinder pth) n]
             Just (R.RuleTermFocus pth') | pth == pth' ->
                 [ iconButton "blue button-icon-addbinder" "Add Variable" "plus" (SetFocus $ R.NewRuleBinderFocus pth)
@@ -32,36 +35,40 @@ renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (rul
         wrap cs = inline "rule-binders" cs
 
     metabinder' pth i n = case editable of
-      Just (selected, n') ->
+      Editable (selected, n') ->
         editableMath n' (metabinder n) (R.RuleBinderFocus pth i) (R.RenameRuleBinder pth i)
           [iconButton "red" "Remove Variable" "trash" (Act $ R.DeleteRuleBinder pth i)]
           selected
-      Nothing -> metabinder n
+      _ -> metabinder n
 
     renderTerm' ctx pth trm = case editable of
-      Just (selected, n) ->
+      Editable (selected, n) ->
         editableMath n (renderTermCtx ctx (termDisplayOptions opts) trm) (R.RuleTermFocus pth) (R.UpdateTerm pth)
           (if null pth then [] else [iconButton "red" "Delete Premise" "trash" (Act $ R.DeletePremise pth)])
           selected
-      Nothing -> renderTermCtx ctx (termDisplayOptions opts) trm
+      InProofTree (selected, n) -> 
+        renderTermCtxEditable (Just (n, R.MetavariableFocus, R.InstantiateMetavariable, selected)) ctx (termDisplayOptions opts) trm
+      _ -> renderTermCtx ctx (termDisplayOptions opts) trm
 
     renderRR' rr@(Local n) = renderRR rr
     renderRR' rr@(Defn n) = case editable of
-      Just (selected, n) -> editableMath n (renderRR rr) R.NameFocus R.Rename [] selected
-      Nothing -> renderRR rr
+      Editable (selected, n) -> editableMath n (renderRR rr) R.NameFocus R.Rename [] selected
+      _ -> renderRR rr
 
     renderRR (Defn d) = definedrule d
     renderRR (Local i) = localrule i
 
     isSelectedOrBinders pth = case editable of
-      Just (selected, n) -> case selected of
+      Editable (selected, n) -> case selected of
         Just (R.RuleTermFocus pth')      | pth == pth' -> True
         Just (R.RuleBinderFocus pth' _)  | pth == pth' -> True
         Just (R.NewRuleBinderFocus pth') | pth == pth' -> True
         _ -> False
       _ -> False
 
-    isSelected pth = fmap fst editable == Just (Just (R.RuleTermFocus pth))
+    isSelected pth = case editable of 
+      Editable (Just (R.RuleTermFocus pth'),_) -> pth == pth'  
+      otherwise -> False      
 
     renderP showMetas title style ctx pth (Forall sks lcls g) =
       let (renderer, nextStyle) = case style of

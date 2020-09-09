@@ -23,7 +23,7 @@ data Prop = Forall [String] [Prop] T.Term deriving (Eq, Ord, Show, Generic, ToJS
 
 type Path = [Int]
 
-type RuleContext = [T.Id]
+type RuleContext = [String]
 
 infixl 9 %.
 (%.) a b = icompose (flip (++)) (a % b)
@@ -43,7 +43,7 @@ conclusion :: IxLens' RuleContext Prop T.Term
 conclusion = ilens (\(Forall xs _    t) -> (reverse xs, t))
                    (\(Forall xs lcls _) t -> Forall xs lcls t)
 
-metabinders :: Lens' Prop [T.Id]
+metabinders :: Lens' Prop [String]
 metabinders = lens (\(Forall xs _    _) -> xs)
                    (\(Forall _  lcls t) xs -> Forall xs lcls t)
 
@@ -54,7 +54,7 @@ removePremise :: Int -> Prop -> Prop
 removePremise i (Forall vs lcls g) = let (first,_:rest) = splitAt i lcls
                                       in Forall vs (first ++ rest) g
 
-addBinder :: T.Id -> Prop -> Prop
+addBinder :: String -> Prop -> Prop
 addBinder new (Forall vs lcls g) =  Forall (vs ++ [new]) (map (raise 1) lcls) (T.raise 1 g)
 
 isBinderUsed :: Int -> Prop -> Bool
