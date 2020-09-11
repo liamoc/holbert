@@ -1,3 +1,7 @@
+* Version 0.3.1
+- Improvement: Banished `String` representations to improve performance 
+- Improvement: UI Performance greatly improved by not updating model on every keystroke.
+
 * Version 0.3
 - New feature: Can now instantiate metavariables in proofs
 - Improvement: Metavariables are represented numerically for efficiency.

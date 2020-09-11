@@ -6,7 +6,7 @@ import Data.Maybe (isNothing)
 import View.Utils
 import View.Prop
 import View.ProofTree
-import Editor (DisplayOptions (..))
+import DisplayOptions
 import qualified Item as I
 import qualified Rule as R
 import qualified ProofTree as PT

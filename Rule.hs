@@ -6,6 +6,7 @@ import qualified Terms as T
 import Controller
 import Unification
 import Miso.String (MisoString, pack)
+import qualified Miso.String as MS
 import Optics.Core
 import StringRep
 import Control.Monad(when)
@@ -63,9 +64,9 @@ runUnifyPS act (PS pt c) = case runUnifyM (act pt) c of
                              (Left e, c) -> Left e
                              (Right pt',c') -> Right (PS pt' c')
 
-checkVariableName :: String -> Controller (Focus Rule) ()
+checkVariableName :: MS.MisoString -> Controller (Focus Rule) ()
 checkVariableName new = case T.invalidName new of
-  Just e  -> errorMessage $ "Invalid variable name: "  ++ e
+  Just e  -> errorMessage $ "Invalid variable name: " <> pack e
   Nothing -> pure ()
 
 instance Control Rule where
@@ -99,11 +100,11 @@ instance Control Rule where
 
   renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r
 
-  editable (ProofBinderFocus pth i) = fmap pack . preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
-  editable (RuleBinderFocus pth i) = fmap pack . preview (prop % P.path pth % P.metabinders % ix i)
-  editable (RuleTermFocus pth) = Just . pack . P.getConclusionString pth . view prop
+  editable (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
+  editable (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
+  editable (RuleTermFocus pth) = Just . P.getConclusionString pth . view prop
   editable (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
-  editable NameFocus = fmap pack . preview name
+  editable NameFocus = preview name
   editable _ = const Nothing
 
 
@@ -149,9 +150,7 @@ instance Control Rule where
      clearFocus -- should it be updateterm?
      pure $ set (prop % P.path pth % P.metabinders % ix i) new state
 
-  handle (DeleteRuleBinder pth i) state = do
-     new <- textInput
-     checkVariableName new
+  handle (DeleteRuleBinder pth i) state = do     
      when (maybe False (P.isBinderUsed i) $ preview (prop % P.path pth) state) $ errorMessage "Cannot remove binder: is in use"
      invalidate (view name state)
      clearFocus
@@ -160,7 +159,7 @@ instance Control Rule where
   handle (UpdateTerm pth) state = do
      new <- textInput
      case toLensVL prop (P.setConclusionString pth new) state of
-       Left e -> errorMessage $ "Parse error: " ++ e
+       Left e -> errorMessage $ "Parse error: " <> e
        Right state' -> do
          invalidate (view name state')
          case pth of [] -> clearFocus
@@ -169,8 +168,8 @@ instance Control Rule where
   handle (InstantiateMetavariable i) state = do 
     new <- textInput 
     case fromSexps [] new of 
-      Left e -> errorMessage $ "Parse error: " ++ e 
-      Right obj -> do 
+      Left e -> errorMessage $ "Parse error: " <> e 
+      Right obj -> do
          pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
 
   handle (AddPremise pth) state = do

@@ -14,12 +14,12 @@ import StringRep
 import Unification
 import Optics.Core
 
-data ProofTree = PT [String] [P.Prop] T.Term (Maybe (P.RuleRef, [ProofTree]))
+data ProofTree = PT [T.Name] [P.Prop] T.Term (Maybe (P.RuleRef, [ProofTree]))
                deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 type Path = [Int]
 
-data Context = Context { bound :: [String], locals :: [P.Prop] } deriving (Show)
+data Context = Context { bound :: [T.Name], locals :: [P.Prop] } deriving (Show)
 
 instance Semigroup Context where
   Context bs lcls <> Context bs' lcls' = Context (bs' ++ bs) (map (P.raise (length bs')) lcls ++ lcls')
@@ -51,7 +51,7 @@ inference :: IxLens' Context ProofTree T.Term
 inference = ilens (\(PT xs lcls t _ ) -> (Context (reverse xs) lcls, t))
                   (\(PT xs lcls _ sg) t -> PT xs lcls t sg)
 
-goalbinders :: Lens' ProofTree [String]
+goalbinders :: Lens' ProofTree [T.Name]
 goalbinders = lens (\(PT xs _   _ sg) -> xs)
                    (\(PT _ lcls t sg) xs -> PT xs lcls t sg)
 
@@ -89,7 +89,7 @@ apply (r,prp) p pt = do
        tell subst
        pure $ PT xs lcls t (Just (r,sgs))
 
-    applyRule :: [String] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
+    applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRule skolems g (P.Forall (m :ms) sgs g') = do
        n <- fresh
        let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])

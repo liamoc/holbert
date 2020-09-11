@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module View.Paragraph where
 import Miso 
-import Editor (TermDisplayOptions (..))
+import DisplayOptions
 import StringRep
 import qualified Item as I
 import qualified Miso.String as MS
@@ -24,8 +24,8 @@ renderText txt = normalText txt
     tagsFor '$' txt =
       let (ctx, txt') = case MS.span (/= ':') txt of
             (_, crest) | MS.null crest -> ([], txt)
-            (ctx, crest) | Just (_, rest) <- MS.uncons crest -> (map MS.unpack (MS.words ctx), rest)
-       in case fromSexps ctx (MS.unpack txt') of
+            (ctx, crest) | Just (_, rest) <- MS.uncons crest -> (MS.words ctx, rest)
+       in case fromSexps ctx txt' of
             Left _ -> ["$", text txt, "$"]
             Right t -> [inline "inline-math" [renderTermCtx ctx (TDO True True) t]]
 

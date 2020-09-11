@@ -13,28 +13,13 @@ import qualified Paragraph as P
 import qualified ProofTree as PT
 import qualified Prop as Prp
 import qualified Rule as R
+import DisplayOptions 
 
 type Document = [I.Item]
 type ItemIndex = Int
 
 type InputText = MS.MisoString
 type ErrorMessage = MS.MisoString
-
-data DisplayOptions = O 
-  { showMetaBinders :: Bool
-  , assumptionsMode :: AssumptionsMode
-  , compactRules    :: RuleStyle
-  , tDOs            :: TermDisplayOptions
-  } deriving (Show, Eq)
-
-data TermDisplayOptions = TDO {showTeles :: Bool, showInfixes :: Bool}
-  deriving (Show, Eq)
-
-data RuleStyle = BarTurnstile | Turnstile | Bar | Dots 
-  deriving (Show, Eq)
-
-data AssumptionsMode = Cumulative | New | Hidden
-  deriving (Show, Eq)
 
 data Editor = Editor
   { document       :: Document
@@ -86,7 +71,7 @@ after n = atraversalVL guts
               (\(it', rights') -> lefts ++ it' : rights') <$> act (it, rights)
             _ -> pure' ls
 
-rulesSummary :: (Int, PT.Path) -> Document -> ([String], [(String, [Prp.NamedProp])])
+rulesSummary :: (Int, PT.Path) -> Document -> ([MS.MisoString], [(MS.MisoString, [Prp.NamedProp])])
 rulesSummary (i, p) s =
   let (lefts, I.Rule (R.R n prp (Just (R.PS pt c))) : rights) = splitAt i s
       context = fst $ fromJust $ ipreview (PT.path p PT.%+ PT.step) pt
@@ -95,17 +80,17 @@ rulesSummary (i, p) s =
       rules = groupedRules lefts []
    in (ctx, filter (not . null . snd) (("Local Facts", lcls) : rules))
   where
-    groupedRules :: Document -> [(String, [Prp.NamedProp])] -> [(String, [Prp.NamedProp])]
+    groupedRules :: Document -> [(MS.MisoString, [Prp.NamedProp])] -> [(MS.MisoString, [Prp.NamedProp])]
     groupedRules [] acc = acc
     groupedRules (I.Heading (H.Heading n str) : xs) acc
-      | n < 2 = groupedRules xs ((MS.unpack $ str, []) : acc)
+      | n < 2 = groupedRules xs ((str, []) : acc)
       | otherwise = groupedRules xs acc
     groupedRules (i : xs) (h : acc) =
       let rs = map (\(R.R n prp _) -> (Prp.Defn n, prp)) (toListOf I.rule i)
        in groupedRules xs (fmap (rs ++) h : acc)
     groupedRules (i : xs) [] = error "Script didn't start with a heading"
 
-processRenames :: [(String, String)] -> Document -> Either String Document
+processRenames :: [(MS.MisoString, MS.MisoString)] -> Document -> Either MS.MisoString Document
 processRenames rns doc = foldM processRename doc rns
   where
     names = concatMap defined doc
@@ -122,10 +107,10 @@ switchFocus f ed = ed {currentFocus = f, inputText = ""}
 
 runAction :: EditorAction -> Editor -> Editor
 runAction act ed = case runAction' act ed of
-  Left e -> ed {message = Just $ MS.pack e}
+  Left e -> ed {message = Just e}
   Right ed' -> ed'
 
-runAction' :: EditorAction -> Editor -> Either String Editor
+runAction' :: EditorAction -> Editor -> Either MS.MisoString Editor
 runAction' Noop ed = pure ed
 runAction' Reset ed = pure (ed {message = Nothing, currentFocus = NoFocus})
 runAction' (ItemAction mi act) ed = do
@@ -166,7 +151,7 @@ runAction' (DeleteItem idx) ed =
    in pure (ed {document = lefts ++ rest', currentFocus = NoFocus, message = Nothing})
 
 runAction' (InsertProposition idx b) ed =
-  let n = MS.unpack $ inputText ed
+  let n = inputText ed
       item = (if b then R.blankTheorem else R.blankAxiom) n
    in case n of
         "" -> Left "Name cannot be empty"
@@ -174,4 +159,4 @@ runAction' (InsertProposition idx b) ed =
         _ -> runAction' (InsertItem idx (I.Rule item)) ed
 
 runAction' (LoadDocument m) ed = Right $ ed { document = m, currentFocus = NoFocus, message = Nothing}
-runAction' (DisplayError e) ed = Left (MS.unpack e)
+runAction' (DisplayError e) ed = Left e

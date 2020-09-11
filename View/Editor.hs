@@ -3,6 +3,7 @@ module View.Editor where
 import Miso
 import qualified Miso.String as MS
 import Editor
+import DisplayOptions
 import qualified Heading as H
 import qualified Item as I
 import qualified Paragraph as P
@@ -13,7 +14,7 @@ import View.Term
 import View.Prop
 import View.Utils hiding (LocalAction (..))
 
-version = "0.3"
+version = "0.3.1"
 
 viewEditor :: Editor -> View EditorAction
 viewEditor x =
@@ -41,7 +42,6 @@ viewEditor x =
         , block "sidebar-credits"
           [ a_ [class_ "big-icon-link", title_ "github", href_ "https://github.com/liamoc/holbert"] [typicon "social-github-circular" ]
           , a_ [class_ "big-icon-link", title_ "twitter", href_ "https://twitter.com/kamatsu8"] [typicon "social-twitter-circular" ]
-          , br_ [], small_ [] ["version ", text version] 
           , p_ []
             [ "Holbert is made by "
             , a_ [href_ "http://liamoc.net"] ["Liam O'Connor"]
@@ -49,12 +49,13 @@ viewEditor x =
             ]
           , p_ [] [" It is released under the BSD3 license."]
           , p_ [] ["Some icons are from the Typicons icon set by Stephen Hutchings."]
+          , small_ [] ["This is version ", text version] 
           ]
         ]
       _ -> [block "sidebar-header" ["Facts Summary:"], renderIndex $ document x]
 
     renderPropGroup i p ctx (n, rs) =
-      [ block "sidebar-header" [text $ MS.pack (n ++ ":")]
+      [ block "sidebar-header" [text n, text ":"]
       , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p)) rs
       ]
 

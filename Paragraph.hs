@@ -16,6 +16,6 @@ instance Control Paragraph where
 
   leaveFocus _ = pure
 
-  handle Edit _ = Paragraph . pack <$> textInput
+  handle Edit _ = Paragraph <$> textInput
 
   inserted _ = Select

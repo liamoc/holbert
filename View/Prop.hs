@@ -2,7 +2,7 @@
 module View.Prop where
 import Miso
 import qualified Miso.String as MS
-import Editor (TermDisplayOptions(..),RuleStyle (..))
+import DisplayOptions
 import qualified Rule as R
 import Terms
 import Prop

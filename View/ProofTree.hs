@@ -3,7 +3,7 @@ module View.ProofTree where
 import Miso
 import qualified Miso.String as MS
 import Data.List (intersperse)
-import Editor (DisplayOptions (..), RuleStyle (..), AssumptionsMode (..))
+import DisplayOptions
 import qualified Item as I
 import qualified Rule as R
 import qualified Prop as P

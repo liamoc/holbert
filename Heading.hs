@@ -18,6 +18,6 @@ instance Control Heading where
 
   leaveFocus _ = pure
 
-  handle Edit (Heading i _) = Heading i . pack <$> textInput
+  handle Edit (Heading i _) = Heading i <$> textInput
 
   inserted _ = Select

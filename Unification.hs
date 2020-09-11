@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts, OverloadedStrings #-}
 module Unification (unifier, fresh, UnifyM, runUnifyM, UnifyError) where
+import qualified Miso.String as MS
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans
@@ -13,7 +14,7 @@ import Terms
 
 -- almost all of this is a direct port of Tobias Nipkow's pattern unification implementation
 -- in standard ML.
-type UnifyError = String
+type UnifyError = MS.MisoString
 
 gen = do x <- get; put (x + 1); pure x
 
@@ -120,7 +121,7 @@ rigidrigid a ss b ts sS
 
 type Gen = State Int
 
-type UnifyM = ExceptT String (State Int)
+type UnifyM = ExceptT MS.MisoString (State Int)
 
 unifier :: Term-> Term -> UnifyM Subst
 unifier t1 t2 = fromUnifier <$> unif [] (t1,t2)

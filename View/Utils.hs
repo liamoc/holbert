@@ -64,13 +64,23 @@ labelledBrackets content label = multi
 
 parenthesise = ([inline "symbol" ["("]] ++) . (++ [inline "symbol" [")"]])
 
-textbox i act n = input_ [id_ i, onInput act, value_ n]
-expandingTextbox i act n = input_ [id_ i, style_ ("width" =: MS.pack (show size <> "em")), onInput act, value_ n]
-  where size = ((fromIntegral (MS.length n) + 1) * 16) / 30
+textbox i act n = input_ [id_ i, onChange act, value_ n]
+expandingTextbox i act n 
+  = multi
+    [ input_ [id_ i, class_ $ "expandingTextbox-" <> i, onChange act, value_ n]
+    , script_ [] 
+      $ "its = document.getElementsByClassName('expandingTextbox-" <> i <>"');"
+      <> "var fn = function(evt) { for (it of its) {"
+      <>   "it.style.width='';it.value = evt.target.value;it.style.width = it.scrollWidth+'px';"
+      <> "}};"
+      <> "for (it of its) {" 
+      <>   "it.addEventListener('input',fn);it.style.width='';it.style.width = it.scrollWidth+'px';"
+      <> "}"
+    ]
 
 expandingTextarea ids cls act textIn =
   multi
-    [ textarea_ [id_ ids, onInput act, class_ cls] [text textIn]
+    [ textarea_ [id_ ids, onChange act, class_ cls] [text textIn]
     , script_ []
       $  "it = document.getElementById('ta');"
       <> "var fn = function() {"
@@ -143,14 +153,12 @@ editableMath text view focus act extraActions selected
   where
     ed = editor "expanding" act text
 
-name [] = []
-name ('_' : str) = placeholder : name str
-name (' ' : str) = name str
-name str | (first, rest) <- span (`notElem` ("_ " :: [Char])) str = name' first ++ name rest
+name str = concatMap go (MS.words str)
+  where go str = concat $ intersperse [placeholder] (map name' (MS.splitOn "_" str))
 name' s =
-  let noPrimes = dropWhileEnd (== '\'') s
-      bulk = dropWhileEnd (isDigit) noPrimes
-      rest = drop (length bulk) noPrimes
+  let noPrimes = MS.dropWhileEnd (== '\'') s
+      bulk = MS.dropWhileEnd (isDigit) noPrimes
+      rest = MS.drop (MS.length bulk) noPrimes
       bulk' = case bulk of
         "/\\" -> "∧"
         "\\/" -> "∨"
@@ -242,11 +250,11 @@ name' s =
         "Psi" -> "Ψ"
         "Omega" -> "Ω"
         _ -> bulk
-      primeString = makePrimeString (length s - length noPrimes)
+      primeString = makePrimeString (MS.length s - MS.length noPrimes)
       makePrimeString 0 = ""
       makePrimeString 1 = "′"
       makePrimeString 2 = "″"
       makePrimeString 3 = "‴"
       makePrimeString 4 = "⁗"
       makePrimeString n = "⁗" <> makePrimeString (n - 4)
-   in if bulk' == "" then [text (MS.pack rest)] else [text (MS.pack bulk'), sub_ [] [text (MS.pack rest)], text primeString]
+   in if MS.null bulk' then [text rest] else [text bulk', sub_ [] [text rest], text primeString]

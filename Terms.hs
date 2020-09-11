@@ -1,6 +1,6 @@
-{-# LANGUAGE FlexibleContexts, DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE FlexibleContexts, DeriveGeneric, DeriveAnyClass, OverloadedStrings #-}
 module Terms
-  ( Term (..), Masked (..), Id
+  ( Term (..), Masked (..), Id, Name
   , raise, raise'
   , isUsed
   , subst
@@ -17,8 +17,10 @@ import Data.List (foldl')
 import Data.Char (isSpace)
 import GHC.Generics (Generic)
 import Data.Aeson (ToJSON, FromJSON)
+import qualified Miso.String as MS
 -- Judge equality of terms modulo alpha equivalence.
 -- we do this by hiding names from the Eq instance.
+type Name = MS.MisoString
 type Id = Int
 newtype Masked a = M a deriving (Generic, ToJSON, FromJSON)
 instance Eq (Masked a) where
@@ -34,13 +36,13 @@ type Index = Int
 data Term = LocalVar Index
           | MetaVar Id
           | Ap Term Term
-          | Const String
-          | Lam (Masked String) Term
+          | Const Name
+          | Lam (Masked Name) Term
           deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 invalidName "" = Just "Name cannot be empty"
-invalidName s | any isSpace s = Just "Name contains spaces"
-invalidName s | any (`elem` ("()." :: String)) s = Just "Name contains reserved symbols"
+invalidName s | MS.any isSpace s = Just "Name contains spaces"
+invalidName s | MS.any (`elem` ("()." :: String)) s = Just "Name contains reserved symbols"
 invalidName s = Nothing
 
 raise :: Int -> Term -> Term
