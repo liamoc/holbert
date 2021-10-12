@@ -32,8 +32,21 @@ viewEditor x =
   where
     mainSidebar = case currentFocus x of
       ItemFocus i (I.RuleFocus (R.GoalFocus p)) ->
-        let (ctx, rs) = rulesSummary (i, p) (document x)
-         in concatMap (renderPropGroup i p ctx) rs
+        [ div_ [class_ "tabbed"] 
+          [ input_ [type_ "radio", id_ "intro-tab", name_ "rulestabs", checked_ True]
+          , input_ [type_ "radio", id_ "elim-tab", name_ "rulestabs"]
+          , input_ [type_ "radio", id_ "rewrite-tab", name_ "rulestabs"]
+          , ul_ [class_ "tabs"] 
+            [ li_ [class_ "tab"] [label_ [for_ "intro-tab"] ["Intro"]]
+            , li_ [class_ "tab"] [label_ [for_ "elim-tab"] ["Elim"]]
+            , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
+            ]
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)
+          , div_ [class_ "tab-content" ] ["Incomplete"]
+          , div_ [class_ "tab-content" ] ["Incomplete"]
+          ]
+        ]
+        
       NewItemFocus i -> newItemMenu i
       ItemFocus i (I.ParagraphFocus _) -> editingHelp
       ImportFocus -> importForm
