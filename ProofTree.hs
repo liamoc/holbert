@@ -1,8 +1,9 @@
-{-# LANGUAGE TupleSections, FlexibleContexts, GADTs, DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE TupleSections, FlexibleContexts, GADTs, DeriveGeneric, DeriveAnyClass, OverloadedStrings #-}
 module ProofTree where
 
 import Data.Maybe
 import Data.List
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Writer (WriterT (..), tell)
 import Control.Monad.Trans (lift)
@@ -96,6 +97,31 @@ apply (r,prp) p pt = do
        applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
+
+applyEq :: [T.Name] -> T.Term -> P.NamedProp -> UnifyM (T.Subst, P.RuleRef, [ProofTree])
+applyEq skolems g (r,(P.Forall (m :ms) sgs g')) = do
+  n <- fresh
+  let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+  applyEq skolems g (r,(P.subst mt 0 (P.Forall ms sgs g')))
+applyEq skolems g (r,(P.Forall [] sgs g')) = do
+  (s,t) <- match skolems g (P.Forall [] sgs g')
+  return (s,r,((PT [] [] t Nothing):(map fromProp sgs)))
+  where
+    match :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, T.Term)
+    match skolems g (P.Forall (m :ms) sgs g') = (do
+      a <- fresh
+      let ma = foldl T.Ap a (map T.LocalVar [0..length skolems -1])
+      s <- unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
+      return (s, ma)) <|> case g of
+        (T.Lam (T.M x) e) -> do
+          (a,b) <- match (x:skolems) e (P.Forall [] sgs g')
+          return (a, (T.Lam (T.M x) b))
+        (T.Ap e1 e2) -> (do
+          (a,b) <- match skolems e1 (P.Forall [] sgs g')
+          return (a, (T.Ap b e2))) <|> do
+            (a,b) <- match skolems e2 (P.Forall [] sgs g')
+            return (a, (T.Ap e1 b))
+        otherwise -> empty
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT sks lcls g sgs) =
