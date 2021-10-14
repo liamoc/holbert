@@ -90,12 +90,28 @@ apply (r,prp) p pt = do
        pure $ PT xs lcls t (Just (r,sgs))
 
     applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
-    applyRule skolems g (P.Forall (m :ms) sgs g') = do
-       n <- fresh
-       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+    applyRule skolems g (P.Forall (m :ms) sgs g') = do -- skolem is in scope; is bound and cant subsitute - cant unify with these vars
+       n <- fresh -- returns increasing # always unique
+       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])  --db indices refers to every var inscope by its bound number, Ap x y - application: expr subst, x is bound, y are constants
        applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
+
+-- also tries to unifies with assumption
+-- only tries to unify goal is unifies with an assumption
+    applyRuleElim :: [T.Name] ->  [T.Prop] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- add [T.Prop] for assmps
+    applyRuleElim skolems assmps g (P.Forall (m :ms) sgs g') = do
+       n <- fresh
+       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+       applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall ms sgs g'))
+    applyRuleElim skolems (a:assmps) g (P.Forall [] (s:sgs) g') = (do
+       -- unifier (P.subst  g) (P.subst g') and then...
+       substs <- unifier a s -- write func in prop called unifierProp but takes 2 props not 2 terms (if i have a prop if its simple just unify terms (for all [] [] g is just a term))
+       (,map fromProp sgs) <$> unifier (T.applySubst substs g) (T.applySubst substs g'))-- applySubst :: Subst -> Term -> Term
+       <|> (
+         applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g')
+       )
+    applyRuleElim skolems [] g (P.Forall [] sgs g') = empty
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT sks lcls g sgs) =
