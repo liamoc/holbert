@@ -105,10 +105,13 @@ apply (r,prp) p pt = do
        let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1]) -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
        applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRuleElim skolems (a:assmps) g (P.Forall [] (s:sgs) g') = (do
-       substs <- unifierProp a s -- TODO: write func in Prop.hs called unifierProp but takes 2 props not 2 terms (if i have a prop and it's simple just unify terms (for all [] [] g is just a term))
+       substs <- unifierProp a s -- TODO: unifierProp like unifier but takes 2 props not 2 terms
        (,map fromProp sgs) <$> unifier (T.applySubst substs g) (T.applySubst substs g')) -- T.applySubst like P.subst but takes terms not props
        <|> applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g') -- <|> := else
     applyRuleElim skolems [] g (P.Forall [] sgs g') = empty
+    applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall [] [] g')) = g
+
+    -- if i have a prop and it's simple just unify terms (P.ForAll [] [] g' is just a term (g?)) NOT SURE WHERE TO PUT THIS! - currently as last case
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT sks lcls g sgs) =

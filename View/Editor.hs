@@ -42,7 +42,7 @@ viewEditor x =
             , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
             ]
           , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)
-          , div_ [class_ "tab-content" ] ["Incomplete"] -- will be the same as above but will only show elim rules
+          , div_ [class_ "tab-content" ] ["Incomplete"] -- TODO: will be the same as above but will only show elim rules
           , div_ [class_ "tab-content" ] ["Incomplete"]
           ]
         ]
