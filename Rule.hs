@@ -14,11 +14,11 @@ import Data.Maybe(fromMaybe)
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
 
-data Rule = R P.RuleName P.Prop (Maybe ProofState) 
+data Rule = R P.RuleName P.Prop (Maybe ProofState)
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type Counter = Int
-data ProofState = PS PT.ProofTree Counter 
+data ProofState = PS PT.ProofTree Counter
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 name :: Lens' Rule P.RuleName
@@ -80,6 +80,7 @@ instance Control Rule where
                   deriving (Show, Eq)
 
   data Action Rule = Apply P.NamedProp PT.Path
+                   | Rewrite P.NamedProp PT.Path
                    | Nix PT.Path
                    | RenameProofBinder PT.Path Int
                    | AddRuleBinder P.Path
@@ -127,6 +128,18 @@ instance Control Rule where
             _      -> clearFocus
           pure state'
 
+  handle (Rewrite np pth) state = case traverseOf proofState (runUnifyPS $ PT.apply np pth) state of
+     Left e -> errorMessage e >> pure state
+     Right state' -> let
+          newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
+                     then Just (0:pth)
+                     else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
+        in do
+          case newFocus of
+            Just f -> setFocus (GoalFocus f)
+            _      -> clearFocus
+          pure state'
+
   handle (Nix pth) state = do
      clearFocus
      pure $ set (proofState % proofTree % PT.path pth % PT.step) Nothing state
@@ -150,7 +163,7 @@ instance Control Rule where
      clearFocus -- should it be updateterm?
      pure $ set (prop % P.path pth % P.metabinders % ix i) new state
 
-  handle (DeleteRuleBinder pth i) state = do     
+  handle (DeleteRuleBinder pth i) state = do
      when (maybe False (P.isBinderUsed i) $ preview (prop % P.path pth) state) $ errorMessage "Cannot remove binder: is in use"
      invalidate (view name state)
      clearFocus
@@ -165,10 +178,10 @@ instance Control Rule where
          case pth of [] -> clearFocus
                      (_:pth') -> setFocus (RuleTermFocus pth')
          pure $ over propUpdate id state' --hack..
-  handle (InstantiateMetavariable i) state = do 
-    new <- textInput 
-    case fromSexps [] new of 
-      Left e -> errorMessage $ "Parse error: " <> e 
+  handle (InstantiateMetavariable i) state = do
+    new <- textInput
+    case fromSexps [] new of
+      Left e -> errorMessage $ "Parse error: " <> e
       Right obj -> do
          pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
 
