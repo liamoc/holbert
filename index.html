@@ -253,6 +253,7 @@ button {
 .rule {
   font-family: 'NeoEulerMedium';
 }
+
 .rule-cell {
   font-family: 'NeoEulerMedium';
   vertical-align:bottom;
@@ -628,6 +629,22 @@ ul.sidebar-index ul {
 .tabbed [type="radio"]:nth-of-type(3):checked ~ .tab-content:nth-of-type(3),
 .tabbed [type="radio"]:nth-of-type(4):checked ~ .tab-content:nth-of-type(4) {
 	display: block;
+}
+/* PRINT MEDIA */
+@media print {
+  .button-icon {
+    display:none;
+  }
+  .gutter {
+    display:none;
+  }
+  .sidebar {
+    display:none;
+  }
+  .document {
+    width:100% !important;
+    overflow:inherit;
+  }
 }
   </style> 
   </head>
