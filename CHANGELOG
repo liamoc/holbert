@@ -1,3 +1,10 @@
+- New feature: Prose style proofs
+- New feature: Apply a rule as an elimination rule
+- New feature: Apply an equality rule as a rewrite
+- New feature: mix-fix syntax declarations
+- New feature: Multi-file documents
+- Improvement: Holbert documents are now printable
+
 * Version 0.3.1
 - Improvement: Banished `String` representations to improve performance 
 - Improvement: UI Performance greatly improved by not updating model on every keystroke.

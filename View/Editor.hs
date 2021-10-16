@@ -58,7 +58,7 @@ viewEditor x =
           , p_ []
             [ "Holbert is made by "
             , a_ [href_ "http://liamoc.net"] ["Liam O'Connor"]
-            , ", a lecturer at the University of Edinburgh."
+            , ", and several other student contributors."
             ]
           , p_ [] [" It is released under the BSD3 license."]
           , p_ [] ["Some icons are from the Typicons icon set by Stephen Hutchings."]
