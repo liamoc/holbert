@@ -72,6 +72,7 @@ checkVariableName new = case T.invalidName new of
 instance Control Rule where
   data Focus Rule = GoalFocus PT.Path
                   | ProofBinderFocus PT.Path Int
+                  | ProofSubtitleFocus PT.Path
                   | RuleBinderFocus P.Path Int
                   | NewRuleBinderFocus P.Path
                   | RuleTermFocus P.Path
@@ -80,6 +81,8 @@ instance Control Rule where
                   deriving (Show, Eq)
 
   data Action Rule = Apply P.NamedProp PT.Path
+                   | ToggleStyle PT.Path
+                   | SetSubgoalHeading PT.Path
                    | Nix PT.Path
                    | RenameProofBinder PT.Path Int
                    | AddRuleBinder P.Path
@@ -105,6 +108,7 @@ instance Control Rule where
   editable (RuleTermFocus pth) = Just . P.getConclusionString pth . view prop
   editable (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
   editable NameFocus = preview name
+  editable (ProofSubtitleFocus pth) = fmap (fromMaybe "Subgoal" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
   editable _ = const Nothing
 
 
@@ -126,7 +130,15 @@ instance Control Rule where
             Just f -> setFocus (GoalFocus f)
             _      -> clearFocus
           pure state'
-
+  handle (ToggleStyle pth) state = do    
+    let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Subgoal" })
+        f (Just pdd) = Just $ pdd { PT.proseStyle = not (PT.proseStyle pdd)}
+    pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
+  handle (SetSubgoalHeading pth) state = do    
+    new <- textInput
+    let f Nothing = Just (PT.PDD {  PT.proseStyle = False, PT.subtitle = new })
+        f (Just pdd) = Just $ pdd { PT.subtitle = new }
+    pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
   handle (Nix pth) state = do
      clearFocus
      pure $ set (proofState % proofTree % PT.path pth % PT.step) Nothing state
