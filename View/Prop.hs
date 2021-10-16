@@ -17,9 +17,9 @@ data EditableMode = NotEditable
 
 renderProp = renderPropName Nothing
 renderPropName = renderPropNameE NotEditable
-renderPropNameE = renderPropNameLabelledE Nothing
+renderPropNameE = renderPropNameLabelledE Nothing Nothing
 
-renderPropNameLabelledE labels editable n ctx opts prp = renderP labels (showInitialMetas opts) n (ruleStyle opts) ctx [] prp
+renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (showInitialMetas opts) n (ruleStyle opts) ctx [] prp
   where
     metabinders pth vs = wrap $
       zipWith (metabinder' pth) [0 ..] vs ++
@@ -41,6 +41,9 @@ renderPropNameLabelledE labels editable n ctx opts prp = renderP labels (showIni
         editableMath n' (metabinder n) (R.RuleBinderFocus pth i) (R.RenameRuleBinder pth i)
           [iconButton "red" "Remove Variable" "trash" (Act $ R.DeleteRuleBinder pth i)]
           selected
+      InProofTree (selected, n') | pth == [], Just pth' <- ptpath ->
+        editableMath n' (metabinder n) (R.ProofBinderFocus pth' i) (R.RenameProofBinder pth' i)
+          [] selected
       _ -> metabinder n
 
     renderTerm' ctx pth trm = case editable of

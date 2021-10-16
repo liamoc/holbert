@@ -54,7 +54,7 @@ renderProofTree opts pt selected textIn = renderPT False False [] [] [] pt
             $ [ multi boundrules, renderPropNameLabelledE (Just $ case assumptionsMode opts of
               New  -> map P.Local [length rns ..]
               Cumulative -> map P.Local [0..]
-              _ -> []) (InProofTree (selected, textIn)) Nothing ctx (ruleDOs {ruleStyle = compactRules opts}) 
+              _ -> []) (Just pth) (InProofTree (selected, textIn)) Nothing ctx (ruleDOs {ruleStyle = compactRules opts}) 
                            $ P.Forall sks (case assumptionsMode opts of
               New  -> lcls
               Cumulative -> rns'
@@ -62,7 +62,7 @@ renderProofTree opts pt selected textIn = renderPT False False [] [] [] pt
           conclusion = pure $ renderPropNameLabelledE (Just $ case assumptionsMode opts of
               New  -> map P.Local [length rns ..]
               Cumulative -> map P.Local [0..]
-              _ -> []) (InProofTree (selected, textIn)) Nothing ctx' ruleDOs
+              _ -> []) Nothing (InProofTree (selected, textIn)) Nothing ctx' ruleDOs
                            $ P.Forall [] (case assumptionsMode opts of
               New  -> lcls
               Cumulative -> rns'
