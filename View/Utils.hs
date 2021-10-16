@@ -91,7 +91,7 @@ expandingTextarea ids cls act textIn =
 
 inferrule binders premises spacer ruleTitle conclusion =
   table_
-    [intProp "cellpadding" 0, intProp "cellspacing" 0]
+    [  intProp "cellpadding" 0, class_ "inference",intProp "cellspacing" 0]
     [ tr_ []
       $  [td_ [class_ "rule-cell rule-binderbox", rowspan_ "2"] binders]
       ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
