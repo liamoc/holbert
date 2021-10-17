@@ -2,7 +2,7 @@
 module View.Paragraph where
 import Miso 
 import DisplayOptions
-import StringRep
+import StringRep as SR
 import qualified Item as I
 import qualified Miso.String as MS
 import qualified Paragraph as P
@@ -25,7 +25,7 @@ renderText txt = normalText txt
       let (ctx, txt') = case MS.span (/= ':') txt of
             (_, crest) | MS.null crest -> ([], txt)
             (ctx, crest) | Just (_, rest) <- MS.uncons crest -> (MS.words ctx, rest)
-       in case fromSexps ctx txt' of
+       in case SR.parse ctx txt' of
             Left _ -> ["$", text txt, "$"]
             Right t -> [inline "inline-math" [renderTermCtx ctx (TDO True True) t]]
 

@@ -179,7 +179,7 @@ instance Control Rule where
          pure $ over propUpdate id state' --hack..
   handle (InstantiateMetavariable i) state = do 
     new <- textInput 
-    case fromSexps [] new of 
+    case parse [] new of 
       Left e -> errorMessage $ "Parse error: " <> e 
       Right obj -> do
          pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
