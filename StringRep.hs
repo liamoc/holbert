@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, RecursiveDo #-}
-module StringRep (prettyPrint, parse, SyntaxTable (..), EPM.Associativity) where
+module StringRep (prettyPrint, parse, SyntaxTable (..), EPM.Associativity(..)) where
 
 import Data.Char
 import Control.Arrow(first)
