@@ -12,8 +12,8 @@ flag mixfix
   default:     False
 
 executable app
-  if flag(mixfix)
-    cpp-options: -DMIXFIX
+  --if flag(mixfix)
+  --  cpp-options: -DMIXFIX
   main-is:             Main.hs
   other-modules: 
     StringRep 
