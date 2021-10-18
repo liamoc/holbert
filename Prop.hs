@@ -94,12 +94,12 @@ applySubst :: T.Subst -> Prop -> Prop
 applySubst subst (Forall vs lcls g) = Forall vs (map (applySubst subst) lcls) (T.applySubst subst g)
 
 -- A bit disappointing that this can't be cleanly lensified.
-getConclusionString :: Path -> Prop -> MisoString
-getConclusionString p prp = let (ctx, trm) = fromJust (ipreview (path p %. conclusion) prp)
-                             in SR.prettyPrint ctx trm
+getConclusionString :: SR.SyntaxTable -> Path -> Prop -> MisoString
+getConclusionString tbl p prp = let (ctx, trm) = fromJust (ipreview (path p %. conclusion) prp)
+                             in SR.prettyPrint tbl ctx trm
 
-setConclusionString :: Path -> MisoString -> Prop -> Either MisoString Prop
-setConclusionString p txt prp = iatraverseOf (path p %. conclusion) Right parse prp
+setConclusionString :: SR.SyntaxTable -> Path -> MisoString -> Prop -> Either MisoString Prop
+setConclusionString tbl p txt prp = iatraverseOf (path p %. conclusion) Right parse prp
   where
-    parse ctx _ = SR.parse ctx txt
+    parse ctx _ = SR.parse tbl ctx txt
 

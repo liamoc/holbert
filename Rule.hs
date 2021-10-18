@@ -103,13 +103,13 @@ instance Control Rule where
 
   renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r
 
-  editable (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
-  editable (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
-  editable (RuleTermFocus pth) = Just . P.getConclusionString pth . view prop
-  editable (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
-  editable NameFocus = preview name
-  editable (ProofSubtitleFocus pth) = fmap (fromMaybe "Subgoal" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
-  editable _ = const Nothing
+  editable tbl (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
+  editable tbl (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
+  editable tbl (RuleTermFocus pth) = Just . P.getConclusionString tbl pth . view prop
+  editable tbl (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
+  editable tbl NameFocus = preview name
+  editable tbl (ProofSubtitleFocus pth) = fmap (fromMaybe "Subgoal" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
+  editable _ _ = const Nothing
 
 
   leaveFocus (ProofBinderFocus p i) = noFocus . handle (RenameProofBinder p i)
@@ -170,7 +170,8 @@ instance Control Rule where
 
   handle (UpdateTerm pth) state = do
      new <- textInput
-     case toLensVL prop (P.setConclusionString pth new) state of
+     tbl <- syntaxTable
+     case toLensVL prop (P.setConclusionString tbl pth new) state of
        Left e -> errorMessage $ "Parse error: " <> e
        Right state' -> do
          invalidate (view name state')
@@ -178,8 +179,9 @@ instance Control Rule where
                      (_:pth') -> setFocus (RuleTermFocus pth')
          pure $ over propUpdate id state' --hack..
   handle (InstantiateMetavariable i) state = do 
-    new <- textInput 
-    case parse [] new of 
+    new <- textInput
+    tbl <- syntaxTable 
+    case parse tbl [] new of 
       Left e -> errorMessage $ "Parse error: " <> e 
       Right obj -> do
          pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state

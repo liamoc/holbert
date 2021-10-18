@@ -9,10 +9,12 @@ import qualified Item as I
 import qualified Paragraph as P
 import qualified Rule as R
 import qualified Terms as T
+import Controller(definedSyntax)
 import View.Item
 import View.Term
 import View.Prop
 import View.Utils hiding (LocalAction (..))
+import Data.List(mapAccumL)
 
 version = "0.3.1"
 
@@ -140,11 +142,11 @@ renderIndex (_ : script) = ul_ [class_ "sidebar-index"] $ renderIndex' (zip [1 .
     within n (_, I.Heading (H.Heading lvl hd)) = lvl > n
     within n _ = True
 
-renderDoc textIn opts selected script = zipWith go [0 ..] script
+renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] script
   where
     scriptSize = length script
-    go i item =
-      let mainItem = renderItem opts i textIn item selected
+    go tbl (i,item) =
+      let mainItem = renderItem opts i tbl textIn item selected
           inserting = selected == NewItemFocus i
           itemOptions
             | i > 0 =
@@ -162,7 +164,7 @@ renderDoc textIn opts selected script = zipWith go [0 ..] script
                     InsertingPropositionFocus isT i' | i == i' ->
                       [editorWithTitle (if isT then theoremHeading i else axiomHeading i) "newrule" (InsertProposition i isT) UpdateInput Reset textIn]
                     _ -> []
-       in block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton
+       in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 
 renderAvailableRule ctx opts (i, p) (rr, r) =
   button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ R.Apply (rr, r) p)

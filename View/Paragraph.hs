@@ -9,7 +9,7 @@ import qualified Paragraph as P
 import View.Term
 import View.Utils
 
-renderText txt = normalText txt
+renderText tbl txt = normalText txt
   where
     normalText txt = case MS.span (`notElem` ("~/$*" :: String)) txt of
       (first, crest) | MS.null crest -> [text first]
@@ -25,11 +25,11 @@ renderText txt = normalText txt
       let (ctx, txt') = case MS.span (/= ':') txt of
             (_, crest) | MS.null crest -> ([], txt)
             (ctx, crest) | Just (_, rest) <- MS.uncons crest -> (MS.words ctx, rest)
-       in case SR.parse ctx txt' of
+       in case SR.parse tbl ctx txt' of
             Left _ -> ["$", text txt, "$"]
             Right t -> [inline "inline-math" [renderTermCtx ctx (TDO True True) t]]
 
-renderParagraph textIn selected (P.Paragraph txt) =
+renderParagraph tbl textIn selected (P.Paragraph txt) =
   block "" $ case selected of
     Just P.Select ->
       [ block "item-options-bottom"
@@ -41,5 +41,5 @@ renderParagraph textIn selected (P.Paragraph txt) =
     Nothing ->
       [ block "item-options-bottom"
         [ iconButton "blue" "Edit paragraph" "edit" (SetFocus P.Select)]
-      , block "paragraph" (renderText txt)
+      , block "paragraph" (renderText tbl txt)
       ]            

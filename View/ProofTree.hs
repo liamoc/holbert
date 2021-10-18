@@ -15,7 +15,7 @@ import View.Term
 import View.Paragraph (renderText)
 
 
-renderProofTree opts pt selected textIn = renderPT False False [] [] [] pt
+renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
   where
     
     termDOs = tDOs opts
@@ -45,7 +45,7 @@ renderProofTree opts pt selected textIn = renderPT False False [] [] [] pt
 
           subtitleWidget
             | selected == Just (R.ProofSubtitleFocus pth) = editor "expanding" (R.SetSubgoalHeading pth) txt  
-            | otherwise = button "editable editable-heading" "" (SetFocus (R.ProofSubtitleFocus pth)) (renderText txt)
+            | otherwise = button "editable editable-heading" "" (SetFocus (R.ProofSubtitleFocus pth)) (renderText tbl txt)
             where txt = case ptopts of Nothing -> "Subgoal"; Just opts -> subtitle opts
 
           preamble = div_ [class_ "word-proof-prop"] 
