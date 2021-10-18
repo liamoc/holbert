@@ -61,5 +61,7 @@ class Control s where
   renamed :: (MS.MisoString, MS.MisoString) -> s -> s
   renamed = const id
   defined :: s -> [MS.MisoString]
-  defined = const []
+  defined = const []  
   inserted :: s -> Focus s
+  definedSyntax :: s -> [MS.MisoString]
+  definedSyntax = const []  
