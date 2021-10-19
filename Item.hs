@@ -55,13 +55,17 @@ instance Control Item where
   defined (Rule i)      = defined i
   defined (Paragraph i) = defined i
 
+  definedSyntax (Heading i)   = definedSyntax i
+  definedSyntax (Rule i)      = definedSyntax i
+  definedSyntax (Paragraph i) = definedSyntax i
+
   invalidated n (Heading i)   = Heading   $ invalidated n i
   invalidated n (Rule i)      = Rule      $ invalidated n i
   invalidated n (Paragraph i) = Paragraph $ invalidated n i
   
-  editable (HeadingFocus f)   (Heading h)   = editable f h
-  editable (RuleFocus f)      (Rule h)      = editable f h
-  editable (ParagraphFocus f) (Paragraph h) = editable f h
+  editable tbl (HeadingFocus f)   (Heading h)   = editable tbl f h
+  editable tbl (RuleFocus f)      (Rule h)      = editable tbl f h
+  editable tbl (ParagraphFocus f) (Paragraph h) = editable tbl f h
 
   leaveFocus (HeadingFocus f)   (Heading h)   = Heading   <$> leaveFocus f h
   leaveFocus (ParagraphFocus f) (Paragraph h) = Paragraph <$> leaveFocus f h
@@ -74,4 +78,6 @@ instance Control Item where
   inserted (Heading s)   = HeadingFocus   (inserted s)
   inserted (Paragraph s) = ParagraphFocus (inserted s)
   inserted (Rule s)      = RuleFocus      (inserted s)
+  
+
 

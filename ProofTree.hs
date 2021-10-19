@@ -10,12 +10,17 @@ import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
 import qualified Prop as P
 import qualified Terms as T
+import qualified Miso.String as MS
 import StringRep
 import Unification
 import Optics.Core
 
-data ProofTree = PT [T.Name] [P.Prop] T.Term (Maybe (P.RuleRef, [ProofTree]))
-               deriving (Eq, Show, Generic, ToJSON, FromJSON)
+data ProofDisplayData = PDD { proseStyle :: Bool, subtitle :: MS.MisoString} 
+  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+data ProofTree = PT (Maybe ProofDisplayData) [T.Name] [P.Prop] T.Term (Maybe (P.RuleRef, [ProofTree]))
+               deriving (Eq, Show, Generic, ToJSON,FromJSON)
+
 
 type Path = [Int]
 
@@ -36,35 +41,39 @@ subgoal :: Int -> IxAffineTraversal' Context ProofTree ProofTree
 subgoal n = subgoals % ix n
 
 step :: IxLens' Context ProofTree (Maybe (P.RuleRef, [ProofTree]))
-step = ilens (\(PT xs lcls t sg) -> (Context (reverse xs) lcls, sg))
-             (\(PT xs lcls t _ ) sg -> PT xs lcls t sg)
+step = ilens (\(PT _ xs lcls t sg) -> (Context (reverse xs) lcls, sg))
+             (\(PT opts xs lcls t _ ) sg -> PT opts xs lcls t sg)
 
 path :: [Int] -> IxAffineTraversal' Context ProofTree ProofTree
 path [] = iatraversal (Right . (mempty,)) (const id)
 path (x:xs) = path xs %+ subgoal x
 
+style :: Lens' ProofTree (Maybe ProofDisplayData)
+style = lens (\(PT opts _  _ _ _ ) -> opts)
+             (\(PT _ xs lcls t sg) opts -> PT opts xs lcls t sg)
+
 assumptions :: Lens' ProofTree [P.Prop]
-assumptions = lens (\(PT _  lcls _ _ ) -> lcls)
-                   (\(PT xs _    t sg) lcls -> PT xs lcls t sg)
+assumptions = lens (\(PT _    _  lcls _ _ ) -> lcls)
+                   (\(PT opts xs _    t sg) lcls -> PT opts xs lcls t sg)
 
 inference :: IxLens' Context ProofTree T.Term
-inference = ilens (\(PT xs lcls t _ ) -> (Context (reverse xs) lcls, t))
-                  (\(PT xs lcls _ sg) t -> PT xs lcls t sg)
+inference = ilens (\(PT _ xs lcls t _ ) -> (Context (reverse xs) lcls, t))
+                  (\(PT opts xs lcls _ sg) t -> PT opts xs lcls t sg)
 
 goalbinders :: Lens' ProofTree [T.Name]
-goalbinders = lens (\(PT xs _   _ sg) -> xs)
-                   (\(PT _ lcls t sg) xs -> PT xs lcls t sg)
+goalbinders = lens (\(PT _ xs _   _ sg) -> xs)
+                   (\(PT opts _ lcls t sg) xs -> PT opts xs lcls t sg)
 
 
 
 fromProp :: P.Prop -> ProofTree
-fromProp (P.Forall sks lcls g) = PT sks lcls g Nothing
+fromProp (P.Forall sks lcls g) = PT Nothing sks lcls g Nothing
 
 dependencies :: Traversal' ProofTree P.RuleName
 dependencies = traversalVL guts
   where
-    guts act (PT sks lcls g (Just (P.Defn rr,sgs)))
-        = (\rr' sgs' -> PT sks lcls g (Just (P.Defn rr',sgs')))
+    guts act (PT opts sks lcls g (Just (P.Defn rr,sgs)))
+        = (\rr' sgs' -> PT opts sks lcls g (Just (P.Defn rr',sgs')))
           <$> act rr
           <*> traverse (guts act) sgs
     guts act x = pure x
@@ -73,10 +82,10 @@ dependencies = traversalVL guts
 outstandingGoals :: IxTraversal' Path ProofTree ProofTree
 outstandingGoals = itraversalVL (\act -> guts act [])
   where
-    guts act pth (PT sks lcls g (Just (rr,sgs)))
-        = (\sgs' -> PT sks lcls g (Just (rr,sgs')))
+    guts act pth (PT opts sks lcls g (Just (rr,sgs)))
+        = (\sgs' -> PT opts sks lcls g (Just (rr,sgs')))
           <$> traverse (uncurry $ guts act) (zip (map (:pth) [0..]) sgs)
-    guts act pth p@(PT sks lcls g Nothing) = act pth p
+    guts act pth p@(PT opts sks lcls g Nothing) = act pth p
 
 apply :: P.NamedProp -> Path -> ProofTree -> UnifyM ProofTree
 apply (r,prp) p pt = do
@@ -84,10 +93,10 @@ apply (r,prp) p pt = do
        pure $ applySubst subst pt'
   where
     guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
-    guts context (PT xs lcls t _) = do
+    guts context (PT opts xs lcls t _) = do
        (subst, sgs) <- lift $ applyRule (reverse xs ++ bound context) t prp
        tell subst
-       pure $ PT xs lcls t (Just (r,sgs))
+       pure $ PT opts xs lcls t (Just (r,sgs))
 
     applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRule skolems g (P.Forall (m :ms) sgs g') = do
@@ -114,13 +123,13 @@ apply (r,prp) p pt = do
     -- if i have a prop and it's simple just unify terms (P.ForAll [] [] g' is just a term (g?)) NOT SURE WHERE TO PUT THIS! - currently as last case
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
-applySubst subst (PT sks lcls g sgs) =
-    PT sks (map (P.applySubst subst) lcls) (T.applySubst subst g) (fmap (fmap (map (applySubst subst))) sgs)
+applySubst subst (PT opts sks lcls g sgs) =
+    PT opts sks (map (P.applySubst subst) lcls) (T.applySubst subst g) (fmap (fmap (map (applySubst subst))) sgs)
 
 clear :: P.RuleName -> ProofTree -> ProofTree
-clear toClear x@(PT sks lcl g (Just (rr,sgs)))
-     | rr == (P.Defn toClear) = PT sks lcl g Nothing
-     | otherwise              = PT sks lcl g $ Just (rr, map (clear toClear) sgs)
+clear toClear x@(PT opts sks lcl g (Just (rr,sgs)))
+     | rr == (P.Defn toClear) = PT opts sks lcl g Nothing
+     | otherwise              = PT opts sks lcl g $ Just (rr, map (clear toClear) sgs)
 clear toClear x = x
 
 
