@@ -99,9 +99,11 @@ processRenames rns doc = foldM processRename doc rns
       | otherwise = Right $ map (renamed (s, s')) doc
 
 switchFocus :: EditorFocus -> Editor -> Editor
-switchFocus (ItemFocus idx f) ed = ed
+switchFocus (ItemFocus idx f) ed =
+  let (lefts, x : rest) = splitAt idx (document ed)
+  in ed
   { currentFocus = ItemFocus idx f
-  , inputText = fromMaybe "" (editable f (document ed !! idx))
+  , inputText = fromMaybe "" (editable (concatMap definedSyntax lefts) f x)
   }
 switchFocus f ed = ed {currentFocus = f, inputText = ""}
 
@@ -116,7 +118,8 @@ runAction' Reset ed = pure (ed {message = Nothing, currentFocus = NoFocus})
 runAction' (ItemAction mi act) ed = do
   let index | Just i <- mi = i
             | ItemFocus i _ <- currentFocus ed = i
-  (item, mf, inv, rns) <- runController (handle act (document ed !! index)) (inputText ed)
+  let (lefts,it:rights) = splitAt index (document ed)
+  (item, mf, inv, rns) <- runController (handle act it) (inputText ed) (concatMap definedSyntax lefts)
   doc' <- processRenames rns (document ed)
   let doc'' = over (after index) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) doc'
       ed'   = ed {message = Nothing, document = doc''}
@@ -124,10 +127,10 @@ runAction' (ItemAction mi act) ed = do
         Nothing -> (False, NoFocus)
         Just (leave, f) -> (leave, ItemFocus index f)
   (if leave then runAction' (SetFocus newFocus) else (pure . switchFocus newFocus)) ed'
-
 runAction' (SetFocus f) ed = case currentFocus ed of
   ItemFocus i f' -> do
-    (item, _, inv, rns) <- runController (leaveFocus f' (document ed !! i)) (inputText ed)
+    let (lefts,it:rights) = splitAt i (document ed)
+    (item, _, inv, rns) <- runController (leaveFocus f' it) (inputText ed) (concatMap definedSyntax lefts)
     let doc = over (after i) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) (document ed)
     Right $ switchFocus f (ed {message = Nothing, document = doc})
   _ -> Right $ switchFocus f (ed {message = Nothing})
