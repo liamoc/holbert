@@ -105,7 +105,7 @@ applyRewrite (r,prp) p pt = do
   where
     guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
     guts context (PT xs lcls t _) = do
-       (subst, sgs) <- lift $ applyEq (reverse xs ++ bound context) t prp
+       (subst, sgs) <- lift $ applyEq (reverse xs ++ bound context) t (r,prp)
        tell subst
        pure $ PT xs lcls t (Just (r,sgs))
 
