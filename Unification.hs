@@ -126,8 +126,9 @@ type UnifyM = ExceptT MS.MisoString (State Int)
 unifier :: Term-> Term -> UnifyM Subst
 unifier t1 t2 = fromUnifier <$> unif [] (t1,t2)
 
+-- Identical to unifier(Term) but instead passes in propositions
 unifierProp :: Prop -> Prop -> UnifyM Subst
-unifierProp p1 p2 = fromUnifier <$> unif [] (p1, p2)
-
+unifierProp (ForAll [] [] p1) (ForAll [] [] p2) = unifier p1 p2  -- Simple case
+unifierProp _ _ = empty  -- Complex case (empty for now)
 
 runUnifyM = runState . runExceptT

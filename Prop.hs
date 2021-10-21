@@ -102,4 +102,3 @@ setConclusionString :: Path -> MisoString -> Prop -> Either MisoString Prop
 setConclusionString p txt prp = iatraverseOf (path p %. conclusion) Right parse prp
   where
     parse ctx _ = fromSexps ctx txt
-

@@ -100,18 +100,16 @@ apply (r,prp) p pt = do
     -- Identical to applyRule(Intro) but also tries to unifie with an assumption
     -- Will only try to unify goal if it usinifies with an assumption
     applyRuleElim :: [T.Name] ->  [T.Prop] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- added [T.Prop] for assumptions
-    applyRuleElim skolems assmps g (P.Forall (m:ms) sgs g') = do -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
-       n <- fresh -- returns increasing #, always unique
-       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1]) -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
+    applyRuleElim skolems assmps g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
+       n <- fresh  -- Returns increasing #, always unique
+       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
        applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRuleElim skolems (a:assmps) g (P.Forall [] (s:sgs) g') = (do
-       substs <- unifierProp a s -- TODO: unifierProp like unifier but takes 2 props not 2 terms
-       (,map fromProp sgs) <$> unifier (T.applySubst substs g) (T.applySubst substs g')) -- T.applySubst like P.subst but takes terms not props
-       <|> applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g') -- <|> := else
+       substs <- unifierProp a s
+       (,map fromProp sgs) <$> unifier (T.applySubst substs g) (T.applySubst substs g'))  -- T.applySubst like P.subst but takes terms not props
+       <|> applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g')  -- <|> := else
     applyRuleElim skolems [] g (P.Forall [] sgs g') = empty
     applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall [] [] g')) = g
-
-    -- if i have a prop and it's simple just unify terms (P.ForAll [] [] g' is just a term (g?)) NOT SURE WHERE TO PUT THIS! - currently as last case
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT sks lcls g sgs) =
