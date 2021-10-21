@@ -98,6 +98,17 @@ apply (r,prp) p pt = do
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
 
+applyRewrite :: P.NamedProp -> Path -> ProofTree -> UnifyM ProofTree
+applyRewrite (r,prp) p pt = do
+    do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
+       pure $ applySubst subst pt'
+  where
+    guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
+    guts context (PT xs lcls t _) = do
+       (subst, sgs) <- lift $ applyEq (reverse xs ++ bound context) t prp
+       tell subst
+       pure $ PT xs lcls t (Just (r,sgs))
+
 applyEq :: [T.Name] -> T.Term -> P.NamedProp -> UnifyM (T.Subst, P.RuleRef, [ProofTree])
 applyEq skolems g (r,(P.Forall (m :ms) sgs g')) = do
   n <- fresh

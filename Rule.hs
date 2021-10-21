@@ -93,13 +93,13 @@ instance Control Rule where
                    | InstantiateMetavariable Int
                    deriving (Show, Eq)
 
-  defined (R n _ _) = [n]
+  defined (R n _ _) = [n] --If an item has defined some rules, they will be returned in a list
 
-  inserted _ = RuleTermFocus []
+  inserted _ = RuleTermFocus [] --When you've inserted an item switches to the relevant focus
 
-  invalidated s r = over (proofState % proofTree) (PT.clear s) r
+  invalidated s r = over (proofState % proofTree) (PT.clear s) r --Whenever we change a rule this goes through the document and removes it from use in proofs
 
-  renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r
+  renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
   editable (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
   editable (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
@@ -109,7 +109,7 @@ instance Control Rule where
   editable _ = const Nothing
 
 
-  leaveFocus (ProofBinderFocus p i) = noFocus . handle (RenameProofBinder p i)
+  leaveFocus (ProofBinderFocus p i) = noFocus . handle (RenameProofBinder p i) --These define the action when the user leaves focus on an item
   leaveFocus (RuleBinderFocus p i)  = noFocus . handle (RenameRuleBinder p i)
   leaveFocus (NewRuleBinderFocus p) = noFocus . handle (AddRuleBinder p)
   leaveFocus (RuleTermFocus p)      = noFocus . handle (UpdateTerm p)
@@ -128,7 +128,7 @@ instance Control Rule where
             _      -> clearFocus
           pure state'
 
-  handle (Rewrite np pth) state = case traverseOf proofState (runUnifyPS $ PT.apply np pth) state of
+  handle (Rewrite np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np pth) state of
      Left e -> errorMessage e >> pure state
      Right state' -> let
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'

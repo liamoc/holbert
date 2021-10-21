@@ -13,7 +13,7 @@ import qualified Paragraph as P
 import qualified ProofTree as PT
 import qualified Prop as Prp
 import qualified Rule as R
-import DisplayOptions 
+import DisplayOptions
 
 type Document = [I.Item]
 type ItemIndex = Int
@@ -49,7 +49,7 @@ data EditorAction
   | NewItemMenu ItemIndex
   | UpdateInput MS.MisoString
   | InsertItem ItemIndex I.Item
-  | InsertProposition ItemIndex Bool  
+  | InsertProposition ItemIndex Bool
   | Download
   | Import
   | LoadDocument Document
@@ -137,7 +137,7 @@ runAction' (UpdateInput s) ed = pure (ed {inputText = s})
 
 runAction' (InsertItem idx itm) ed =
   let (first, last) = splitAt (idx + 1) (document ed)
-   in pure $ switchFocus (ItemFocus (idx + 1) $ inserted itm) $ ed 
+   in pure $ switchFocus (ItemFocus (idx + 1) $ inserted itm) $ ed
         { document = first ++ itm : last, message = Nothing }
 
 runAction' (ShiftDown idx) ed =
