@@ -101,4 +101,4 @@ getConclusionString tbl p prp = let (ctx, trm) = fromJust (ipreview (path p %. c
 setConclusionString :: SR.SyntaxTable -> Path -> MisoString -> Prop -> Either MisoString Prop
 setConclusionString tbl p txt prp = iatraverseOf (path p %. conclusion) Right parse prp
   where
-    parse ctx _ = fromSexps ctx txt
+    parse ctx _ = SR.parse tbl ctx txt
