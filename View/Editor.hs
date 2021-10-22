@@ -41,9 +41,9 @@ viewEditor x =
             , li_ [class_ "tab"] [label_ [for_ "elim-tab"] ["Elim"]]
             , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
             ]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs R.Apply)
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Apply") rs)
           , div_ [class_ "tab-content" ] ["Incomplete"]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs R.Rewrite)
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
           ]
         ]
 
@@ -67,7 +67,7 @@ viewEditor x =
         ]
       _ -> [block "sidebar-header" ["Facts Summary:"], renderIndex $ document x]
 
-    renderPropGroup i p ctx (n, rs) action =
+    renderPropGroup i p ctx action (n, rs)=
       [ block "sidebar-header" [text n, text ":"]
       , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p) action) rs
       ]
@@ -165,10 +165,13 @@ renderDoc textIn opts selected script = zipWith go [0 ..] script
        in block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton
 
 renderAvailableRule ctx opts (i, p) (rr, r) action =
-  button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ action (rr, r) p)
+  button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ a (rr, r) p)
     [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
   where
     ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
+    a = case (action) of
+      "Apply" -> R.Apply
+      "Rewrite" -> R.Rewrite
 
 renderDisplayOptions opts =
   form_ [class_ "sidebar-displayoptions"]
