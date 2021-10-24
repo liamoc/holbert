@@ -164,7 +164,7 @@ renderDoc textIn opts selected script = zipWith go [0 ..] script
                     _ -> []
        in block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton
 
-renderAvailableRule ctx opts (i, p) (rr, r) action =
+renderAvailableRule ctx opts (i, p) action (rr, r) =
   button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ a (rr, r) p)
     [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
   where
