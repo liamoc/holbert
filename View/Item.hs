@@ -5,6 +5,7 @@ import View.Utils
 import View.Heading
 import View.Rule
 import View.Paragraph
+import View.SyntaxDecl
 
 toGlobalAction :: Int -> LocalAction (I.Focus I.Item) (I.Action I.Item) -> E.EditorAction
 toGlobalAction _ (UpdateInput s) = E.UpdateInput s
@@ -23,3 +24,5 @@ renderItem opts index tbl textIn item focus = case item of
     $ renderHeading index textIn (fmap (\(I.HeadingFocus p) -> p) $ toLocalFocus index focus) head
   I.Rule rule -> fmap (toGlobalAction index . mapLocalAction I.RuleFocus I.RuleAct)
     $ renderRule index opts tbl textIn (fmap (\(I.RuleFocus p) -> p) $ toLocalFocus index focus) rule
+  I.SyntaxDecl decl -> fmap (toGlobalAction index . mapLocalAction I.SyntaxDeclFocus I.SyntaxDeclAct)
+    $ renderSyntaxDecl index opts tbl textIn (fmap (\(I.SyntaxDeclFocus p) -> p) $ toLocalFocus index focus) decl

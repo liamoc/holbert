@@ -9,6 +9,8 @@ import qualified Item as I
 import qualified Paragraph as P
 import qualified Rule as R
 import qualified Terms as T
+import qualified SyntaxDecl as SD
+import qualified Text.Earley.Mixfix as EPM
 import Controller(definedSyntax)
 import View.Item
 import View.Term
@@ -89,6 +91,7 @@ viewEditor x =
       [ block "sidebar-header" ["Proof elements:"]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus False i) [block "item-rule-theoremheading" ["Axiom."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus True i) [block "item-rule-theoremheading" ["Theorem."]]
+      , button "sidebar-insert" "" (InsertItem i (I.SyntaxDecl $ SD.SyntaxDecl "_op_" 0 EPM.NonAssoc [])) [block "item-syntaxdecl" ["SyntaxDecl."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
       , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]
