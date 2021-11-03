@@ -107,18 +107,18 @@ apply (r,prp) p pt = do
        (,map fromProp sgs) <$> unifier g g'
 
     -- Identical to applyRule(Intro) but also tries to unifie with an assumption
-    Will only try to unify goal if it usinifies with an assumption
-    applyRuleElim :: [T.Name] ->  [P.Prop] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- added [T.Prop] for assumptions
-    applyRuleElim skolems assmps g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
-       n <- fresh  -- Returns increasing #, always unique
-       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
-       applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall ms sgs g'))
-    applyRuleElim skolems (a:assmps) g (P.Forall [] (s:sgs) g') = (do
-       substs <- unifierProp a s
-       (,map fromProp sgs) <$> unifier (T.applySubst substs g) (T.applySubst substs g'))  -- T.applySubst like P.subst but takes terms not props
-       <|> applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g')  -- <|> := else
-    applyRuleElim skolems [] g (P.Forall [] sgs g') = empty  -- empty doesn't exist?
-    applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall [] [] g')) = g
+    -- Will only try to unify goal if it usinifies with an assumption
+    -- applyRuleElim :: [T.Name] ->  [P.Prop] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- added [T.Prop] for assumptions
+    -- applyRuleElim skolems assmps g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
+    --    n <- fresh  -- Returns increasing #, always unique
+    --    let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
+    --    applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall ms sgs g'))
+    -- applyRuleElim skolems (a:assmps) g (P.Forall [] (s:sgs) g') = (do
+    --    substs <- unifierProp a s
+    --    (,map fromProp sgs) <$> unifier (T.applySubst substs g) (T.applySubst substs g'))  -- T.applySubst like P.subst but takes terms not props
+    --    <|> applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g')  -- <|> := else
+    -- applyRuleElim skolems [] g (P.Forall [] sgs g') = empty  -- empty doesn't exist?
+    -- applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall [] [] g')) = g
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT opts sks lcls g sgs) =

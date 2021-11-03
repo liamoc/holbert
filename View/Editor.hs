@@ -43,9 +43,10 @@ viewEditor x =
             , li_ [class_ "tab"] [label_ [for_ "elim-tab"] ["Elim"]]  -- me!
             , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
             ]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Apply") rs)
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Eliminate") rs)  -- me!
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
+          -- need to add text for each tab
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)  -- me!
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)
           ]
         ]
         
@@ -69,9 +70,9 @@ viewEditor x =
         ]
       _ -> [block "sidebar-header" ["Facts Summary:"], renderIndex $ document x]
 
-    renderPropGroup i p ctx action (n, rs) =
+    renderPropGroup i p ctx (n, rs) =
       [ block "sidebar-header" [text n, text ":"]
-      , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p) action) rs
+      , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p)) rs
       ]
 
     toolbar = block "sidebar-logo"
