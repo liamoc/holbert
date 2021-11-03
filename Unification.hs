@@ -123,12 +123,13 @@ type Gen = State Int
 
 type UnifyM = ExceptT MS.MisoString (State Int)
 
-unifier :: Term-> Term -> UnifyM Subst
+unifier :: Term -> Term -> UnifyM Subst
 unifier t1 t2 = fromUnifier <$> unif [] (t1,t2)
 
+-- MOVED TO PROP AS 'Prop' CANNT BE RESOLVED HERE (LOOP ON IMPORT PROP)
 -- Identical to unifier(Term) but instead passes in propositions
-unifierProp :: Prop -> Prop -> UnifyM Subst
-unifierProp (ForAll [] [] p1) (ForAll [] [] p2) = unifier p1 p2  -- Simple case
-unifierProp _ _ = empty  -- Complex case (empty for now)
+-- unifierProp :: Prop -> Prop -> UnifyM Subst
+-- unifierProp (ForAll [] [] p1) (ForAll [] [] p2) = unifier p1 p2  -- Simple case
+-- unifierProp _ _ = empty  -- Complex case (empty for now)
 
 runUnifyM = runState . runExceptT
