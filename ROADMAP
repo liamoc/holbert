@@ -1,0 +1,23 @@
+- Multi-file documents (Yining)
+   - Imports
+   - Persistence to local storage
+   - Submission to server?
+   - Lockable regions
+- Elimination rules and induction (Chris)
+   - Applying a rule as an elimination rule
+   - Defining an inductive set
+   - Applying an induction tactic
+   - Simultaneous induction
+   - Defining inductive sets via grammar
+- Equality and Definitions (Rayhana)
+   - Applying an equality rule as a rewrite
+   - Definitions that are stricter than axioms.
+   - Transitive calculational proofs
+   - Inductive definitions (possibly)
+- Syntax (Yueyang)
+   - Mix-fix definitions, parsing and pretty printing.
+- Built-ins
+   - Strings
+   - Naturals
+- Hidden premises
+   - e.g. a variable called "xs" in a rule implicity introduces a premise "xs List" but this is not usually displayed prominently and proofs attempt to solve it automatically. 

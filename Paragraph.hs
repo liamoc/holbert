@@ -12,7 +12,7 @@ instance Control Paragraph where
   data Action Paragraph = Edit
     deriving (Show, Eq)
 
-  editable Select (Paragraph s) = Just s
+  editable tbl Select (Paragraph s) = Just s
 
   leaveFocus _ = pure
 

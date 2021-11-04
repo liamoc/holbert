@@ -235,9 +235,25 @@ button {
 }
 
 /* RULE TABLES */
+.word-proof-prop {
+  font-family: 'NeoEulerMedium';
+}
+.word-proof-binders {
+  font-family: 'NeoEulerMedium';
+}
+.word-proof > p {
+  margin:0px;
+}
+.word-proof {
+  margin-top:5px;
+}
+.proof-subtitle {
+  margin-bottom:2px;
+}
 .rule {
   font-family: 'NeoEulerMedium';
 }
+
 .rule-cell {
   font-family: 'NeoEulerMedium';
   vertical-align:bottom;
@@ -613,6 +629,28 @@ ul.sidebar-index ul {
 .tabbed [type="radio"]:nth-of-type(3):checked ~ .tab-content:nth-of-type(3),
 .tabbed [type="radio"]:nth-of-type(4):checked ~ .tab-content:nth-of-type(4) {
 	display: block;
+}
+/* PRINT MEDIA */
+@media print {
+  .button-icon {
+    display:none;
+  }
+  .inference {
+    page-break-inside: avoid;
+  }
+  .gutter {
+    display:none;
+  }
+  .sidebar {
+    display:none;
+  }
+  .document {
+    width:100% !important;
+    overflow:inherit;
+  }
+  .item {
+    border-bottom: 0px;
+  }
 }
   </style> 
   </head>
