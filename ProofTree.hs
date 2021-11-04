@@ -113,10 +113,10 @@ applyRewrite (r,prp) p pt = do
        pure $ applySubst subst pt'
   where
     guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
-    guts context (PT xs lcls t _) = do
+    guts context (PT d xs lcls t _) = do
        (subst, r, sgs) <- lift $ applyEq (reverse xs ++ bound context) t (r,prp)
        tell subst
-       pure $ PT xs lcls t (Just (r,sgs))
+       pure $ PT d xs lcls t (Just (r,sgs))
 
 applyEq :: [T.Name] -> T.Term -> P.NamedProp -> UnifyM (T.Subst, P.RuleRef, [ProofTree])
 applyEq skolems g (r,(P.Forall (m :ms) sgs g')) = do
@@ -125,10 +125,10 @@ applyEq skolems g (r,(P.Forall (m :ms) sgs g')) = do
   applyEq skolems g (r,(P.subst mt 0 (P.Forall ms sgs g')))
 applyEq skolems g (r,(P.Forall [] sgs g')) = do
   (s,t) <- match skolems g (P.Forall [] sgs g')
-  return (s,r,((PT [] [] t Nothing):(map fromProp sgs)))
+  return (s,r,((PT Nothing [] [] t Nothing):(map fromProp sgs)))
   where
     match :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, T.Term)
-    match skolems g (P.Forall (m :ms) sgs g') = (do
+    match skolems g (P.Forall _ sgs g') = (do
       a <- fresh
       let ma = foldl T.Ap a (map T.LocalVar [0..length skolems -1])
       s <- unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
