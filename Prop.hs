@@ -12,6 +12,7 @@ import Optics.IxAffineTraversal
 import Optics.Lens
 import Optics.Iso
 import Optics.Core
+import Control.Applicative
 
 type RuleName = MisoString
 
@@ -105,6 +106,6 @@ setConclusionString tbl p txt prp = iatraverseOf (path p %. conclusion) Right pa
 
 -- Identical to unifier in Terms.hs but instead passes in propositions
 -- (has to go here to use Prop, can't import Prop in Unification.hs as it loops imports)
--- unifierProp :: Prop -> Prop -> UnifyM T.Subst
--- unifierProp (Forall [] [] p1) (Forall [] [] p2) = unifier p1 p2  -- Simple case
--- unifierProp _ _ = empty  -- Complex case (empty for now) (empty doesn't exist?)
+unifierProp :: Prop -> Prop -> UnifyM T.Subst
+unifierProp (Forall [] [] p1) (Forall [] [] p2) = unifier p1 p2  -- Simple case
+unifierProp _ _ = empty  -- Complex case (empty for now)

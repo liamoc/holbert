@@ -43,10 +43,9 @@ viewEditor x =
             , li_ [class_ "tab"] [label_ [for_ "elim-tab"] ["Elim"]]  -- me!
             , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
             ]
-          -- need to add text for each tab
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)  -- me!
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx) rs)
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Intro") rs)
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Elim") rs)  -- me!
+          , div_ [class_ "tab-content" ] ["Incomplete"]
           ]
         ]
         
@@ -70,9 +69,9 @@ viewEditor x =
         ]
       _ -> [block "sidebar-header" ["Facts Summary:"], renderIndex $ document x]
 
-    renderPropGroup i p ctx (n, rs) =
+    renderPropGroup i p ctx filter (n, rs) =
       [ block "sidebar-header" [text n, text ":"]
-      , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p)) rs
+      , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p) filter) rs
       ]
 
     toolbar = block "sidebar-logo"
@@ -167,11 +166,14 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 
-renderAvailableRule ctx opts (i, p) (rr, r) =
+renderAvailableRule ctx opts (i, p) filter (rr, r) =
   button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ R.Apply (rr, r) p)
     [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
   where
     ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
+    filterRules = case (filter) of
+      "Intro" -> R.Apply
+      "Elim" -> R.Elim
 
 renderDisplayOptions opts =
   form_ [class_ "sidebar-displayoptions"]
