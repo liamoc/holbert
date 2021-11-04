@@ -72,6 +72,7 @@ checkVariableName new = case T.invalidName new of
 instance Control Rule where
   data Focus Rule = GoalFocus PT.Path
                   | ProofBinderFocus PT.Path Int
+                  | ProofSubtitleFocus PT.Path
                   | RuleBinderFocus P.Path Int
                   | NewRuleBinderFocus P.Path
                   | RuleTermFocus P.Path
@@ -81,6 +82,8 @@ instance Control Rule where
 
   data Action Rule = Apply P.NamedProp PT.Path
                    | Rewrite P.NamedProp PT.Path
+                   | ToggleStyle PT.Path
+                   | SetSubgoalHeading PT.Path
                    | Nix PT.Path
                    | RenameProofBinder PT.Path Int
                    | AddRuleBinder P.Path
@@ -101,12 +104,13 @@ instance Control Rule where
 
   renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
-  editable (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
-  editable (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
-  editable (RuleTermFocus pth) = Just . P.getConclusionString pth . view prop
-  editable (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
-  editable NameFocus = preview name
-  editable _ = const Nothing
+  editable tbl (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
+  editable tbl (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
+  editable tbl (RuleTermFocus pth) = Just . P.getConclusionString tbl pth . view prop
+  editable tbl (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
+  editable tbl NameFocus = preview name
+  editable tbl (ProofSubtitleFocus pth) = fmap (fromMaybe "Subgoal" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
+  editable _ _ = const Nothing
 
 
   leaveFocus (ProofBinderFocus p i) = noFocus . handle (RenameProofBinder p i) --These define the action when the user leaves focus on an item
@@ -128,6 +132,7 @@ instance Control Rule where
             _      -> clearFocus
           pure state'
 
+
   handle (Rewrite np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np pth) state of
      Left e -> errorMessage e >> pure state
      Right state' -> let
@@ -139,6 +144,16 @@ instance Control Rule where
             Just f -> setFocus (GoalFocus f)
             _      -> clearFocus
           pure state'
+  handle (ToggleStyle pth) state = do
+    let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Subgoal" })
+        f (Just pdd) = Just $ pdd { PT.proseStyle = not (PT.proseStyle pdd)}
+    pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
+  handle (SetSubgoalHeading pth) state = do
+    new <- textInput
+    let f Nothing = Just (PT.PDD {  PT.proseStyle = False, PT.subtitle = new })
+        f (Just pdd) = Just $ pdd { PT.subtitle = new }
+    pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
+
 
   handle (Nix pth) state = do
      clearFocus
@@ -171,7 +186,8 @@ instance Control Rule where
 
   handle (UpdateTerm pth) state = do
      new <- textInput
-     case toLensVL prop (P.setConclusionString pth new) state of
+     tbl <- syntaxTable
+     case toLensVL prop (P.setConclusionString tbl pth new) state of
        Left e -> errorMessage $ "Parse error: " <> e
        Right state' -> do
          invalidate (view name state')
@@ -180,7 +196,8 @@ instance Control Rule where
          pure $ over propUpdate id state' --hack..
   handle (InstantiateMetavariable i) state = do
     new <- textInput
-    case fromSexps [] new of
+    tbl <- syntaxTable
+    case parse tbl [] new of
       Left e -> errorMessage $ "Parse error: " <> e
       Right obj -> do
          pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state

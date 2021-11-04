@@ -11,13 +11,15 @@ import View.Term
 
 data RuleDisplayOptions = RDO { termDisplayOptions :: TermDisplayOptions, showInitialMetas :: Bool, ruleStyle :: RuleStyle } 
 
-renderProp = renderPropName Nothing
-renderPropName = renderPropNameE NotEditable
 data EditableMode = NotEditable
                   | Editable (Maybe (R.Focus R.Rule), MS.MisoString)
                   | InProofTree (Maybe (R.Focus R.Rule), MS.MisoString)
 
-renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (ruleStyle opts) ctx [] prp
+renderProp = renderPropName Nothing
+renderPropName = renderPropNameE NotEditable
+renderPropNameE = renderPropNameLabelledE Nothing Nothing
+
+renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (showInitialMetas opts) n (ruleStyle opts) ctx [] prp
   where
     metabinders pth vs = wrap $
       zipWith (metabinder' pth) [0 ..] vs ++
@@ -39,6 +41,9 @@ renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (rul
         editableMath n' (metabinder n) (R.RuleBinderFocus pth i) (R.RenameRuleBinder pth i)
           [iconButton "red" "Remove Variable" "trash" (Act $ R.DeleteRuleBinder pth i)]
           selected
+      InProofTree (selected, n') | pth == [], Just pth' <- ptpath ->
+        editableMath n' (metabinder n) (R.ProofBinderFocus pth' i) (R.RenameProofBinder pth' i)
+          [] selected
       _ -> metabinder n
 
     renderTerm' ctx pth trm = case editable of
@@ -70,16 +75,19 @@ renderPropNameE editable n ctx opts prp = renderP (showInitialMetas opts) n (rul
       Editable (Just (R.RuleTermFocus pth'),_) -> pth == pth'  
       otherwise -> False      
 
-    renderP showMetas title style ctx pth (Forall sks lcls g) =
+    renderP labels showMetas title style ctx pth (Forall sks lcls g) =
       let (renderer, nextStyle) = case style of
             Bar -> (inferrule, Dots)
             BarTurnstile -> (inferrule, Turnstile)
             Turnstile -> (entailment (isSelected pth), Turnstile)
             Dots -> (hypothetical (isSelected pth), Turnstile)
           ctx' = reverse sks ++ ctx
-          renderNext pth prp | style /= Turnstile = renderP True Nothing nextStyle ctx' pth prp
-          renderNext pth prp@(Forall [] [] g) | not (isSelectedOrBinders pth) = renderP True Nothing nextStyle ctx' pth prp
-          renderNext pth prp = multi (parenthesise [renderP True Nothing nextStyle ctx' pth prp])
+          renderNext pth prp | style /= Turnstile = renderP Nothing True (labels >>= lookupMaybe (head pth)) nextStyle ctx' pth prp
+          renderNext pth prp@(Forall [] [] g) | not (isSelectedOrBinders pth) = renderP Nothing True (labels >>= lookupMaybe (head pth)) nextStyle ctx' pth prp
+          renderNext pth prp = multi (parenthesise [renderP Nothing True (labels >>= lookupMaybe (head pth)) nextStyle ctx' pth prp])
+          lookupMaybe n [] = Nothing
+          lookupMaybe 0 (x:xs) = Just x
+          lookupMaybe n (x:xs) = lookupMaybe (n-1) xs
           binders = if showMetas then [metabinders pth sks] else []
           premises = zipWith renderNext (map (: pth) [0 ..]) lcls
           spacer =

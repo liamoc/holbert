@@ -1,9 +1,12 @@
-{-# LANGUAGE OverloadedStrings #-}
-module StringRep (toSexps, fromSexps) where
+{-# LANGUAGE OverloadedStrings, RecursiveDo #-}
+module StringRep (prettyPrint, parse, SyntaxTable (..), EPM.Associativity) where
 
 import Data.Char
+import Control.Arrow(first)
 import Control.Monad(ap, when)
 import Data.List
+import Data.Function (on)
+import Data.Ord(comparing)
 import Prelude hiding (lex)
 import Data.Maybe
 import Control.Monad.Except
@@ -13,23 +16,105 @@ import qualified Miso.String as MS
 import qualified Data.Text.Lazy.Builder as B
 import qualified Data.Text.Lazy as L
 import Terms
+import qualified Text.Earley as EP
+import qualified Text.Earley.Mixfix as EPM
+
+data Token = LParen | RParen | Word MS.MisoString | Dot | Binder MS.MisoString deriving (Show, Eq)
+
+holey :: MS.MisoString -> EPM.Holey MS.MisoString
+holey str = case MS.uncons str of 
+  Nothing -> []
+  Just ('_',xs) -> Nothing : holey xs
+  Just _        -> Just (MS.toMisoString i) : holey rest
+  where (i, rest) = MS.span (/= '_') str
+
+concatMixfix :: EPM.Holey Token -> MS.MisoString
+concatMixfix xs = MS.ms $ B.toLazyText $ go xs
+  where
+    go []            = B.fromText ""
+    go (Nothing:xs)  = B.fromText "_" <> go xs
+    go ((Just (Word x)):xs) = (B.fromText $ MS.fromMisoString x) <> go xs
+
+type SyntaxTable = [(Int, MS.MisoString,EPM.Associativity)]
+
+
+generateTable :: SyntaxTable -> [[(EPM.Holey MS.MisoString, EPM.Associativity)]]
+generateTable tbl = (map . map) (\(_,str, a) -> (holey str, a)) $ groupBy ((==) `on` precedence) $ sortBy (comparing precedence) tbl
+  where precedence (a,b,c) = a
+
+mixfixDef :: [[(MS.MisoString, EPM.Associativity)]]
+mixfixDef = [ [("_->_",          EPM.RightAssoc)]
+            , [("_,_",           EPM.NonAssoc)]
+            , [("if_then_else_", EPM.RightAssoc)]
+            , [("_|-_:_",        EPM.NonAssoc)]
+            , [("_+_",           EPM.LeftAssoc)]
+            , [("_*_",           EPM.LeftAssoc)]
+            ]
+
+mixfixTable :: [[(EPM.Holey MS.MisoString, EPM.Associativity)]]
+mixfixTable = (map . map) (first holey) mixfixDef
+
+grammar :: SyntaxTable -> EP.Grammar r (EP.Prod r Token Token Term)
+grammar tbl = mdo
+  ident     <- EP.rule $ getWord <$> EP.satisfy isLegalWord
+  atom      <- EP.rule $ Const <$> ident
+                      <|> EP.namedToken LParen *> program <* EP.namedToken RParen
+  normalApp <- EP.rule $ atom
+                      <|> Ap <$> normalApp <*> atom
+  mixfixApp <- EPM.mixfixExpression table normalApp mixfixCon
+  program   <- EP.rule $ mixfixApp 
+                      <|> Lam . maskCon <$> EP.satisfy isLegalBinder <*> program 
+  return program
+  where
+    maskCon (Binder b) = M b
+    mixfixCon op ts = applyApTelescope (Const $ concatMixfix op) ts
+    getWord (Word w) = w
+    tbl' = generateTable tbl
+    table = map (map $ first $ map $ fmap (EP.namedToken . Word)) $ tbl'
+    illegalIdents = [s | xs <- tbl' , (ys, _) <- xs , Just s <- ys]
+    isLegalBinder (Binder b) = not $ elem b illegalIdents
+    isLegalBinder _ = False
+    isLegalWord (Word w) = not $ elem w illegalIdents 
+    isLegalWord _ = False
+
+postProc :: [Name] -> Term -> Term
+postProc ctx (Lam (M b) t) = Lam (M b) $ postProc (b:ctx) t
+postProc ctx (Ap t1 t2) = Ap (postProc ctx t1) (postProc ctx t2) 
+postProc ctx (Const x) | Just v <- elemIndex x ctx = LocalVar v
+                       | otherwise = Const x
 
 type Error = MS.MisoString
 
-toSexps :: [Name] -> Term -> MS.MisoString 
-toSexps ctx t = MS.ms $ B.toLazyText $ go ctx t
-go :: [Name] -> Term -> B.Builder 
-go ctx (Lam (M x) t) = B.fromText (MS.fromMisoString x) <> ". " <> go (x:ctx) t
-go ctx e = go' ctx e
-go' ctx (Ap a1 a2) = go' ctx a1 <> " " <> go'' ctx a2
-go' ctx (Lam n t) = "(" <> go ctx (Lam n t) <> ")"
-go' ctx e = go'' ctx e
-go'' ctx (LocalVar v) = B.fromText (MS.fromMisoString (ctx !! v))
-go'' ctx (Const id) = B.fromText $ MS.fromMisoString $ id
-go'' ctx (MetaVar id) = "?" <> B.fromText (MS.fromMisoString $ MS.pack (show id))
-go'' ctx e = "(" <> go ctx e <> ")"
+printHoley :: MS.MisoString -> [B.Builder] -> B.Builder
+printHoley origin operends = go origin origin operends
+  where
+    go origin op [] = B.fromText $ MS.fromMisoString op
+    go origin op (x:xs) = case MS.uncons op of 
+      Just ('_', ops) | origin == op -> x <> " " <> go origin ops xs
+                      | ops == "" -> " " <> x <> go origin ops xs
+                      | otherwise -> " " <> x <> " " <> go origin ops xs
+      Just (o, ops) -> B.singleton o <> go origin ops (x:xs)
 
-data Token = LParen | RParen | Word MS.MisoString | Dot | Binder MS.MisoString deriving (Show, Eq)
+prettyPrint :: SyntaxTable -> [Name] -> Term -> MS.MisoString 
+prettyPrint tbl ctx t = MS.ms $ B.toLazyText $ go ctx t
+  where
+    go :: [Name] -> Term -> B.Builder 
+    go ctx (Lam (M x) t) = B.fromText (MS.fromMisoString x) <> ". " <> go (x:ctx) t
+    go ctx e = go' ctx e
+    go' ctx (Ap a1 a2) 
+      | (x, ts) <- peelApTelescope (Ap a1 a2) = case x of 
+        Const op 
+          | isMixfix op, MS.count "_" op == length ts -> printHoley op $ (map $ go'' ctx) ts
+        _ -> go' ctx a1 <> " " <> go'' ctx a2
+      where
+        isMixfix op = elem op [ys |  (_,ys, _) <- tbl]  
+        
+    go' ctx (Lam n t) = "(" <> go ctx (Lam n t) <> ")"
+    go' ctx e = go'' ctx e
+    go'' ctx (LocalVar v) = B.fromText (MS.fromMisoString (ctx !! v))
+    go'' ctx (Const id) = B.fromText $ MS.fromMisoString $ id
+    go'' ctx (MetaVar id) = "?" <> B.fromText (MS.fromMisoString $ MS.pack (show id))
+    go'' ctx e = "(" <> go ctx e <> ")"
 
 lexer :: MS.MisoString -> [Token]
 lexer str | (x,y) <- MS.span isSpace str
@@ -52,59 +137,13 @@ unlex Dot = "."
 unlex (Binder s) = s <> "."
 unlex (Word s) = s
 
-
 type Parser a = ExceptT MS.MisoString (State [Token]) a
 
-runParser = runState . runExceptT
+fromMixfix :: SyntaxTable -> [Name] -> MS.MisoString -> Either Error Term
+fromMixfix tbl ctx s = case EP.fullParses (EP.parser $ grammar tbl) $ preprocess . lexer $ s of
+  ([], rep) -> Left $ "Parse error: unexpected character at position " <> MS.toMisoString (EP.position rep)
+  ([x], rep) -> Right $ postProc ctx x
+  ((x:xs), rep) -> Left $ "Parse error: ambiguous parsing result: " <> MS.concat (map ((prettyPrint tbl ctx). (postProc ctx)) (x:xs))
 
-expect :: Token -> Parser ()
-expect t = do
-  w <- lex
-  if w == t then pure () else parseError $ "Expected '" <> unlex t <> "', got '" <> unlex w <> "'."
-
-lex :: Parser Token
-lex = do
-  xs' <- get
-  when (null xs') (parseError $ "Unexpected end of input")
-  let (x:xs) = xs'
-  put xs
-  pure x
-
-peek :: Parser (Maybe Token)
-peek = do
-  xs <- get
-  pure $ listToMaybe xs
-
-parseError :: MS.MisoString -> Parser a
-parseError str = throwError str
-parser :: [Name] -> Parser Term
-parser ctx = do
-      w <- peek
-      case w of
-        Just (Binder w) -> lex >> (Lam (M w) <$> parser (w:ctx))
-        _ -> parser' ctx
-
-parser' :: [Name] -> Parser Term
-parser' ctx = toApplications <$> some (parser'' ctx)
-  where
-    toApplications [] = error "impossible"
-    toApplications [x] = x
-    toApplications [x,y] = Ap x y
-    toApplications (x:y:ys) = toApplications (Ap x y:ys)
-
-
-parser'' :: [Name] -> Parser Term
-parser'' ctx = do
-      w <- peek
-      case w of Just (Word w) -> lex >> pure (symbol w)
-                Just (LParen) -> do lex; x <- parser ctx; expect RParen;  pure x
-                Just x        -> parseError ("Unexpected '" <> unlex x <> "'")
-                Nothing       -> parseError ("Unexpected end of input")
-  where symbol w | Just v <- elemIndex w ctx = LocalVar v
-                 | otherwise = Const w
-
-fromSexps :: [Name] -> MS.MisoString -> Either Error Term
-fromSexps ctx s = case runParser (parser ctx) . preprocess . lexer $ s of
-              (Left e,_) -> Left e
-              (Right v,[]) -> Right v
-              (_,s) -> Left $ "Parse error: Leftover '" <> MS.concat (map unlex s) <> "'"
+parse :: SyntaxTable -> [Name] -> MS.MisoString -> Either Error Term
+parse = fromMixfix

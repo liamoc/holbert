@@ -91,7 +91,7 @@ expandingTextarea ids cls act textIn =
 
 inferrule binders premises spacer ruleTitle conclusion =
   table_
-    [intProp "cellpadding" 0, intProp "cellspacing" 0]
+    [  intProp "cellpadding" 0, class_ "inference",intProp "cellspacing" 0]
     [ tr_ []
       $  [td_ [class_ "rule-cell rule-binderbox", rowspan_ "2"] binders]
       ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
@@ -100,6 +100,9 @@ inferrule binders premises spacer ruleTitle conclusion =
     , tr_ [] [td_ [class_ "rule-cell rule-conclusion", colspan_ (MS.pack $ show $ length premises + 1)] conclusion]
     ]
 
+wordsrule [p] _ _ _ =  div_ [class_ "word-proof"] [p]
+wordsrule premises _ _ _ =
+  div_ [class_ "word-proof"] [ ul_ [] $ map (li_ [] . pure) premises ]
 hypothetical showTurnstile binders premises spacer ruleTitle conclusion =
   table_
     [intProp "cellpadding" 0, intProp "cellspacing" 0]
