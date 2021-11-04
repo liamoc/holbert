@@ -115,15 +115,13 @@ applyElim (r,prp) p pt = do
   where
     guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
     guts context (PT opts xs lcls t _) = do
-       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) (assumptions lens pt) t prp  -- assumptions :: Lens' ProofTree [P.Prop] - where do i get lens??
+       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) (reverse lcls ++ X context) t prp  -- Get assumption from context (need to figure out what X is)
        tell subst
        pure $ PT opts xs lcls t (Just (r,sgs))
-    where  -- get lens of current proof state?
-      lens :: Lens'  -- getter?
 
-    -- Identical to applyRule(Intro) but also tries to unifie with an assumption
+    -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
     -- Will only try to unify goal if it usinifies with an assumption
-    applyRuleElim :: [T.Name] ->  [P.Prop] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- added [T.Prop] for assumptions
+    applyRuleElim :: [T.Name] ->  [P.Prop] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- Added [T.Prop] for assumptions
     applyRuleElim skolems assmps g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
        n <- fresh  -- Returns increasing #, always unique
        let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
