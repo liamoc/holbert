@@ -33,7 +33,7 @@ viewEditor x =
     ]
   where
     mainSidebar = case currentFocus x of
-      ItemFocus i (I.RuleFocus (R.GoalFocus p)) ->
+      ItemFocus i (I.RuleFocus (R.GoalFocus p rev)) ->
         [ div_ [class_ "tabbed"]
           [ input_ [type_ "radio", id_ "intro-tab", name_ "rulestabs", checked_ True]
           , input_ [type_ "radio", id_ "elim-tab", name_ "rulestabs"]
@@ -45,7 +45,9 @@ viewEditor x =
             ]
           , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Apply") rs)
           , div_ [class_ "tab-content" ] ["Incomplete"]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
+          , div_ [class_ "tab-content" ] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (setFocus (GoalFocus p not (rev))))]
+        , label_ [for_ "rev_rewrite"] ["Reverse rewrite application"]
+        ],  (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
           ]
         ]
 
