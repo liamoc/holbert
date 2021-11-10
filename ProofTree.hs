@@ -16,6 +16,8 @@ import StringRep
 import Unification
 import Optics.Core
 
+--data Style = Tree | Prose | Equational
+
 data ProofDisplayData = PDD { proseStyle :: Bool, subtitle :: MS.MisoString} 
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
@@ -34,6 +36,11 @@ instance Monoid Context where
 
 infixl 9 %+
 (%+) a b = icompose (<>) (a % b)
+
+--nextStyle :: Style -> Style
+--nextStyle Tree = Prose
+--nextStyle Prose = Equational
+--nextStyle Equational = Tree
 
 subgoals :: IxAffineTraversal' Context ProofTree [ProofTree]
 subgoals = step % _Just % _2
