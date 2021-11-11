@@ -45,10 +45,10 @@ viewEditor x =
             ]
           , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Apply") rs)
           , div_ [class_ "tab-content" ] ["Incomplete"]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
-          , div_ [] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> SetFocus (ItemFocus i (I.RuleFocus (R.GoalFocus p (not rev)))))]
+          , div_ [class_ "tab-content" ] (div_ [] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> SetFocus (ItemFocus i (I.RuleFocus (R.GoalFocus p (b)))))]
         , label_ [for_ "rev_rewrite"] ["Reverse rewrite application"]
-          ]
+          ]:let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
+          
         ]]
 
       NewItemFocus i -> newItemMenu i
