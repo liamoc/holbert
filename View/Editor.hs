@@ -9,7 +9,7 @@ import qualified Item as I
 import qualified Paragraph as P
 import qualified Rule as R
 import qualified Terms as T
-import Controller(definedSyntax)
+import Controller
 import View.Item
 import View.Term
 import View.Prop
@@ -45,7 +45,7 @@ viewEditor x =
             ]
           , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Apply") rs)
           , div_ [class_ "tab-content" ] ["Incomplete"]
-          , div_ [class_ "tab-content" ] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (setFocus (GoalFocus p not (rev))))]
+          , div_ [class_ "tab-content" ] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (setFocus (R.GoalFocus p (not rev)))]
         , label_ [for_ "rev_rewrite"] ["Reverse rewrite application"]
         ],  (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
           ]
