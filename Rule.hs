@@ -81,7 +81,7 @@ instance Control Rule where
                   deriving (Show, Eq)
 
   data Action Rule = Apply P.NamedProp PT.Path
-                   | Rewrite P.NamedProp PT.Path
+                   | Rewrite Bool P.NamedProp PT.Path
                    | ToggleStyle PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
@@ -133,7 +133,7 @@ instance Control Rule where
           pure state'
 
 
-  handle (Rewrite np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np True pth) state of
+  handle (Rewrite rev np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np rev pth) state of
      Left e -> errorMessage e >> pure state
      Right state' -> let
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'

@@ -18,6 +18,12 @@ import Data.List(mapAccumL)
 
 version = "0.3.1"
 
+data RuleType
+  = Apply
+  | Rewrite
+  | ReverseRewrite
+
+
 viewEditor :: Editor -> View EditorAction
 viewEditor x =
   div_ [class_ "container", onKeyDown (\(KeyCode kc) -> if kc == 27 then Reset else Noop)] $
@@ -43,11 +49,11 @@ viewEditor x =
             , li_ [class_ "tab"] [label_ [for_ "elim-tab"] ["Elim"]]
             , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
             ]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Apply") rs)
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx Apply) rs)
           , div_ [class_ "tab-content" ] ["Incomplete"]
           , div_ [class_ "tab-content" ] (div_ [] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> SetFocus (ItemFocus i (I.RuleFocus (R.GoalFocus p (b)))))]
         , label_ [for_ "rev_rewrite"] ["Reverse rewrite application"]
-          ]:let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx "Rewrite") rs)
+          ]:let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx (if rev then ReverseRewrite else Rewrite)) rs)
           
         ]]
 
@@ -174,8 +180,9 @@ renderAvailableRule ctx opts (i, p) action (rr, r) =
   where
     ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
     a = case (action) of
-      "Apply" -> R.Apply
-      "Rewrite" -> R.Rewrite
+      Apply -> R.Apply
+      Rewrite -> (R.Rewrite False)
+      ReverseRewrite -> (R.Rewrite True)
 
 renderDisplayOptions opts =
   form_ [class_ "sidebar-displayoptions"]
