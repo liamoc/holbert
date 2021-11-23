@@ -16,6 +16,8 @@ import StringRep
 import Unification
 import Optics.Core
 
+--data Style = Tree | Prose | Equational
+
 data ProofDisplayData = PDD { proseStyle :: Bool, subtitle :: MS.MisoString} 
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
@@ -34,6 +36,11 @@ instance Monoid Context where
 
 infixl 9 %+
 (%+) a b = icompose (<>) (a % b)
+
+--nextStyle :: Style -> Style
+--nextStyle Tree = Prose
+--nextStyle Prose = Equational
+--nextStyle Equational = Tree
 
 subgoals :: IxAffineTraversal' Context ProofTree [ProofTree]
 subgoals = step % _Just % _2
@@ -112,31 +119,31 @@ apply (r,prp) p pt = do
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
 
-applyRewrite :: P.NamedProp -> Path -> ProofTree -> UnifyM ProofTree
-applyRewrite (r,prp) p pt = do
+applyRewrite :: P.NamedProp -> Bool -> Path -> ProofTree -> UnifyM ProofTree
+applyRewrite (r,prp) shouldReverse p pt = do
     do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
        pure $ applySubst subst pt'
   where
     guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
     guts context (PT d xs lcls t _) = do
-       (subst, r, sgs) <- lift $ applyEq (reverse xs ++ bound context) t (r,prp)
+       (subst, r, sgs) <- lift $ applyEq (reverse xs ++ bound context) shouldReverse t (r,prp)
        tell subst
        pure $ PT d xs lcls t (Just (r,sgs))
 
-applyEq :: [T.Name] -> T.Term -> P.NamedProp -> UnifyM (T.Subst, P.RuleRef, [ProofTree])
-applyEq skolems g (r,(P.Forall (m :ms) sgs g')) = do
+applyEq :: [T.Name] -> Bool -> T.Term -> P.NamedProp -> UnifyM (T.Subst, P.RuleRef, [ProofTree])
+applyEq skolems shouldReverse g (r,(P.Forall (m :ms) sgs g')) = do
   n <- fresh
   let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
-  applyEq skolems g (r,(P.subst mt 0 (P.Forall ms sgs g')))
-applyEq skolems g (r,(P.Forall [] sgs g')) = do
+  applyEq skolems shouldReverse g (r,(P.subst mt 0 (P.Forall ms sgs g')))
+applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
   (s,t) <- match skolems g (P.Forall [] sgs g')
   return (s,P.Rewrite r,((PT Nothing [] [] t Nothing):(map fromProp sgs)))
   where
     match :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, T.Term)
-    match skolems g (P.Forall _ sgs g') = (do
+    match skolems  g (P.Forall _ sgs g') = (do
       a <- fresh
       let ma = foldl T.Ap a (map T.LocalVar [0..length skolems -1])
-      s <- unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
+      s <- if shouldReverse then unifier g' (T.Ap (T.Ap (T.Const "_=_") ma) g) else unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
       return (s, ma)) <|> case g of
         (T.Lam (T.M x) e) -> do
           (a,b) <- match (x:skolems) e (P.Forall [] sgs g')

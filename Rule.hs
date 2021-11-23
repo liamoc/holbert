@@ -70,7 +70,7 @@ checkVariableName new = case T.invalidName new of
   Nothing -> pure ()
 
 instance Control Rule where
-  data Focus Rule = GoalFocus PT.Path
+  data Focus Rule = GoalFocus PT.Path Bool
                   | ProofBinderFocus PT.Path Int
                   | ProofSubtitleFocus PT.Path
                   | RuleBinderFocus P.Path Int
@@ -81,7 +81,7 @@ instance Control Rule where
                   deriving (Show, Eq)
 
   data Action Rule = Apply P.NamedProp PT.Path
-                   | Rewrite P.NamedProp PT.Path
+                   | Rewrite Bool P.NamedProp PT.Path
                    | ToggleStyle PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
@@ -128,12 +128,12 @@ instance Control Rule where
                      else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
         in do
           case newFocus of
-            Just f -> setFocus (GoalFocus f)
+            Just f -> setFocus (GoalFocus f False)
             _      -> clearFocus
           pure state'
 
 
-  handle (Rewrite np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np pth) state of
+  handle (Rewrite rev np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np rev pth) state of
      Left e -> errorMessage e >> pure state
      Right state' -> let
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
@@ -141,7 +141,7 @@ instance Control Rule where
                      else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
         in do
           case newFocus of
-            Just f -> setFocus (GoalFocus f)
+            Just f -> setFocus (GoalFocus f False)
             _      -> clearFocus
           pure state'
   handle (ToggleStyle pth) state = do
