@@ -143,7 +143,7 @@ applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
     match skolems  g (P.Forall _ sgs g') = (do
       a <- fresh
       let ma = foldl T.Ap a (map T.LocalVar [0..length skolems -1])
-      s <- if shouldReverse then unifier g (T.Ap (T.Ap (T.Const "_=_") g') ma) else unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
+      s <- if shouldReverse then unifier g' (T.Ap (T.Ap (T.Const "_=_") ma) g) else unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
       return (s, ma)) <|> case g of
         (T.Lam (T.M x) e) -> do
           (a,b) <- match (x:skolems) e (P.Forall [] sgs g')
