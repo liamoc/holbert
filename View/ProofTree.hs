@@ -29,7 +29,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
                  ++ boundrules
           boundrules = if assumptionsMode opts == Hidden then map rulebinder [length rns .. length rns + length lcls - 1] else []       
           premises = case msgs of
-            Just (rr, sgs) -> zipWith (renderPT (inTree || shouldBeTree) (isJust ptopts) rns' ctx') (map (: pth) [0 ..]) sgs
+            Just (rr, sgs) -> zipWith (renderPT (inTree || (shouldBeStyle == Tree)) (isJust ptopts) rns' ctx') (map (: pth) [0 ..]) sgs
             Nothing        -> []
           spacer = maybe (goalButton pth) (const $ "") msgs
 
@@ -79,8 +79,8 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
                         iconButton "grey" "Switch to tree style" "tree" (Act $ R.ToggleStyle pth)
                       else 
                         iconButton "grey" "Switch to prose style" "flow-children" (Act $ R.ToggleStyle pth)
-        shouldShowWords = not inTree && not shouldBeTree
-        shouldBeTree = case ptopts of Nothing -> True; Just opts -> not (proseStyle opts)
+        shouldShowWords = not inTree && not (shouldBeStyle == Tree)
+        shouldBeStyle = case ptopts of Nothing -> Tree; Just opts -> nextStyle (proofStyle opts)
         addNix t = multi [t, iconButton "red" "Delete proof subtree" "trash" (Act $ R.Nix pth)]
 
         rulebinder v = multi [localrule v, miniTurnstile]

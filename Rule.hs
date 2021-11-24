@@ -145,12 +145,12 @@ instance Control Rule where
             _      -> clearFocus
           pure state'
   handle (ToggleStyle pth) state = do
-    let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Subgoal" })
-        f (Just pdd) = Just $ pdd { PT.proseStyle = not (PT.proseStyle pdd)}
+    let f Nothing = Just (PT.PDD { PT.proofStyle = PT.Prose, PT.subtitle = "Subgoal" })
+        f (Just pdd) = Just $ pdd { PT.proofStyle = PT.nextStyle (PT.proofStyle pdd)}
     pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
   handle (SetSubgoalHeading pth) state = do
     new <- textInput
-    let f Nothing = Just (PT.PDD {  PT.proseStyle = False, PT.subtitle = new })
+    let f Nothing = Just (PT.PDD {  PT.proofStyle = PT.Tree, PT.subtitle = new })
         f (Just pdd) = Just $ pdd { PT.subtitle = new }
     pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
 
