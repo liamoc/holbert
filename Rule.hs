@@ -81,7 +81,8 @@ instance Control Rule where
                   deriving (Show, Eq)
 
   data Action Rule = Apply P.NamedProp PT.Path
-                   | Elim P.NamedProp PT.Path
+                   | Elim P.NamedProp PT.Path  -- New rule Elim
+                   | Test P.NamedProp PT.Path
                    | ToggleStyle PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
@@ -120,7 +121,7 @@ instance Control Rule where
   leaveFocus NameFocus              = noFocus . handle Rename
   leaveFocus _                      = pure
 
-  handle (Apply np pth) state = case traverseOf proofState (runUnifyPS $ PT.apply np pth) state of
+  handle (Apply np pth) state = case traverseOf proofState (runUnifyPS $ PT.apply np pth) state of  -- Filter just Intro rules
      Left e -> errorMessage e >> pure state
      Right state' -> let
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
@@ -131,7 +132,7 @@ instance Control Rule where
             Just f -> setFocus (GoalFocus f)
             _      -> clearFocus
           pure state'
-  handle (Elim np pth) state = case traverseOf proofState (runUnifyPS $ PT.apply np pth) state of  -- Filter just the Elim rules
+  handle (Elim np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyElim np pth) state of  -- Filter just the Elim rules
      Left e -> errorMessage e >> pure state
      Right state' -> let
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'

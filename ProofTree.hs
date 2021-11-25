@@ -115,7 +115,7 @@ applyElim (r,prp) p pt = do
   where
     guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
     guts context (PT opts xs lcls t _) = do
-       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) (reverse lcls ++ X context) t prp  -- Get assumption from context (need to figure out what X is)
+       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) (reverse lcls ++ locals context) t prp  -- Get assumption from context (is bound context correct?)
        tell subst
        pure $ PT opts xs lcls t (Just (r,sgs))
 
@@ -128,7 +128,8 @@ applyElim (r,prp) p pt = do
        applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRuleElim skolems (a:assmps) g (P.Forall [] (s:sgs) g') = (do
        substs <- P.unifierProp a s
-       (,map fromProp sgs) <$> unifier (T.applySubst substs g) (T.applySubst substs g'))  -- T.applySubst like P.subst but takes terms not props
+       substs' <- unifier (T.applySubst substs g) (T.applySubst substs g')
+       pure (substs <> substs',map fromProp sgs))  -- T.applySubst like P.subst but takes terms not props
        <|> applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g')  -- <|> := else
     applyRuleElim skolems [] g (P.Forall [] sgs g') = empty
 
