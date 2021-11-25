@@ -23,6 +23,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     renderRR (P.Rewrite r) = multi ["->", renderRR r]
     renderRR (P.Defn d) = definedrule d
     renderRR (P.Local i) = localrule i
+    renderRR (P.Transitivity) = "trans"
 
     renderPT inTree showPreamble rns ctx pth (PT ptopts sks lcls prp msgs) =
       let binders = (if showMetaBinders opts then concat (zipWith (metabinder' pth) [0 ..] sks) else [])
@@ -71,16 +72,28 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
                 $ (if inTree || showPreamble then id else (span_ [class_ "item-rule-proofheading"] ["Proof", if not shouldShowWords then ". " else "" ] :) )
                 $ (if inTree || not shouldShowWords then id else (multi [" by ", fromMaybe "" ruleTitle, spacer, if null premises then ". " else ": "]  :))
                 $ (if inTree || shouldShowWords || not showPreamble then id else ("by: ":))
-                $ (if inTree then id else (styleButton :))
-                $ pure $ (if shouldShowWords then wordsrule else inferrule binders) premises spacer ruleTitle conclusion
+                $ (if inTree then id else (multi [styleButton, equationalButton] : ))
+                $ pure $ (case shouldBeStyle of {Prose -> wordsrule; Tree -> inferrule binders; Equational -> equationalrule binders}) premises spacer ruleTitle conclusion
 
       where
-        styleButton = if shouldShowWords then 
+        styleButton = if notTree then 
                         iconButton "grey" "Switch to tree style" "tree" (Act $ R.ToggleStyle pth)
                       else 
                         iconButton "grey" "Switch to prose style" "flow-children" (Act $ R.ToggleStyle pth)
-        shouldShowWords = not inTree && not (shouldBeStyle == Tree)
-        shouldBeStyle = case ptopts of Nothing -> Tree; Just opts -> nextStyle (proofStyle opts)
+        equationalButton = if (shouldBeStyle == Tree || shouldBeStyle == Prose) && True then
+                        iconButton "grey" "Switch to equational style" "equals-outline" (Act $ R.ToggleEquational pth)
+                      else if (shouldBeStyle == Equational)  then
+                        iconButton "grey" "Switch to tree style" "tree" (Act $ R.ToggleEquational pth)
+                      else
+                        button_ [class_ "button-icon button-icon-grey", type_ "button", title_ "Cannot apply equational style"] [typicon "equals-outline"] 
+                        --iconButton "black" "Cannot apply equational style" "tree" --(do nothing)
+                        
+        shouldShowWords = notTree && not (shouldBeStyle == Equational)
+        notTree = not inTree && not (shouldBeStyle == Tree)
+        shouldBeStyle = case ptopts of Nothing -> Tree; Just opts -> toggleStyle (proofStyle opts)
+        isTransitive = case msgs of
+          Just (P.Transitivity, sgs) -> True
+          _ -> False
         addNix t = multi [t, iconButton "red" "Delete proof subtree" "trash" (Act $ R.Nix pth)]
 
         rulebinder v = multi [localrule v, miniTurnstile]
@@ -99,3 +112,12 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
       Just (R.GoalFocus pth True) -> focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth True) [typicon "location"]
       Just (R.GoalFocus pth False) -> focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth False) [typicon "location"]
       _ -> button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (SetFocus $ R.GoalFocus pth False) [typicon "location-outline"]
+
+flatten :: ProofTree -> [ProofTree]
+flatten (PT opts sks lcls g (Just (P.Transitivity, [a,b]))) = concatMap flatten [a,b]--case opts of
+--  Nothing -> concatMap flatten [a,b]
+--  Just opts -> case proofStyle opts of
+--    Equational -> concatMap flatten [a,b]
+--      _ -> concatMap flatten [a,b]
+flatten (PT opts sks lcls g mgs) = [(PT opts sks lcls g mgs)]
+

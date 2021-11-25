@@ -83,6 +83,7 @@ instance Control Rule where
   data Action Rule = Apply P.NamedProp PT.Path
                    | Rewrite Bool P.NamedProp PT.Path
                    | ToggleStyle PT.Path
+                   | ToggleEquational PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
                    | RenameProofBinder PT.Path Int
@@ -146,7 +147,13 @@ instance Control Rule where
           pure state'
   handle (ToggleStyle pth) state = do
     let f Nothing = Just (PT.PDD { PT.proofStyle = PT.Prose, PT.subtitle = "Subgoal" })
-        f (Just pdd) = Just $ pdd { PT.proofStyle = PT.nextStyle (PT.proofStyle pdd)}
+        f (Just pdd) = Just $ pdd { PT.proofStyle = PT.toggleStyle (PT.proofStyle pdd)}
+    pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
+  handle (ToggleEquational pth) state = do
+    let f Nothing = Just (PT.PDD { PT.proofStyle = PT.Equational, PT.subtitle = "Subgoal"})
+        f (Just pdd) = case PT.proofStyle pdd of
+          PT.Equational -> Just $ pdd {PT.proofStyle = PT.Tree}
+          _ -> Just $ pdd {PT.proofStyle = PT.Equational}
     pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
   handle (SetSubgoalHeading pth) state = do
     new <- textInput

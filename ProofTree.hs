@@ -37,10 +37,12 @@ instance Monoid Context where
 infixl 9 %+
 (%+) a b = icompose (<>) (a % b)
 
-nextStyle :: Style -> Style
-nextStyle Tree = Prose
-nextStyle Prose = Equational
-nextStyle Equational = Tree
+toggleStyle :: Style -> Style
+toggleStyle Tree = Prose
+toggleStyle Prose = Tree
+toggleStyle Equational = Tree
+
+
 
 subgoals :: IxAffineTraversal' Context ProofTree [ProofTree]
 subgoals = step % _Just % _2
