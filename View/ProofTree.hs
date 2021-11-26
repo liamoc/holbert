@@ -73,7 +73,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
                 $ (if inTree || not shouldShowWords then id else (multi [" by ", fromMaybe "" ruleTitle, spacer, if null premises then ". " else ": "]  :))
                 $ (if inTree || shouldShowWords || not showPreamble then id else ("by: ":))
                 $ (if inTree then id else (multi [styleButton, equationalButton] : ))
-                $ pure $ (case shouldBeStyle of {Prose -> wordsrule; Tree -> inferrule binders; Equational -> equationalrule binders}) premises spacer ruleTitle conclusion
+                $ pure $ (case shouldBeStyle of {Prose -> wordsrule; Tree -> inferrule binders; Equational -> equationalrule binders (flatten pt)}) premises spacer ruleTitle conclusion
 
       where
         styleButton = if notTree then 
@@ -81,12 +81,11 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
                       else 
                         iconButton "grey" "Switch to prose style" "flow-children" (Act $ R.ToggleStyle pth)
         equationalButton = if (shouldBeStyle == Tree || shouldBeStyle == Prose) && True then
-                        iconButton "grey" "Switch to equational style" "equals-outline" (Act $ R.ToggleEquational pth)
+                        iconButton "grey" "Switch to equational style" "equals" (Act $ R.ToggleEquational pth)
                       else if (shouldBeStyle == Equational)  then
                         iconButton "grey" "Switch to tree style" "tree" (Act $ R.ToggleEquational pth)
                       else
-                        button_ [class_ "button-icon button-icon-grey", type_ "button", title_ "Cannot apply equational style"] [typicon "equals-outline"] 
-                        --iconButton "black" "Cannot apply equational style" "tree" --(do nothing)
+                        button_ [class_ "button-icon button-icon-grey", type_ "button", title_ "Cannot apply equational style"] [typicon "equals-outline"]
                         
         shouldShowWords = notTree && not (shouldBeStyle == Equational)
         notTree = not inTree && not (shouldBeStyle == Tree)
@@ -113,11 +112,16 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
       Just (R.GoalFocus pth False) -> focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth False) [typicon "location"]
       _ -> button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (SetFocus $ R.GoalFocus pth False) [typicon "location-outline"]
 
+--listEqs :: [ProofTree] -> [Term]
+--listEqs (((PT opts sks lcls g mgs)):pts) =  : listEqs pts
+--listEqs [] = []
+
+
 flatten :: ProofTree -> [ProofTree]
 flatten (PT opts sks lcls g (Just (P.Transitivity, [a,b]))) = concatMap flatten [a,b]--case opts of
 --  Nothing -> concatMap flatten [a,b]
 --  Just opts -> case proofStyle opts of
 --    Equational -> concatMap flatten [a,b]
 --      _ -> concatMap flatten [a,b]
-flatten (PT opts sks lcls g mgs) = [(PT opts sks lcls g mgs)]
+flatten (PT opts sks lcls g mgs) = [(PT opts sks lcls g Nothing)]
 

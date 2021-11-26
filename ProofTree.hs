@@ -91,6 +91,9 @@ dependencies = traversalVL guts
         = (\rr' sgs' -> PT opts sks lcls g (Just (P.Defn rr',sgs')))
           <$> act rr
           <*> traverse (guts act) sgs
+    guts act (PT opts sks lcls g (Just (P.Transitivity,sgs)))
+        = (\sgs' -> PT opts sks lcls g (Just (P.Transitivity,sgs')))
+          <$> traverse (guts act) sgs
     guts act x = pure x
 
 

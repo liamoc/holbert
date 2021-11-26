@@ -100,7 +100,7 @@ inferrule binders premises spacer ruleTitle conclusion =
     , tr_ [] [td_ [class_ "rule-cell rule-conclusion", colspan_ (MS.pack $ show $ length premises + 1)] conclusion]
     ]
 
-equationalrule binders premises spacer ruleTitle conclusion =
+equationalrule binders pts premises spacer ruleTitle conclusion =
   table_ 
     [  intProp "cellpadding" 0, class_ "inference",intProp "cellspacing" 0]
     [ tr_ []
