@@ -17,7 +17,7 @@ type RuleName = MisoString
 
 data RuleRef = Defn RuleName
              | Local Int
-             | Rewrite (RuleRef)
+             | Rewrite RuleRef Bool -- bool is if it is flipped
              deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 type NamedProp = (RuleRef, Prop)
