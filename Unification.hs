@@ -117,7 +117,7 @@ cases sS (s,t) = case (peelApTelescope s,peelApTelescope t) of
 
 rigidrigid a ss b ts sS
   | a == b, length ss == length ts  = foldlM unif sS (zip ss ts)
-  | otherwise = throwError "Unification Error (rigid, rigid)"
+  | otherwise = throwError (MS.toMisoString (concat ["Unification Error (", show a, ", ", show b, ")"])) --"Unification Error (rigid, rigid)"
 
 type Gen = State Int
 

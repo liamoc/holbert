@@ -17,6 +17,7 @@ type RuleName = MisoString
 
 data RuleRef = Defn RuleName
              | Local Int
+             | Rewrite (RuleRef)
              deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 type NamedProp = (RuleRef, Prop)
