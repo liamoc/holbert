@@ -20,7 +20,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     
     termDOs = tDOs opts
     ruleDOs = RDO {termDisplayOptions = termDOs, showInitialMetas = True, ruleStyle = Turnstile}
-
+    renderRR (P.Rewrite r) = multi ["->", renderRR r]
     renderRR (P.Defn d) = definedrule d
     renderRR (P.Local i) = localrule i
 
@@ -95,7 +95,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
 
     metabinderEditor pth i n = editor "expanding" (R.RenameProofBinder pth i) n
 
-    goalButton pth =
-      if Just (R.GoalFocus pth) == selected
-      then focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth) [typicon "location"]
-      else button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (SetFocus $ R.GoalFocus pth) [typicon "location-outline"]
+    goalButton pth  = case selected of
+      Just (R.GoalFocus pth True) -> focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth True) [typicon "location"]
+      Just (R.GoalFocus pth False) -> focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth False) [typicon "location"]
+      _ -> button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (SetFocus $ R.GoalFocus pth False) [typicon "location-outline"]

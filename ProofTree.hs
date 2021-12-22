@@ -1,8 +1,9 @@
-{-# LANGUAGE TupleSections, FlexibleContexts, GADTs, DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE TupleSections, FlexibleContexts, GADTs, DeriveGeneric, DeriveAnyClass, OverloadedStrings #-}
 module ProofTree where
 
 import Data.Maybe
 import Data.List
+import Control.Applicative
 import Control.Monad
 import Control.Monad.Writer (WriterT (..), tell)
 import Control.Monad.Trans (lift)
@@ -14,6 +15,8 @@ import qualified Miso.String as MS
 import StringRep
 import Unification
 import Optics.Core
+
+--data Style = Tree | Prose | Equational
 
 data ProofDisplayData = PDD { proseStyle :: Bool, subtitle :: MS.MisoString} 
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
@@ -33,6 +36,11 @@ instance Monoid Context where
 
 infixl 9 %+
 (%+) a b = icompose (<>) (a % b)
+
+--nextStyle :: Style -> Style
+--nextStyle Tree = Prose
+--nextStyle Prose = Equational
+--nextStyle Equational = Tree
 
 subgoals :: IxAffineTraversal' Context ProofTree [ProofTree]
 subgoals = step % _Just % _2
@@ -72,6 +80,11 @@ fromProp (P.Forall sks lcls g) = PT Nothing sks lcls g Nothing
 dependencies :: Traversal' ProofTree P.RuleName
 dependencies = traversalVL guts
   where
+    
+    guts act (PT opts sks lcls g (Just (P.Rewrite (P.Defn rr),sgs)))
+        = (\rr' sgs' -> PT opts sks lcls g (Just (P.Rewrite (P.Defn rr'),sgs')))
+          <$> act rr
+          <*> traverse (guts act) sgs
     guts act (PT opts sks lcls g (Just (P.Defn rr,sgs)))
         = (\rr' sgs' -> PT opts sks lcls g (Just (P.Defn rr',sgs')))
           <$> act rr
@@ -106,6 +119,42 @@ apply (r,prp) p pt = do
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
 
+applyRewrite :: P.NamedProp -> Bool -> Path -> ProofTree -> UnifyM ProofTree
+applyRewrite (r,prp) shouldReverse p pt = do
+    do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
+       pure $ applySubst subst pt'
+  where
+    guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
+    guts context (PT d xs lcls t _) = do
+       (subst, r, sgs) <- lift $ applyEq (reverse xs ++ bound context) shouldReverse t (r,prp)
+       tell subst
+       pure $ PT d xs lcls t (Just (r,sgs))
+
+applyEq :: [T.Name] -> Bool -> T.Term -> P.NamedProp -> UnifyM (T.Subst, P.RuleRef, [ProofTree])
+applyEq skolems shouldReverse g (r,(P.Forall (m :ms) sgs g')) = do
+  n <- fresh
+  let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+  applyEq skolems shouldReverse g (r,(P.subst mt 0 (P.Forall ms sgs g')))
+applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
+  (s,t) <- match skolems g (P.Forall [] sgs g')
+  return (s,P.Rewrite r,((PT Nothing [] [] t Nothing):(map fromProp sgs)))
+  where
+    match :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, T.Term)
+    match skolems  g (P.Forall _ sgs g') = (do
+      a <- fresh
+      let ma = foldl T.Ap a (map T.LocalVar [0..length skolems -1])
+      s <- if shouldReverse then unifier g' (T.Ap (T.Ap (T.Const "_=_") ma) g) else unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
+      return (s, ma)) <|> case g of
+        (T.Lam (T.M x) e) -> do
+          (a,b) <- match (x:skolems) e (P.Forall [] sgs g')
+          return (a, (T.Lam (T.M x) b))
+        (T.Ap e1 e2) -> (do
+          (a,b) <- match skolems e1 (P.Forall [] sgs g')
+          return (a, (T.Ap b e2))) <|> do
+            (a,b) <- match skolems e2 (P.Forall [] sgs g')
+            return (a, (T.Ap e1 b))
+        otherwise -> empty
+
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT opts sks lcls g sgs) =
     PT opts sks (map (P.applySubst subst) lcls) (T.applySubst subst g) (fmap (fmap (map (applySubst subst))) sgs)
@@ -113,6 +162,7 @@ applySubst subst (PT opts sks lcls g sgs) =
 clear :: P.RuleName -> ProofTree -> ProofTree
 clear toClear x@(PT opts sks lcl g (Just (rr,sgs)))
      | rr == (P.Defn toClear) = PT opts sks lcl g Nothing
+     | rr == (P.Rewrite (P.Defn toClear)) = PT opts sks lcl g Nothing
      | otherwise              = PT opts sks lcl g $ Just (rr, map (clear toClear) sgs)
 clear toClear x = x
 

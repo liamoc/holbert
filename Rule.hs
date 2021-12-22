@@ -14,11 +14,11 @@ import Data.Maybe(fromMaybe)
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
 
-data Rule = R P.RuleName P.Prop (Maybe ProofState) 
+data Rule = R P.RuleName P.Prop (Maybe ProofState)
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type Counter = Int
-data ProofState = PS PT.ProofTree Counter 
+data ProofState = PS PT.ProofTree Counter
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 name :: Lens' Rule P.RuleName
@@ -70,7 +70,7 @@ checkVariableName new = case T.invalidName new of
   Nothing -> pure ()
 
 instance Control Rule where
-  data Focus Rule = GoalFocus PT.Path
+  data Focus Rule = GoalFocus PT.Path Bool
                   | ProofBinderFocus PT.Path Int
                   | ProofSubtitleFocus PT.Path
                   | RuleBinderFocus P.Path Int
@@ -81,6 +81,7 @@ instance Control Rule where
                   deriving (Show, Eq)
 
   data Action Rule = Apply P.NamedProp PT.Path
+                   | Rewrite Bool P.NamedProp PT.Path
                    | ToggleStyle PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
@@ -95,13 +96,13 @@ instance Control Rule where
                    | InstantiateMetavariable Int
                    deriving (Show, Eq)
 
-  defined (R n _ _) = [n]
+  defined (R n _ _) = [n] --If an item has defined some rules, they will be returned in a list
 
-  inserted _ = RuleTermFocus []
+  inserted _ = RuleTermFocus [] --When you've inserted an item switches to the relevant focus
 
-  invalidated s r = over (proofState % proofTree) (PT.clear s) r
+  invalidated s r = over (proofState % proofTree) (PT.clear s) r --Whenever we change a rule this goes through the document and removes it from use in proofs
 
-  renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r
+  renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
   editable tbl (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
   editable tbl (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
@@ -112,7 +113,7 @@ instance Control Rule where
   editable _ _ = const Nothing
 
 
-  leaveFocus (ProofBinderFocus p i) = noFocus . handle (RenameProofBinder p i)
+  leaveFocus (ProofBinderFocus p i) = noFocus . handle (RenameProofBinder p i) --These define the action when the user leaves focus on an item
   leaveFocus (RuleBinderFocus p i)  = noFocus . handle (RenameRuleBinder p i)
   leaveFocus (NewRuleBinderFocus p) = noFocus . handle (AddRuleBinder p)
   leaveFocus (RuleTermFocus p)      = noFocus . handle (UpdateTerm p)
@@ -127,18 +128,33 @@ instance Control Rule where
                      else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
         in do
           case newFocus of
-            Just f -> setFocus (GoalFocus f)
+            Just f -> setFocus (GoalFocus f False)
             _      -> clearFocus
           pure state'
-  handle (ToggleStyle pth) state = do    
+
+
+  handle (Rewrite rev np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np rev pth) state of
+     Left e -> errorMessage e >> pure state
+     Right state' -> let
+          newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
+                     then Just (0:pth)
+                     else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
+        in do
+          case newFocus of
+            Just f -> setFocus (GoalFocus f False)
+            _      -> clearFocus
+          pure state'
+  handle (ToggleStyle pth) state = do
     let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Subgoal" })
         f (Just pdd) = Just $ pdd { PT.proseStyle = not (PT.proseStyle pdd)}
     pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
-  handle (SetSubgoalHeading pth) state = do    
+  handle (SetSubgoalHeading pth) state = do
     new <- textInput
     let f Nothing = Just (PT.PDD {  PT.proseStyle = False, PT.subtitle = new })
         f (Just pdd) = Just $ pdd { PT.subtitle = new }
     pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
+
+
   handle (Nix pth) state = do
      clearFocus
      pure $ set (proofState % proofTree % PT.path pth % PT.step) Nothing state
@@ -162,7 +178,7 @@ instance Control Rule where
      clearFocus -- should it be updateterm?
      pure $ set (prop % P.path pth % P.metabinders % ix i) new state
 
-  handle (DeleteRuleBinder pth i) state = do     
+  handle (DeleteRuleBinder pth i) state = do
      when (maybe False (P.isBinderUsed i) $ preview (prop % P.path pth) state) $ errorMessage "Cannot remove binder: is in use"
      invalidate (view name state)
      clearFocus
@@ -178,11 +194,11 @@ instance Control Rule where
          case pth of [] -> clearFocus
                      (_:pth') -> setFocus (RuleTermFocus pth')
          pure $ over propUpdate id state' --hack..
-  handle (InstantiateMetavariable i) state = do 
+  handle (InstantiateMetavariable i) state = do
     new <- textInput
-    tbl <- syntaxTable 
-    case parse tbl [] new of 
-      Left e -> errorMessage $ "Parse error: " <> e 
+    tbl <- syntaxTable
+    case parse tbl [] new of
+      Left e -> errorMessage $ "Parse error: " <> e
       Right obj -> do
          pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
 
