@@ -53,6 +53,13 @@ proofState =  atraversal
   (\i s -> case i of R n p (Just _) -> R n p (Just s)
                      i -> i)
 
+
+applyRuleTactic :: Rule -> P.NamedProp -> PT.Path -> Maybe (Action Rule)
+applyRuleTactic state np pth = 
+  case traverseOf proofState (runUnifyPS $ PT.apply np pth) state of
+     Left _ -> Nothing
+     Right st' -> flip Tactic pth <$> preview proofState st'
+
 unresolved :: ProofState -> Bool
 unresolved (PS pt c) = has PT.outstandingGoals pt
 
@@ -80,8 +87,8 @@ instance Control Rule where
                   | MetavariableFocus Int
                   deriving (Show, Eq)
 
-  data Action Rule = Apply P.NamedProp PT.Path
-                   | Rewrite Bool P.NamedProp PT.Path
+  data Action Rule = Rewrite Bool P.NamedProp PT.Path -- TODO replace with Tactic
+                   | Tactic ProofState PT.Path
                    | ToggleStyle PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
@@ -120,9 +127,8 @@ instance Control Rule where
   leaveFocus NameFocus              = noFocus . handle Rename
   leaveFocus _                      = pure
 
-  handle (Apply np pth) state = case traverseOf proofState (runUnifyPS $ PT.apply np pth) state of
-     Left e -> errorMessage e >> pure state
-     Right state' -> let
+  handle (Tactic ps pth) state = let 
+          state' = set proofState ps state 
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
                      then Just (0:pth)
                      else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
@@ -131,8 +137,6 @@ instance Control Rule where
             Just f -> setFocus (GoalFocus f False)
             _      -> clearFocus
           pure state'
-
-
   handle (Rewrite rev np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np rev pth) state of
      Left e -> errorMessage e >> pure state
      Right state' -> let
