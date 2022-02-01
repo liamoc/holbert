@@ -41,7 +41,8 @@ viewEditor x =
   where
     mainSidebar = case currentFocus x of
       ItemFocus i (I.RuleFocus (R.GoalFocus p rev)) ->
-        concat([ div_ [class_ "tabbed"]
+        let tl = getRuleAt i (document x) in
+        [ div_ [class_ "tabbed"]
           [ input_ [type_ "radio", id_ "intro-tab", name_ "rulestabs", checked_ True]
           , input_ [type_ "radio", id_ "elim-tab", name_ "rulestabs"]
           , input_ [type_ "radio", id_ "rewrite-tab", name_ "rulestabs"]
@@ -50,11 +51,11 @@ viewEditor x =
             , li_ [class_ "tab"] [label_ [for_ "elim-tab"] ["Elim"]]
             , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
             ]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx Apply) rs)
+          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup tl i p ctx Apply) rs)
           , div_ [class_ "tab-content" ] ["Incomplete"]
           , div_ [class_ "tab-content" ] (div_ [] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> SetFocus (ItemFocus i (I.RuleFocus (R.GoalFocus p (b)))))]
         , label_ [for_ "rev_rewrite"] ["Reverse rewrite application"]
-          ]:let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup i p ctx (if rev then ReverseRewrite else Rewrite)) rs)
+          ]:let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup tl i p ctx (if rev then ReverseRewrite else Rewrite)) rs)
           
         ]]: [[button "apply-option" "Transitivity" (ItemAction (Just i) $ I.RuleAct $ R.Apply (Pr.Transitivity, r) p) [typicon "equals"]]]) -- [fmap (const Noop) $ renderPropName (Just Pr.Transitivity) ctx ruleDOs r]
         where
@@ -84,9 +85,9 @@ viewEditor x =
         ]
       _ -> [block "sidebar-header" ["Facts Summary:"], renderIndex $ document x]
 
-    renderPropGroup i p ctx action (n, rs)=
+    renderPropGroup topLevel i p ctx action (n, rs)=
       [ block "sidebar-header" [text n, text ":"]
-      , block "sidebar-apply-group" $ map (renderAvailableRule ctx (displayOptions x) (i, p) action) rs
+      , block "sidebar-apply-group" $ map (renderAvailableRule topLevel ctx (displayOptions x) (i, p) action) rs
       ]
 
     toolbar = block "sidebar-logo"
@@ -181,15 +182,17 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 
-renderAvailableRule ctx opts (i, p) action (rr, r) =
-  button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ a (rr, r) p)
-    [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
+renderAvailableRule topLevel ctx opts (i, p) action (rr, r) =
+  case a (rr, r) p of 
+    Nothing -> ""
+    Just act -> button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ act)
+      [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
   where
     ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
     a = case (action) of
-      Apply -> R.Apply
-      Rewrite -> (R.Rewrite False)
-      ReverseRewrite -> (R.Rewrite True)
+      Apply -> R.applyRuleTactic topLevel
+      Rewrite -> \r p -> Just (R.Rewrite False r p)
+      ReverseRewrite -> \r p -> Just (R.Rewrite True r p)
 
 renderDisplayOptions opts =
   form_ [class_ "sidebar-displayoptions"]

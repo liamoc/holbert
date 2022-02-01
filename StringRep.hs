@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, RecursiveDo #-}
-module StringRep (prettyPrint, parse, SyntaxTable (..), EPM.Associativity) where
+module StringRep (prettyPrint, parse, SyntaxTable (..), EPM.Associativity(..)) where
 
 import Data.Char
 import Control.Arrow(first)
@@ -41,18 +41,6 @@ type SyntaxTable = [(Int, MS.MisoString,EPM.Associativity)]
 generateTable :: SyntaxTable -> [[(EPM.Holey MS.MisoString, EPM.Associativity)]]
 generateTable tbl = (map . map) (\(_,str, a) -> (holey str, a)) $ groupBy ((==) `on` precedence) $ sortBy (comparing precedence) tbl
   where precedence (a,b,c) = a
-
-mixfixDef :: [[(MS.MisoString, EPM.Associativity)]]
-mixfixDef = [ [("_->_",          EPM.RightAssoc)]
-            , [("_,_",           EPM.NonAssoc)]
-            , [("if_then_else_", EPM.RightAssoc)]
-            , [("_|-_:_",        EPM.NonAssoc)]
-            , [("_+_",           EPM.LeftAssoc)]
-            , [("_*_",           EPM.LeftAssoc)]
-            ]
-
-mixfixTable :: [[(EPM.Holey MS.MisoString, EPM.Associativity)]]
-mixfixTable = (map . map) (first holey) mixfixDef
 
 grammar :: SyntaxTable -> EP.Grammar r (EP.Prod r Token Token Term)
 grammar tbl = mdo

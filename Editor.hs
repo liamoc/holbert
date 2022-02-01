@@ -71,6 +71,12 @@ after n = atraversalVL guts
               (\(it', rights') -> lefts ++ it' : rights') <$> act (it, rights)
             _ -> pure' ls
 
+
+
+getRuleAt :: Int -> Document -> R.Rule
+getRuleAt i s = case s !! i of 
+  I.Rule v -> v
+  _ -> error "Rule not found!" 
 rulesSummary :: (Int, PT.Path) -> Document -> ([MS.MisoString], [(MS.MisoString, [Prp.NamedProp])])
 rulesSummary (i, p) s =
   let (lefts, I.Rule (R.R n prp (Just (R.PS pt c))) : rights) = splitAt i s
