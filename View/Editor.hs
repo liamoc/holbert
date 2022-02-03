@@ -42,7 +42,7 @@ viewEditor x =
     mainSidebar = case currentFocus x of
       ItemFocus i (I.RuleFocus (R.GoalFocus p rev)) ->
         let tl = getRuleAt i (document x) in
-        [ div_ [class_ "tabbed"]
+        concat([ div_ [class_ "tabbed"]
           [ input_ [type_ "radio", id_ "intro-tab", name_ "rulestabs", checked_ True]
           , input_ [type_ "radio", id_ "elim-tab", name_ "rulestabs"]
           , input_ [type_ "radio", id_ "rewrite-tab", name_ "rulestabs"]
@@ -57,12 +57,13 @@ viewEditor x =
         , label_ [for_ "rev_rewrite"] ["Reverse rewrite application"]
           ]:let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup tl i p ctx (if rev then ReverseRewrite else Rewrite)) rs)
           
-        ]]: [[button "apply-option" "Transitivity" (ItemAction (Just i) $ I.RuleAct $ R.Apply (Pr.Transitivity, r) p) [typicon "equals"]]]) -- [fmap (const Noop) $ renderPropName (Just Pr.Transitivity) ctx ruleDOs r]
+        ]]: [[button "apply-option" "Transitivity" (ItemAction (Just i) $ I.RuleAct $ act) [typicon "equals"]]]) -- [fmap (const Noop) $ renderPropName (Just Pr.Transitivity) ctx ruleDOs r]
         where
           r= Pr.Forall ["A","B","C"] [(Pr.Forall [] [] (T.Ap (T.Ap (T.Const "_=_") (T.LocalVar 0)) (T.LocalVar 1))), (Pr.Forall [] [] (T.Ap (T.Ap (T.Const "_=_") (T.LocalVar 1)) (T.LocalVar 2)))] (T.Ap (T.Ap (T.Const "_=_") (T.LocalVar 0)) (T.LocalVar 2))
           opts = (displayOptions x)
           ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
           (ctx, rs) = rulesSummary (i, p) (document x)
+          Just act = R.applyRuleTactic tl (Pr.Transitivity, r) p where tl = getRuleAt i (document x)
 
         
       NewItemFocus i -> newItemMenu i

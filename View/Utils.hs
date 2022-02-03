@@ -2,6 +2,7 @@
 module View.Utils where
 import Miso
 import qualified Miso.String as MS
+import qualified Miso.Html as MT
 import Data.Char
 import Data.List (dropWhileEnd, intersperse)
 import Data.Maybe (fromMaybe)
@@ -100,16 +101,11 @@ inferrule binders premises spacer ruleTitle conclusion =
     , tr_ [] [td_ [class_ "rule-cell rule-conclusion", colspan_ (MS.pack $ show $ length premises + 1)] conclusion]
     ]
 
-equationalrule binders pts premises spacer ruleTitle conclusion =
-  table_ 
-    [  intProp "cellpadding" 0, class_ "inference",intProp "cellspacing" 0]
-    [ tr_ []
-      $  [td_ [class_ "rule-cell rule-binderbox", rowspan_ "2"] binders]
-      ++ map (td_ [class_ "rule-cell rule-premise"] . pure) premises
-      ++ [td_ [class_ "rule-cell rule-spacer"] [spacer]]
-      ++ [td_ [rowspan_ "2", class_ "rule-cell rule-rulebox"] [fromMaybe "" ruleTitle]]
-    , tr_ [] [td_ [class_ "rule-cell rule-conclusion", colspan_ (MS.pack $ show $ length premises + 1)] conclusion]
-    ]
+equationalrule binders [] premises spacer ruleTitle conclusion =
+  span_ [] ["The current proof cannot be represented in the equational style"]
+
+equationalrule binders terms premises spacer ruleTitle conclusion =
+  span_ [] [text (MS.pack (concatMap show terms))]
 
 wordsrule [p] _ _ _ =  div_ [class_ "word-proof"] [p]
 wordsrule premises _ _ _ =
