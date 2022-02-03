@@ -89,6 +89,7 @@ instance Control Rule where
 
   data Action Rule = Rewrite Bool P.NamedProp PT.Path -- TODO replace with Tactic
                    | Tactic ProofState PT.Path
+                   | Elim P.NamedProp PT.Path  -- New rule Elim (TODO replace with Tactic)
                    | ToggleStyle PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
@@ -138,6 +139,17 @@ instance Control Rule where
             _      -> clearFocus
           pure state'
   handle (Rewrite rev np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np rev pth) state of
+     Left e -> errorMessage e >> pure state
+     Right state' -> let
+          newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
+                     then Just (0:pth)
+                     else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
+        in do
+          case newFocus of
+            Just f -> setFocus (GoalFocus f False)
+            _      -> clearFocus
+          pure state'
+  handle (Elim np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyElim np pth) state of  -- Filter just the Elim rules
      Left e -> errorMessage e >> pure state
      Right state' -> let
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
