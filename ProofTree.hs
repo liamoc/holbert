@@ -15,6 +15,7 @@ import qualified Miso.String as MS
 import StringRep
 import Unification
 import Optics.Core
+import Control.Applicative
 
 --data Style = Tree | Prose | Equational
 
@@ -154,6 +155,31 @@ applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
             (a,b) <- match skolems e2 (P.Forall [] sgs g')
             return (a, (T.Ap e1 b))
         otherwise -> empty
+-- Wrapper for elim rules
+applyElim :: P.NamedProp -> Path -> ProofTree -> UnifyM ProofTree
+applyElim (r,prp) p pt = do
+    do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
+       pure $ applySubst subst pt'
+  where
+    guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
+    guts context (PT opts xs lcls t _) = do
+       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) (reverse lcls ++ locals context) t prp  -- Get assumption from context (is bound context correct?)
+       tell subst
+       pure $ PT opts xs lcls t (Just (r,sgs))
+
+    -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
+    -- Will only try to unify goal if it usinifies with an assumption
+    applyRuleElim :: [T.Name] ->  [P.Prop] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- Added [T.Prop] for assumptions
+    applyRuleElim skolems assmps g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
+       n <- fresh  -- Returns increasing #, always unique
+       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
+       applyRuleElim skolems assmps g (P.subst mt 0 (P.Forall ms sgs g'))
+    applyRuleElim skolems (a:assmps) g (P.Forall [] (s:sgs) g') = (do
+       substs <- P.unifierProp a s
+       substs' <- unifier (T.applySubst substs g) (T.applySubst substs g')
+       pure (substs <> substs',map fromProp sgs))  -- T.applySubst like P.subst but takes terms not props
+       <|> applyRuleElim skolems assmps g (P.Forall [] (s:sgs) g')  -- <|> := else
+    applyRuleElim skolems [] g (P.Forall [] sgs g') = empty
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT opts sks lcls g sgs) =
