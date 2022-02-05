@@ -39,6 +39,8 @@
    --editable-hover-col: #CCCCFF;
    --apply-option-hover-border-col: #CC00FF;
    --apply-option-hover-bg-col: #FAEFFA;
+   --inactive-option-hover-border-col: #0091aa;;
+   --inactive-option-hover-bg-col: #d7f4f9;;
    --apply-option-border-col:  #0000CC;
    --apply-option-bg-col: #EFEFFA;
    --rule-binder-col: #006600;
@@ -248,7 +250,7 @@ button {
 }
 .button-icon {
   padding: 0;
-  background: var(--bg-col);
+  background: transparent; /* var(--bg-col); */
   border: 0px;
   font-size: 16px;
   cursor: pointer;
@@ -309,6 +311,31 @@ button {
   border: 1px solid var(--apply-option-hover-border-col) ;
   background: var(--apply-option-hover-bg-col);
 }
+.inactive-assumption:hover {
+  border: 1px solid var(--inactive-option-hover-border-col) ;
+  background: var(--inactive-option-hover-bg-col);
+}
+.inactive-assumption {
+  border: 1px solid var(--faint-line-col);
+  background: var(--bg-col); 
+  color:var(--fg-col);
+  border-radius: 5px;
+  white-space:nowrap;
+  display:inline-block;
+  padding-left:9px;
+  padding-right:9px;
+  padding-top:9px;
+  margin-left:5px;
+  padding-bottom:1px;
+  margin-top:5px;
+  margin-right:0px;
+  margin-bottom:0px;
+
+  cursor: -moz-zoom-in; 
+    cursor: -webkit-zoom-in; 
+    cursor: zoom-in;
+  font-family: 'NeoEulerMedium';
+}
 .apply-option {
   border: 1px solid var(--apply-option-border-col);
   background: var(--apply-option-bg-col); 
@@ -320,13 +347,16 @@ button {
   padding-left:9px;
   padding-right:9px;
   padding-top:9px;
+  padding-bottom:1px;
   margin-left:5px;
   margin-top:5px;
   margin-right:0px;
   margin-bottom:0px;
   font-family: 'NeoEulerMedium';
 }
-
+.borderless-rule {
+  padding:5px;
+}
 /* RULE TABLES */
 .word-proof-prop {
   font-family: 'NeoEulerMedium';
@@ -538,6 +568,7 @@ textarea.paragraph {
   text-align: left;
   font-family: 'Computer Modern Sans';
 }
+
 /* LOGO */
 .logo-text {
   color: var(--logo-col);
@@ -632,7 +663,24 @@ ul.sidebar-index ul {
   padding-bottom:5px;
   padding-right:5px;
 }
-
+.sidebar-goal-buttons {
+  float:right;
+}
+.sidebar-rewrite-box {
+  border-bottom: 1px dotted var(--faint-line-col);
+  padding-top:2px;
+}
+.rewrite-checkbox-label {
+  font-family:   'Computer Modern Sans'
+}
+.sidebar-goal-display {
+  font-family:'NeoEulerMedium';
+  padding:6px;
+}
+.sidebar-goal-conclusion {
+  padding-left:6px;
+  padding-top:3px; 
+}
 /* TOP-LEVEL LAYOUT */
 .container {
   display:flex;

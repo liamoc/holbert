@@ -36,13 +36,17 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
         wrap [] = multi []
         wrap cs = inline "rule-binders" cs
 
+    currentGS = case editable of 
+      InProofTree (Just (R.ProofFocus _ g), _) -> g
+      _ -> Nothing
+
     metabinder' pth i n = case editable of
       Editable (selected, n') ->
         editableMath n' (metabinder n) (R.RuleBinderFocus pth i) (R.RenameRuleBinder pth i)
           [iconButton "red" "Remove Variable" "trash" (Act $ R.DeleteRuleBinder pth i)]
           selected
       InProofTree (selected, n') | pth == [], Just pth' <- ptpath ->
-        editableMath n' (metabinder n) (R.ProofBinderFocus pth' i) (R.RenameProofBinder pth' i)
+        editableMath n' (metabinder n) (flip R.ProofFocus currentGS $ R.ProofBinderFocus pth' i) (R.RenameProofBinder pth' i)
           [] selected
       _ -> metabinder n
 
@@ -51,8 +55,8 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
         editableMath n (renderTermCtx ctx (termDisplayOptions opts) trm) (R.RuleTermFocus pth) (R.UpdateTerm pth)
           (if null pth then [] else [iconButton "red" "Delete Premise" "trash" (Act $ R.DeletePremise pth)])
           selected
-      InProofTree (selected, n) -> 
-        renderTermCtxEditable (Just (n, R.MetavariableFocus, R.InstantiateMetavariable, selected)) ctx (termDisplayOptions opts) trm
+      InProofTree (selected, n) ->
+        renderTermCtxEditable (Just (n, flip R.ProofFocus currentGS . R.MetavariableFocus, R.InstantiateMetavariable, selected)) ctx (termDisplayOptions opts) trm
       _ -> renderTermCtx ctx (termDisplayOptions opts) trm
 
     renderRR' rr@(Local n) = renderRR rr

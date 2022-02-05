@@ -7,6 +7,7 @@ import DisplayOptions
 import qualified Heading as H
 import qualified Item as I
 import qualified Paragraph as P
+import qualified Prop as Prp
 import qualified Rule as R
 import qualified Terms as T
 import Controller(definedSyntax)
@@ -14,6 +15,7 @@ import View.Item
 import View.Term
 import View.Prop
 import View.Utils hiding (LocalAction (..))
+import qualified View.Utils as U
 import Data.List(mapAccumL)
 
 version = "0.3.1"
@@ -39,24 +41,43 @@ viewEditor x =
     ]
   where
     mainSidebar = case currentFocus x of
-      ItemFocus i (I.RuleFocus (R.GoalFocus p rev)) ->
+      ItemFocus i (I.RuleFocus foc@(R.ProofFocus pf (Just gs@(R.GS binds locals t p rev)))) ->
         let tl = getRuleAt i (document x) in
-        [ div_ [class_ "tabbed"]
-          [ input_ [type_ "radio", id_ "intro-tab", name_ "rulestabs", checked_ True]
-          , input_ [type_ "radio", id_ "elim-tab", name_ "rulestabs"]  -- me!
-          , input_ [type_ "radio", id_ "rewrite-tab", name_ "rulestabs"]
-          , ul_ [class_ "tabs"]
-            [ li_ [class_ "tab"] [label_ [for_ "intro-tab"] ["Intro"]]
-            , li_ [class_ "tab"] [label_ [for_ "elim-tab"] ["Elim"]]  -- me!
-            , li_ [class_ "tab"] [label_ [for_ "rewrite-tab"] ["Rewrite"]]
+        [ block "sidebar-header" ["Current Goal:"]
+        , div_ [class_ "sidebar-goal-display"]
+          [ div_ [class_ "sidebar-goal-buttons"] [iconButton (case pf of R.RewriteGoalFocus _ _ -> "active"; _ -> "teal" ) "Rewrite Goal" "equals-outline" 
+                                                 $ (ItemAction (Just i) $ I.RuleAct $ R.RewriteGoal False) ] 
+          , renderGoal (inputText x) i (Just foc) (displayOptions x) gs
+          ]      
+        ] ++ case pf of 
+          R.GoalFocus rs -> 
+            (if null locals then [] else 
+              [ block "sidebar-header" ["Assumptions:"]
+              , div_ [class_ "sidebar-assumptions"]  (map (renderAvailableRule' (map (\(_,_,n)->n) (reverse binds)) (displayOptions x) (i, p)) locals) 
+              ]) ++
+            [ block "sidebar-header" ["Available Rules:"]
+            , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule [] (displayOptions x) (i,p)) rs)
             ]
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup tl i p ctx Apply) rs)
-          , div_ [class_ "tab-content" ] (let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup tl i p ctx Elim) rs)  -- me!
-          , div_ [class_ "tab-content" ] (div_ [] [ input_ [checked_ (rev), id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> SetFocus (ItemFocus i (I.RuleFocus (R.GoalFocus p (b)))))]
-        , label_ [for_ "rev_rewrite"] ["Reverse rewrite application"]
-          ]:let (ctx, rs) = rulesSummary (i, p) (document x) in concatMap (renderPropGroup tl i p ctx (if rev then ReverseRewrite else Rewrite)) rs)
-          
-        ]]
+          R.AssumptionFocus ix rs -> 
+            [ block "sidebar-header" ["Assumption ", text (MS.pack (show ix)),  
+               iconButton "grey" "Close Assumption" "times-outline" (ItemAction (Just i) $ I.RuleAct $ R.SelectGoal p ) ]
+            , div_ [class_ "sidebar-assumptions"]  [renderAvailableRule'' (map (\(_,_,n)->n) (reverse binds)) (displayOptions x) (i, p) $ fst (locals !! ix)]
+            , block "sidebar-header" ["Available Eliminators:"]
+            , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule [] (displayOptions x) (i,p)) rs)
+            ]
+          R.RewriteGoalFocus b rs -> 
+            [ block "sidebar-header" ["Available Rewrites:",
+               iconButton "grey" "Close Rewrites" "times-outline" (ItemAction (Just i) $ I.RuleAct $ R.SelectGoal p ) ]
+            , div_ [class_ "sidebar-rewrite-box"] 
+                      [ input_ [checked_ b, id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> ItemAction (Just i) $ I.RuleAct $ R.RewriteGoal b)]
+                      , label_ [class_ "rewrite-checkbox-label", for_ "rev_rewrite"] ["Reverse rewrite application"]
+                      ]
+            , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule [] (displayOptions x) (i,p)) rs)
+            ]
+          _ -> []
+
+
+        
 
       NewItemFocus i -> newItemMenu i
       ItemFocus i (I.ParagraphFocus _) -> editingHelp
@@ -78,10 +99,7 @@ viewEditor x =
         ]
       _ -> [block "sidebar-header" ["Facts Summary:"], renderIndex $ document x]
 
-    renderPropGroup topLevel i p ctx action (n, rs)=
-      [ block "sidebar-header" [text n, text ":"]
-      , block "sidebar-apply-group" $ map (renderAvailableRule topLevel ctx (displayOptions x) (i, p) action) rs
-      ]
+    
 
     toolbar = block "sidebar-logo"
       [ iconButton "teal" "Download document" "download-outline" Download
@@ -175,18 +193,43 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 
-renderAvailableRule topLevel ctx opts (i, p) action (rr, r) =
-  case a (rr, r) p of 
-    Nothing -> ""
-    Just act -> button "apply-option" "" (ItemAction (Just i) $ I.RuleAct $ act)
-      [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
+renderGoal textIn i selected opts gs@(R.GS sks _ t p b) = 
+   fmap (toGlobalAction i . mapLocalAction I.RuleFocus I.RuleAct) $
+     multi [ div_ [] (if (showMetaBinders opts) then concatMap metabinder' sks else []), div_ [class_ "sidebar-goal-conclusion"] 
+        [renderTermCtxEditable 
+          (Just 
+            ( textIn
+            , flip R.ProofFocus (Just gs) . R.MetavariableFocus
+            , R.InstantiateMetavariable
+            , selected
+            )) (map (\(_,_,n) -> n) $ reverse sks) (tDOs opts) t]]
+  where
+    metabinder' (pth, i, n) = case selected of
+      Just (R.ProofFocus (R.ProofBinderFocus pth' i') _) | pth == pth', i == i' -> [metabinderEditor pth i textIn]
+      _ -> [button "editable editable-math" "" (U.SetFocus $ R.ProofFocus (R.ProofBinderFocus pth i) $ Just gs) [metabinder n]]
+
+    metabinderEditor pth i n = editor "expanding" (R.RenameProofBinder pth i) n
+
+
+renderAvailableRule ctx opts (i, p) ((rr, r), act) =
+  div_ [class_ "apply-option", onClick (ItemAction (Just i) $ I.RuleAct $ act)]
+       [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
   where
     ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
-    a = case (action) of
-      Apply -> R.applyRuleTactic topLevel
-      Rewrite -> \r p -> Just (R.Rewrite False r p)
-      ReverseRewrite -> \r p -> Just (R.Rewrite True r p)
-      Elim -> \r p -> Just (R.Elim r p)
+
+renderAvailableRule' ctx opts (i, p) ((Prp.Local rr, r), act) =
+    (case act of Just a -> div_ [class_ "apply-option", onClick (ItemAction (Just i) $ I.RuleAct $ a)]; 
+                 _      -> div_ [class_ "inactive-assumption", onClick (ItemAction (Just i) $ I.RuleAct $ R.ExamineAssumption rr)])
+      [fmap (const Noop) $ renderPropName (Just $ Prp.Local rr) ctx ruleDOs r]
+  where
+    ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
+renderAvailableRule' _ _ _ _ = multi []
+
+renderAvailableRule'' ctx opts (i, p) (rr, r) =
+      div_ [class_ "borderless-rule"] [fmap (const Noop) $ renderPropName (Just rr) ctx ruleDOs r]
+  where
+    ruleDOs = RDO {termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts}
+
 
 renderDisplayOptions opts =
   form_ [class_ "sidebar-displayoptions"]

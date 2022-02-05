@@ -10,7 +10,7 @@ import qualified Miso.String as MS
 import Optics.Core
 import StringRep
 import Control.Monad(when)
-import Data.Maybe(fromMaybe)
+import Data.Maybe(fromMaybe,fromJust,mapMaybe)
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
 
@@ -53,6 +53,17 @@ proofState =  atraversal
   (\i s -> case i of R n p (Just _) -> R n p (Just s)
                      i -> i)
 
+applyRewriteTactic :: Rule -> P.NamedProp -> Bool -> PT.Path -> Maybe (Action Rule)
+applyRewriteTactic state np rev pth = 
+  case traverseOf proofState (runUnifyPS $ PT.applyRewrite np rev pth) state of
+     Left _ -> Nothing
+     Right st' -> flip Tactic pth <$> preview proofState st'
+applyERuleTactic :: Rule -> P.NamedProp -> P.NamedProp -> PT.Path -> Maybe (Action Rule)
+applyERuleTactic state assm np pth = 
+  case traverseOf proofState (runUnifyPS $ PT.applyElim np pth assm) state of
+     Left _ -> Nothing
+     Right st' -> flip Tactic pth <$> preview proofState st'
+
 
 applyRuleTactic :: Rule -> P.NamedProp -> PT.Path -> Maybe (Action Rule)
 applyRuleTactic state np pth = 
@@ -76,23 +87,38 @@ checkVariableName new = case T.invalidName new of
   Just e  -> errorMessage $ "Invalid variable name: " <> pack e
   Nothing -> pure ()
 
+data ProofFocus = GoalFocus [(P.NamedProp, Action Rule)] | RewriteGoalFocus Bool [(P.NamedProp, Action Rule)] | AssumptionFocus Int [(P.NamedProp, Action Rule)] | MetavariableFocus Int | SubtitleFocus PT.Path | ProofBinderFocus PT.Path Int deriving (Show, Eq)
+
+data GoalSummary = GS [(PT.Path,Int,T.Name)] [(P.NamedProp, Maybe (Action Rule))] T.Term PT.Path Bool deriving (Show, Eq)
+
+getGoalSummary :: Rule -> PT.Path -> Maybe GoalSummary
+getGoalSummary state' f = GS <$> pure (associate state' f)
+                             <*> fmap (map tryApply . zip (map P.Local [0 ..]) . PT.locals . fst)  (ipreview (PT.path f PT.%+ PT.step) =<< preview (proofState % proofTree) state')
+                             <*> preview (proofState % proofTree % PT.path f % PT.inference) state' 
+                             <*> pure f <*> pure False
+  where 
+    tryApply r = (r, applyRuleTactic state' r f)
+    associate (R _ _ (Just (PS pt _))) f = go [] (reverse f) pt
+    go pth [] pt = zipWith (\i n -> (pth, i, n)) [0..] (view PT.goalbinders pt)
+    go pth (x:xs) pt = zipWith (\i n -> (pth, i, n)) [0..] (view PT.goalbinders pt) ++ case preview (PT.subgoal x) pt of 
+                         Nothing -> [] 
+                         Just sg -> go (x:pth) xs sg 
+      
 instance Control Rule where
-  data Focus Rule = GoalFocus PT.Path Bool
-                  | ProofBinderFocus PT.Path Int
-                  | ProofSubtitleFocus PT.Path
+  data Focus Rule = ProofFocus ProofFocus (Maybe GoalSummary)
                   | RuleBinderFocus P.Path Int
                   | NewRuleBinderFocus P.Path
                   | RuleTermFocus P.Path
                   | NameFocus
-                  | MetavariableFocus Int
                   deriving (Show, Eq)
 
-  data Action Rule = Rewrite Bool P.NamedProp PT.Path -- TODO replace with Tactic
-                   | Tactic ProofState PT.Path
-                   | Elim P.NamedProp PT.Path  -- New rule Elim (TODO replace with Tactic)
+  data Action Rule = Tactic ProofState PT.Path
                    | ToggleStyle PT.Path
                    | SetSubgoalHeading PT.Path
                    | Nix PT.Path
+                   | SelectGoal PT.Path
+                   | ExamineAssumption Int
+                   | RewriteGoal Bool
                    | RenameProofBinder PT.Path Int
                    | AddRuleBinder P.Path
                    | RenameRuleBinder P.Path Int
@@ -104,7 +130,7 @@ instance Control Rule where
                    | InstantiateMetavariable Int
                    deriving (Show, Eq)
 
-  defined (R n _ _) = [n] --If an item has defined some rules, they will be returned in a list
+  defined (R n p _) = [(P.Defn n,p)] --If an item has defined some rules, they will be returned in a list
 
   inserted _ = RuleTermFocus [] --When you've inserted an item switches to the relevant focus
 
@@ -112,22 +138,45 @@ instance Control Rule where
 
   renamed (s,s') r = over (proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
-  editable tbl (ProofBinderFocus pth i) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
+  editable tbl (ProofFocus (ProofBinderFocus pth i) g) = preview (proofState % proofTree % PT.path pth % PT.goalbinders % ix i)
   editable tbl (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabinders % ix i)
   editable tbl (RuleTermFocus pth) = Just . P.getConclusionString tbl pth . view prop
-  editable tbl (MetavariableFocus i) = const (Just ("?" <> pack (show i)))
+  editable tbl (ProofFocus (MetavariableFocus i) g) = const (Just ("?" <> pack (show i)))
   editable tbl NameFocus = preview name
-  editable tbl (ProofSubtitleFocus pth) = fmap (fromMaybe "Subgoal" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
+  editable tbl (ProofFocus (SubtitleFocus pth) g) = fmap (fromMaybe "Subgoal" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
   editable _ _ = const Nothing
 
 
-  leaveFocus (ProofBinderFocus p i) = noFocus . handle (RenameProofBinder p i) --These define the action when the user leaves focus on an item
+  leaveFocus (ProofFocus (ProofBinderFocus p i) g) = noFocus . handle (RenameProofBinder p i) --These define the action when the user leaves focus on an item
   leaveFocus (RuleBinderFocus p i)  = noFocus . handle (RenameRuleBinder p i)
   leaveFocus (NewRuleBinderFocus p) = noFocus . handle (AddRuleBinder p)
   leaveFocus (RuleTermFocus p)      = noFocus . handle (UpdateTerm p)
   leaveFocus NameFocus              = noFocus . handle Rename
+  --TODO handle other foci?
   leaveFocus _                      = pure
 
+
+  handle (SelectGoal pth) state = do
+     let summary = getGoalSummary state pth 
+     rules <- getKnownRules
+     setFocus (ProofFocus (GoalFocus $ mapMaybe (\r -> (,) r <$> applyRuleTactic state r pth) rules) summary)
+     pure state
+  handle (ExamineAssumption i) state = do 
+    foc <- getOriginalFocus 
+    case foc of 
+      Just (ProofFocus _ (Just gs@(GS _ lcls _ p _))) | (it:_) <- drop i lcls -> do
+        rules <- getKnownRules
+        setFocus (ProofFocus (AssumptionFocus i (mapMaybe (\r -> (,) r <$> applyERuleTactic state (fst it) r p) rules)) (Just gs))
+        pure state
+      _ -> pure state
+  handle (RewriteGoal rev) state = do 
+    foc <- getOriginalFocus 
+    case foc of 
+      Just (ProofFocus _ (Just gs@(GS _ _ t p _)))  -> do
+        rules <- getKnownRules
+        setFocus (ProofFocus (RewriteGoalFocus rev (mapMaybe (\r -> (,) r <$> applyRewriteTactic state r rev p ) rules)) (Just gs))
+        pure state
+      _ -> pure state
   handle (Tactic ps pth) state = let 
           state' = set proofState ps state 
           newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
@@ -135,31 +184,8 @@ instance Control Rule where
                      else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
         in do
           case newFocus of
-            Just f -> setFocus (GoalFocus f False)
-            _      -> clearFocus
-          pure state'
-  handle (Rewrite rev np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyRewrite np rev pth) state of
-     Left e -> errorMessage e >> pure state
-     Right state' -> let
-          newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
-                     then Just (0:pth)
-                     else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
-        in do
-          case newFocus of
-            Just f -> setFocus (GoalFocus f False)
-            _      -> clearFocus
-          pure state'
-  handle (Elim np pth) state = case traverseOf proofState (runUnifyPS $ PT.applyElim np pth) state of  -- Filter just the Elim rules
-     Left e -> errorMessage e >> pure state
-     Right state' -> let
-          newFocus = if has (proofState % proofTree % PT.path (0:pth)) state'
-                     then Just (0:pth)
-                     else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
-        in do
-          case newFocus of
-            Just f -> setFocus (GoalFocus f False)
-            _      -> clearFocus
-          pure state'
+            Just f -> handle (SelectGoal f) state'
+            _      -> clearFocus >> pure state'
   handle (ToggleStyle pth) state = do
     let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Subgoal" })
         f (Just pdd) = Just $ pdd { PT.proseStyle = not (PT.proseStyle pdd)}
@@ -168,9 +194,11 @@ instance Control Rule where
     new <- textInput
     let f Nothing = Just (PT.PDD {  PT.proseStyle = False, PT.subtitle = new })
         f (Just pdd) = Just $ pdd { PT.subtitle = new }
-    pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
-
-
+    foc <- getOriginalFocus
+    let state' = over (proofState % proofTree % PT.path pth % PT.style) f state
+    case foc of
+      Just (ProofFocus _ (Just (GS _ _ _ p _))) -> handle (SelectGoal p) state'
+      _ -> pure state'
   handle (Nix pth) state = do
      clearFocus
      pure $ set (proofState % proofTree % PT.path pth % PT.step) Nothing state
@@ -178,8 +206,11 @@ instance Control Rule where
   handle (RenameProofBinder pth i) state = do
      new <- textInput
      checkVariableName new
-     clearFocus -- should it be updateterm?
-     pure $ set (proofState % proofTree % PT.path pth % PT.goalbinders % ix i) new state
+     let state' = set (proofState % proofTree % PT.path pth % PT.goalbinders % ix i) new state
+     foc <- getOriginalFocus
+     case foc of
+       Just (ProofFocus _ (Just (GS _  _ _ p _))) -> handle (SelectGoal p) state'
+       _ -> pure state'
 
   handle (AddRuleBinder pth) state = do
      new <- textInput
@@ -216,7 +247,11 @@ instance Control Rule where
     case parse tbl [] new of
       Left e -> errorMessage $ "Parse error: " <> e
       Right obj -> do
-         pure $ over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
+         foc <- getOriginalFocus
+         let state' = over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
+         case foc of
+           Just (ProofFocus _ (Just (GS _  _ _ p _))) -> handle (SelectGoal p) state'
+           _ -> pure state'
 
   handle (AddPremise pth) state = do
      invalidate (view name state)

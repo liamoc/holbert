@@ -24,6 +24,10 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     renderRR (P.Defn d) = definedrule d
     renderRR (P.Local i) = localrule i
 
+    currentGS = case selected of 
+      Just (R.ProofFocus t g) -> g 
+      _ -> Nothing
+
     renderPT inTree showPreamble rns ctx pth (PT ptopts sks lcls prp msgs) =
       let binders = (if showMetaBinders opts then concat (zipWith (metabinder' pth) [0 ..] sks) else [])
                  ++ boundrules
@@ -35,17 +39,10 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
 
           ruleTitle = Just $ maybe "?" (addNix . renderRR . fst) msgs
 
-          conclusionTerm = renderTermCtxEditable 
-              (Just 
-                ( textIn
-                , R.MetavariableFocus
-                , R.InstantiateMetavariable
-                , selected
-                )) ctx' termDOs prp
 
-          subtitleWidget
-            | selected == Just (R.ProofSubtitleFocus pth) = editor "expanding" (R.SetSubgoalHeading pth) txt  
-            | otherwise = button "editable editable-heading" "" (SetFocus (R.ProofSubtitleFocus pth)) (renderText tbl txt)
+          subtitleWidget = case selected of
+              Just (R.ProofFocus (R.SubtitleFocus pth') _) | pth == pth' -> editor "expanding" (R.SetSubgoalHeading pth) txt  
+              _ -> button "editable editable-heading" "" (SetFocus (R.ProofFocus (R.SubtitleFocus pth) currentGS)) (renderText tbl txt)
             where txt = case ptopts of Nothing -> "Subgoal"; Just opts -> subtitle opts
 
           preamble = div_ [class_ "word-proof-prop"] 
@@ -90,12 +87,11 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
 
 
     metabinder' pth i n = case selected of
-      Just (R.ProofBinderFocus pth' i') | pth == pth', i == i' -> [metabinderEditor pth i textIn]
-      _ -> [button "editable editable-math" "" (SetFocus $ R.ProofBinderFocus pth i) [metabinder n]]
+      Just (R.ProofFocus (R.ProofBinderFocus pth' i') _) | pth == pth', i == i' -> [metabinderEditor pth i textIn]
+      _ -> [button "editable editable-math" "" (SetFocus $ R.ProofFocus (R.ProofBinderFocus pth i) currentGS) [metabinder n]]
 
     metabinderEditor pth i n = editor "expanding" (R.RenameProofBinder pth i) n
 
     goalButton pth  = case selected of
-      Just (R.GoalFocus pth' True) | pth == pth' -> focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth True) [typicon "location"]
-      Just (R.GoalFocus pth' False) | pth == pth' -> focusedButton "button-icon button-icon-active button-icon-goal" "" (SetFocus $ R.GoalFocus pth False) [typicon "location"]
-      _ -> button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (SetFocus $ R.GoalFocus pth False) [typicon "location-outline"]
+      Just (R.ProofFocus _ (Just (R.GS _ _ _ pth' _)))  | pth == pth' -> focusedButton "button-icon button-icon-active button-icon-goal" "" (Act $ R.SelectGoal pth) [typicon "location"]
+      _ -> button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (Act $ R.SelectGoal pth) [typicon "location-outline"]

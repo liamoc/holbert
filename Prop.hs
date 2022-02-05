@@ -21,6 +21,9 @@ data RuleRef = Defn RuleName
              | Rewrite RuleRef Bool -- bool is if it is flipped
              deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
+defnName :: RuleRef -> Maybe RuleName
+defnName v = case v of Defn n -> Just n; _ -> Nothing
+
 type NamedProp = (RuleRef, Prop)
 data Prop = Forall [T.Name] [Prop] T.Term deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
