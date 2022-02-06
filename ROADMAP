@@ -4,7 +4,7 @@
    - Submission to server?
    - Lockable regions
 - Elimination rules and induction (Chris)
-   - Applying a rule as an elimination rule
+   - Applying a rule as an elimination rule DONE
    - Defining an inductive set
    - Applying an induction tactic
    - Simultaneous induction

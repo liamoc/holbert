@@ -1,8 +1,14 @@
+* In progress
+- New feature: mix-fix syntax declarations
+- New feature: Multi-file documents
+
+* Version 0.4
+- New feature: Goal display on RHS
+- Improvement: Only displays applicable rules
+- New feature: Night mode
 - New feature: Prose style proofs
 - New feature: Apply a rule as an elimination rule
 - New feature: Apply an equality rule as a rewrite
-- New feature: mix-fix syntax declarations
-- New feature: Multi-file documents
 - Improvement: Holbert documents are now printable
 
 * Version 0.3.1
