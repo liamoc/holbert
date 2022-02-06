@@ -103,7 +103,7 @@ getGoalSummary state' f = GS <$> pure (associate state' f)
     go pth (x:xs) pt = zipWith (\i n -> (pth, i, n)) [0..] (view PT.goalbinders pt) ++ case preview (PT.subgoal x) pt of 
                          Nothing -> [] 
                          Just sg -> go (x:pth) xs sg 
-      
+
 instance Control Rule where
   data Focus Rule = ProofFocus ProofFocus (Maybe GoalSummary)
                   | RuleBinderFocus P.Path Int
@@ -155,10 +155,9 @@ instance Control Rule where
   --TODO handle other foci?
   leaveFocus _                      = pure
 
-
   handle (SelectGoal pth) state = do
      let summary = getGoalSummary state pth 
-     rules <- getKnownRules
+     rules <- filter (P.isIntroduction . snd) <$> getKnownRules
      setFocus (ProofFocus (GoalFocus $ mapMaybe (\r -> (,) r <$> applyRuleTactic state r pth) rules) summary)
      pure state
   handle (ExamineAssumption i) state = do 
@@ -173,7 +172,7 @@ instance Control Rule where
     foc <- getOriginalFocus 
     case foc of 
       Just (ProofFocus _ (Just gs@(GS _ _ t p _)))  -> do
-        rules <- getKnownRules
+        rules <- filter (P.isRewrite . snd) <$> getKnownRules
         setFocus (ProofFocus (RewriteGoalFocus rev (mapMaybe (\r -> (,) r <$> applyRewriteTactic state r rev p ) rules)) (Just gs))
         pure state
       _ -> pure state

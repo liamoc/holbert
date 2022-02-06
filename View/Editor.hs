@@ -59,7 +59,7 @@ viewEditor x =
             , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule [] (displayOptions x) (i,p)) rs)
             ]
           R.AssumptionFocus ix rs -> 
-            [ block "sidebar-header" ["Assumption ", text (MS.pack (show ix)),  
+            [ block "sidebar-header" ["Assumption ", localrule ix,  
                iconButton "grey" "Close Assumption" "times-outline" (ItemAction (Just i) $ I.RuleAct $ R.SelectGoal p ) ]
             , div_ [class_ "sidebar-assumptions"]  [renderAvailableRule'' (map (\(_,_,n)->n) (reverse binds)) (displayOptions x) (i, p) $ fst (locals !! ix)]
             , block "sidebar-header" ["Available Eliminators:"]

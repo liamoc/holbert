@@ -20,7 +20,8 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     
     termDOs = tDOs opts
     ruleDOs = RDO {termDisplayOptions = termDOs, showInitialMetas = True, ruleStyle = Turnstile}
-    renderRR (P.Rewrite r fl) = multi [if not fl then "→" else "←", renderRR r]
+    renderRR (P.Rewrite r fl) = span_ [class_ "rule-rulename-rewrite"]  [renderRR r, sup_ [] [if not fl then "→" else "←"]]
+    renderRR (P.Elim r i) = span_ [class_ "rule-rulename-elim"] [renderRR r, sup_ [] [renderRR i]]
     renderRR (P.Defn d) = definedrule d
     renderRR (P.Local i) = localrule i
 

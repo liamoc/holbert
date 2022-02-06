@@ -167,7 +167,7 @@ applyElim (r,prp) p (rr,assm) pt = do
     guts context (PT opts xs lcls t _) = do
        (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) t prp  -- Get assumption from context (is bound context correct?)
        tell subst
-       pure $ PT opts xs lcls t (Just (r,sgs))
+       pure $ PT opts xs lcls t (Just (P.Elim r rr,sgs))
 
     -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
     -- Will only try to unify goal if it usinifies with an assumption

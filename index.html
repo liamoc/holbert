@@ -39,7 +39,7 @@
    --editable-hover-col: #CCCCFF;
    --apply-option-hover-border-col: #CC00FF;
    --apply-option-hover-bg-col: #FAEFFA;
-   --inactive-option-hover-border-col: #0091aa;;
+   --inactive-option-hover-border-col: #0091aa;
    --inactive-option-hover-bg-col: #d7f4f9;;
    --apply-option-border-col:  #0000CC;
    --apply-option-bg-col: #EFEFFA;
@@ -60,6 +60,8 @@
    --logo-shadow-col:#666;
    --sidebar-insert-bg-col: #EEEEFF;
    --sidebar-insert-hover-bg-col: #FFEEFF;
+   --rule-name-elim-col: #0091aa;
+   --rule-name-rewrite-col: #5500aa;
 }
 @media screen and (prefers-color-scheme: dark) {
 :root {
@@ -87,10 +89,12 @@
     --apply-option-hover-bg-col: #330022;
     --apply-option-border-col: #AAAAFF;
     --apply-option-bg-col: #000;
+    --inactive-option-hover-border-col: #77ccff;
+    --inactive-option-hover-bg-col: #21383c;;
     --rule-binder-col: #AACCAA;
     --rule-name-local-col: #AAAAEE;
     --freevar-col: #AAFFAA;
-    --metavar-col: #BBB;
+    --metavar-col: #777;
     --bound-col: #ffaef5;
     --placeholder-fg-col: #777;
     --symbol-col: #FF9999;
@@ -104,6 +108,8 @@
     --index-bullet-col: #AAAAAA;
     --sidebar-insert-bg-col: #EEEEFF;
     --sidebar-insert-hover-bg-col: #FFEEFF;
+    --rule-name-elim-col:  #77ccff;;
+    --rule-name-rewrite-col: #f5c95a;
 }
 }
 
@@ -423,6 +429,12 @@ button {
   font-family:'Computer Modern Typewriter';
   color: var(--rule-name-local-col);
 }
+.rule-rulename-rewrite {  
+  color: var(--rule-name-rewrite-col);
+}
+.rule-rulename-elim {  
+  color: var(--rule-name-elim-col);
+}
 /* TERMS */
 .term-freevar {
   color: var(--freevar-col);
@@ -674,6 +686,10 @@ ul.sidebar-index ul {
   font-family:   'Computer Modern Sans'
 }
 .sidebar-goal-display {
+  font-family:'NeoEulerMedium';
+  padding:6px;
+}
+.sidebar-assumptions {
   font-family:'NeoEulerMedium';
   padding:6px;
 }
