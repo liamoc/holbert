@@ -102,10 +102,10 @@ inferrule binders premises spacer ruleTitle conclusion =
     ]
 
 equationalrule binders [] premises spacer ruleTitle conclusion =
-  span_ [] ["The current proof cannot be represented in the equational style"]
+  span_ [] ["<br> The current proof cannot be represented in the equational style"]
 
 equationalrule binders terms premises spacer ruleTitle conclusion =
-  span_ [] [text (MS.pack (concatMap show terms))]
+  span_ [] (map (text . MS.pack . show) terms)
 
 wordsrule [p] _ _ _ =  div_ [class_ "word-proof"] [p]
 wordsrule premises _ _ _ =
