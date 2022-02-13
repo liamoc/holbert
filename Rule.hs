@@ -143,7 +143,7 @@ instance Control Rule where
   editable tbl (RuleTermFocus pth) = Just . P.getConclusionString tbl pth . view prop
   editable tbl (ProofFocus (MetavariableFocus i) g) = const (Just ("?" <> pack (show i)))
   editable tbl NameFocus = preview name
-  editable tbl (ProofFocus (SubtitleFocus pth) g) = fmap (fromMaybe "Subgoal" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
+  editable tbl (ProofFocus (SubtitleFocus pth) g) = fmap (fromMaybe "Show:" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
   editable _ _ = const Nothing
 
 
@@ -186,7 +186,7 @@ instance Control Rule where
             Just f -> handle (SelectGoal f) state'
             _      -> clearFocus >> pure state'
   handle (ToggleStyle pth) state = do
-    let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Subgoal" })
+    let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Show:" })
         f (Just pdd) = Just $ pdd { PT.proseStyle = not (PT.proseStyle pdd)}
     pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
   handle (SetSubgoalHeading pth) state = do

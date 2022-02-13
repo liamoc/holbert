@@ -167,6 +167,10 @@ a[href]:active {
 }
 
 /* SOME TOP-LEVEL STYLES */
+ul {
+  margin-block: 5px;
+  list-style-type:square;
+}
 body {
   background: var(--bg-col);
   color: var(--fg-col);
@@ -370,6 +374,11 @@ button {
 .word-proof-binders {
   font-family: 'NeoEulerMedium';
 }
+.word-proof-goal {
+  padding-left:11px;
+  padding-top:6px;
+  padding-bottom:3px;
+}
 .word-proof > p {
   margin:0px;
 }
@@ -529,6 +538,7 @@ textarea.paragraph {
   overflow-x: scroll 
 }
 .item-rule-proofheading {
+  font-family: 'Computer Modern Concrete';
   font-style:italic;
 }
 .item-rule-theoremheading {
