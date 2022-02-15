@@ -165,12 +165,12 @@ applyElim (r,prp) p (rr,assm) pt = do
   where
     guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
     guts context (PT opts xs lcls t _) = do
-       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) t prp  -- Get assumption from context (is bound context correct?)
+       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) t prp
        tell subst
        pure $ PT opts xs lcls t (Just (P.Elim r rr,sgs))
 
     -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
-    -- Will only try to unify goal if it usinifies with an assumption
+    -- Will only try to unify goal if it unifies with an assumption
     applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- Added [T.Prop] for assumptions
     applyRuleElim skolems g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
        n <- fresh  -- Returns increasing #, always unique
@@ -178,7 +178,7 @@ applyElim (r,prp) p (rr,assm) pt = do
        applyRuleElim skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRuleElim skolems g (P.Forall [] (s:sgs) g') = (do
        substs <- P.unifierProp assm s
-       substs' <- unifier (T.applySubst substs g) (T.applySubst substs g')
+       substs' <- unifier (T.applySubst substs g) (T.applySubst substs g')  -- TODO: fix unification for inductive principle
        pure (substs <> substs',map fromProp sgs))  -- T.applySubst like P.subst but takes terms not props
        
     applyRuleElim skolems g _ = empty

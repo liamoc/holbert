@@ -21,6 +21,12 @@ type ItemIndex = Int
 type InputText = MS.MisoString
 type ErrorMessage = MS.MisoString
 
+data ElementType
+  = Axiom
+  | AxiomSet
+  | Theorem
+  deriving (Show, Eq)
+
 data Editor = Editor
   { document       :: Document
   , currentFocus   :: EditorFocus
@@ -33,7 +39,7 @@ data EditorFocus
   = ItemFocus ItemIndex (Focus I.Item)
   | NoFocus
   | NewItemFocus ItemIndex
-  | InsertingPropositionFocus Bool ItemIndex
+  | InsertingPropositionFocus ElementType ItemIndex
   | CreditsFocus
   | ImportFocus
   deriving (Show, Eq)
@@ -49,7 +55,7 @@ data EditorAction
   | NewItemMenu ItemIndex
   | UpdateInput MS.MisoString
   | InsertItem ItemIndex I.Item
-  | InsertProposition ItemIndex Bool
+  | InsertProposition ItemIndex ElementType
   | Download
   | Import
   | LoadDocument Document
@@ -145,9 +151,11 @@ runAction' (DeleteItem idx) ed =
       rest' = map (foldr (.) id (map (maybe id invalidated . Prp.defnName . fst) (defined x))) rest
    in pure (ed {document = lefts ++ rest', currentFocus = NoFocus, message = Nothing})
 
-runAction' (InsertProposition idx b) ed =
+runAction' (InsertProposition idx elemType) ed =
   let n = inputText ed
-      item = (if b then R.blankTheorem else R.blankAxiom) n
+      item = (if elemType == Axiom then R.blankAxiom
+              else if elemType == AxiomSet then R.blankAxiomSet
+              else R.blankTheorem) n
    in case n of
         "" -> Left "Name cannot be empty"
         _ | n `elem` concatMap (mapMaybe (Prp.defnName . fst) . defined) (document ed) -> Left "Name already in use"

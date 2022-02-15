@@ -25,6 +25,7 @@ anchor i = a_ [id_ $ "anchor" <> MS.pack (show i)]
 metabinder v = inline "rule-binder" (name v ++ ["."])
 
 axiomHeading i = block "item-rule-theoremheading" [anchor i ["Axiom."]]
+axiomSetHeading i = block "item-rule-theoremheading" [anchor i ["Set of Axioms."]]
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 
 

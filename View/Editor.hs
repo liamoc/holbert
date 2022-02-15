@@ -114,8 +114,9 @@ viewEditor x =
       ]
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus False i) [block "item-rule-theoremheading" ["Axiom."]]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus True i) [block "item-rule-theoremheading" ["Theorem."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus Axiom i) [block "item-rule-theoremheading" ["Axiom."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus AxiomSet i) [block "item-rule-theoremheading" ["Set of Axioms."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
       , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]
@@ -188,8 +189,10 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                   else ("insert button-icon-blue", "plus-outline")
              in iconButton cls "Insert new element" icn (SetFocus $ NewItemFocus i)
                   : case selected of
-                    InsertingPropositionFocus isT i' | i == i' ->
-                      [editorWithTitle (if isT then theoremHeading i else axiomHeading i) "newrule" (InsertProposition i isT) UpdateInput Reset textIn]
+                    InsertingPropositionFocus elemType i' | i == i' ->
+                      [editorWithTitle (if elemType == Axiom then axiomHeading i
+                                        else if elemType == AxiomSet then axiomSetHeading i
+                                        else theoremHeading i) "newrule" (InsertProposition i elemType) UpdateInput Reset textIn]
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 

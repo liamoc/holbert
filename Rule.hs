@@ -27,6 +27,9 @@ name = lensVL $ \act (R n prp m) -> (\n' -> R n' prp m) <$> act n
 blankAxiom :: P.RuleName -> Rule
 blankAxiom n = (R n P.blank Nothing)
 
+blankAxiomSet :: P.RuleName -> Rule
+blankAxiomSet n = (R n P.blank Nothing)
+
 blankTheorem :: P.RuleName -> Rule
 blankTheorem n = (R n P.blank (Just $ PS (PT.fromProp P.blank) 0))
 
