@@ -2,7 +2,7 @@
 module View.Utils where
 import Miso
 import qualified Miso.String as MS
-import qualified Miso.Html as MT
+import DisplayOptions
 import Data.Char
 import Data.List (dropWhileEnd, intersperse)
 import Data.Maybe (fromMaybe)
@@ -104,8 +104,29 @@ inferrule binders premises spacer ruleTitle conclusion =
 equationalrule binders [] premises spacer ruleTitle conclusion =
   span_ [] ["<br> The current proof cannot be represented in the equational style"]
 
-equationalrule binders terms premises spacer ruleTitle conclusion =
-  span_ [] (map (text . MS.pack . show) terms)
+equationalrule binders [x] premises spacer ruleTitle conclusion =
+    table_
+    [ intProp "cellpadding" 0, class_ "equational-proof",intProp "cellspacing" 0]
+    (displayeqline (Just x) Nothing)
+
+equationalrule binders (x:y:xs) premises spacer ruleTitle conclusion =
+    table_
+    [ intProp "cellpadding" 0, class_ "equational-proof",intProp "cellspacing" 0]
+    ((displayeqline (Just x) (Just y)) ++ (displayequalities xs))
+
+displayequalities :: [View a] -> [View action]
+displayequalities [x] = displayeqline Nothing (Just x)
+displayequalities (x:xs) = displayeqline Nothing (Just x)  ++ displayequalities xs
+
+displayeqline :: (Maybe (View a)) -> (Maybe (View a)) -> [View action]
+displayeqline x y = [
+    tr_ []
+      $  case x of {Nothing -> [td_ [class_ "rule-cell rule-spacer"] [" "]]; Just x -> [td_ [class_ "rule-cell rule-spacer"] [(text . MS.pack . show) x]]}
+      ++ [td_ [class_ "rule-cell rule-spacer"] [" "]]
+      ++ [td_ [class_ "rule-cell equals"] ["="]]
+      ++ [td_ [class_ "rule-cell rule-spacer"] [" "]]
+      ++  case y of {Nothing -> [td_ [class_ "rule-cell rule-spacer"] [" "]]; Just y -> [td_ [class_ "rule-cell rule-spacer"] [(text . MS.pack . show) y]]}
+                           ]
 
 wordsrule [p] _ _ _ =  div_ [class_ "word-proof"] [p]
 wordsrule premises _ _ _ =

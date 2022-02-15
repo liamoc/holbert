@@ -74,7 +74,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
                 $ (if inTree || not shouldShowWords then id else (multi [" by ", fromMaybe "" ruleTitle, spacer, if null premises then ". " else ": "]  :))
                 $ (if inTree || shouldShowWords || not showPreamble then id else ("by: ":))
                 $ (if inTree then id else (multi [styleButton, equationalButton] : ))
-                $ pure $ (case shouldBeStyle of {Prose -> wordsrule; Tree -> inferrule binders; Equational -> equationalrule binders (flatten pt)}) premises spacer ruleTitle conclusion
+                $ pure $ (case shouldBeStyle of {Prose -> wordsrule; Tree -> inferrule binders; Equational -> equationalrule binders (map (renderTermCtx ctx (TDO True True)) (flatten pt))}) premises spacer ruleTitle conclusion
 
       where
         styleButton = if notTree then 
