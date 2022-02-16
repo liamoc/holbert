@@ -114,18 +114,18 @@ equationalrule binders (x:y:xs) premises spacer ruleTitle conclusion =
     [ intProp "cellpadding" 0, class_ "equational-proof",intProp "cellspacing" 0]
     ((displayeqline (Just x) (Just y)) ++ (displayequalities xs))
 
-displayequalities :: [View a] -> [View action]
+displayequalities :: [View action] -> [View action]
 displayequalities [x] = displayeqline Nothing (Just x)
 displayequalities (x:xs) = displayeqline Nothing (Just x)  ++ displayequalities xs
 
-displayeqline :: (Maybe (View a)) -> (Maybe (View a)) -> [View action]
+displayeqline :: (Maybe (View action)) -> (Maybe (View action)) -> [View action]
 displayeqline x y = [
     tr_ []
-      $  case x of {Nothing -> [td_ [class_ "rule-cell rule-spacer"] [" "]]; Just x -> [td_ [class_ "rule-cell rule-spacer"] [(text . MS.pack . show) x]]}
-      ++ [td_ [class_ "rule-cell rule-spacer"] [" "]]
-      ++ [td_ [class_ "rule-cell equals"] ["="]]
-      ++ [td_ [class_ "rule-cell rule-spacer"] [" "]]
-      ++  case y of {Nothing -> [td_ [class_ "rule-cell rule-spacer"] [" "]]; Just y -> [td_ [class_ "rule-cell rule-spacer"] [(text . MS.pack . show) y]]}
+      $  case x of {Nothing -> [td_ [class_ "rule-cell rule-spacer"] ["    "]]; Just x -> [td_ [class_ "rule-cell rule-spacer"] [x]]}
+      ++ [td_ [class_ "rule-cell rule-spacer"] ["    "]]
+      ++ [td_ [class_ "rule-cell equals"] [" = "]]
+      ++ [td_ [class_ "rule-cell rule-spacer"] ["    "]]
+      ++  case y of {Nothing -> [td_ [class_ "rule-cell rule-spacer"] ["    "]]; Just y -> [td_ [class_ "rule-cell rule-spacer"] [y]]}
                            ]
 
 wordsrule [p] _ _ _ =  div_ [class_ "word-proof"] [p]
