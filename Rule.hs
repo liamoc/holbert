@@ -14,7 +14,13 @@ import Data.Maybe(fromMaybe,fromJust,mapMaybe)
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
 
-data Rule = R P.RuleName P.Prop (Maybe ProofState)
+data RuleType
+  = Axiom
+  | Theorem
+  | Induction
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data Rule = R RuleType P.RuleName P.Prop (Maybe ProofState)
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type Counter = Int
@@ -22,38 +28,38 @@ data ProofState = PS PT.ProofTree Counter
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 name :: Lens' Rule P.RuleName
-name = lensVL $ \act (R n prp m) -> (\n' -> R n' prp m) <$> act n
+name = lensVL $ \act (R ruleType n prp m) -> (\n' -> R ruleType n' prp m) <$> act n
 
-blankAxiom :: P.RuleName -> Rule
-blankAxiom n = (R n P.blank Nothing)
+blankAxiom :: RuleType -> P.RuleName -> Rule
+blankAxiom ruleType n = (R ruleType n P.blank Nothing)
 
-blankAxiomSet :: P.RuleName -> Rule
-blankAxiomSet n = (R n P.blank Nothing)
+blankInduction :: RuleType -> P.RuleName -> Rule
+blankInduction ruleType n = (R ruleType n P.blank Nothing)
 
-blankTheorem :: P.RuleName -> Rule
-blankTheorem n = (R n P.blank (Just $ PS (PT.fromProp P.blank) 0))
+blankTheorem :: RuleType -> P.RuleName -> Rule
+blankTheorem ruleType n = (R ruleType n P.blank (Just $ PS (PT.fromProp P.blank) 0))
 
 -- warning, do not use this lens to assign to anything that might invalidate the proof state
 -- use propUpdate for that (which will reset the proof state)
 prop :: Lens' Rule P.Prop
-prop = lensVL $ \act (R n prp m) -> (\prp' -> R n prp' m) <$> act prp
+prop = lensVL $ \act (R ruleType n prp m) -> (\prp' -> R ruleType n prp' m) <$> act prp
 
 -- disjoint product of prop and name
 namedProp :: Lens' Rule P.NamedProp
-namedProp = lensVL $ \act (R n prp m) -> (\(P.Defn n',prp') -> R n' prp' m) <$> act (P.Defn n, prp)
+namedProp = lensVL $ \act (R ruleType n prp m) -> (\(P.Defn n',prp') -> R ruleType n' prp' m) <$> act (P.Defn n, prp)
 
 propUpdate :: Setter' Rule P.Prop
 propUpdate = sets guts
   where
-    guts act (R n p s)
+    guts act (R ruleType n p s)
       | p' <- act p
-      = R n p' (fmap (const $ PS (PT.fromProp p') 0) s)
+      = R ruleType n p' (fmap (const $ PS (PT.fromProp p') 0) s)
 
 proofState :: AffineTraversal' Rule ProofState
 proofState =  atraversal
-  (\i   -> case i of R _ _ (Just s) -> Right s
+  (\i   -> case i of R _ _ _ (Just s) -> Right s
                      i -> Left i)
-  (\i s -> case i of R n p (Just _) -> R n p (Just s)
+  (\i s -> case i of R ruleType n p (Just _) -> R ruleType n p (Just s)
                      i -> i)
 
 applyRewriteTactic :: Rule -> P.NamedProp -> Bool -> PT.Path -> Maybe (Action Rule)
@@ -101,7 +107,7 @@ getGoalSummary state' f = GS <$> pure (associate state' f)
                              <*> pure f <*> pure False
   where 
     tryApply r = (r, applyRuleTactic state' r f)
-    associate (R _ _ (Just (PS pt _))) f = go [] (reverse f) pt
+    associate (R _ _ _ (Just (PS pt _))) f = go [] (reverse f) pt
     go pth [] pt = zipWith (\i n -> (pth, i, n)) [0..] (view PT.goalbinders pt)
     go pth (x:xs) pt = zipWith (\i n -> (pth, i, n)) [0..] (view PT.goalbinders pt) ++ case preview (PT.subgoal x) pt of 
                          Nothing -> [] 
@@ -133,7 +139,7 @@ instance Control Rule where
                    | InstantiateMetavariable Int
                    deriving (Show, Eq)
 
-  defined (R n p _) = [(P.Defn n,p)] --If an item has defined some rules, they will be returned in a list
+  defined (R ruleType n p _) = [(P.Defn n,p)] --If an item has defined some rules, they will be returned in a list
 
   inserted _ = RuleTermFocus [] --When you've inserted an item switches to the relevant focus
 

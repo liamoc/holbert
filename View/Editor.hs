@@ -114,9 +114,9 @@ viewEditor x =
       ]
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus Axiom i) [block "item-rule-theoremheading" ["Axiom."]]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus AxiomSet i) [block "item-rule-theoremheading" ["Set of Axioms."]]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axiom."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Induction i) [block "item-rule-theoremheading" ["Induction."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
       , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]
@@ -155,7 +155,7 @@ renderIndex (_ : script) = ul_ [class_ "sidebar-index"] $ renderIndex' (zip [1 .
     renderIndex' ((i, I.Heading (H.Heading lvl hd)) : scr)
       | (itms, rest) <- span (within lvl) scr =
         li_ [] [b_ [] [a_ [href_ $ "#anchor" <> (MS.pack $ show i)] [text hd]], ul_ [] $ renderIndex' itms] : renderIndex' rest
-    renderIndex' ((i, I.Rule (R.R n _ mpt)) : scr) =
+    renderIndex' ((i, I.Rule (R.R ruleType n _ mpt)) : scr) =
       li_ []
         [ a_ [href_ $ "#anchor" <> (MS.pack $ show i)] [definedrule n]
         , case mpt of
@@ -189,10 +189,10 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                   else ("insert button-icon-blue", "plus-outline")
              in iconButton cls "Insert new element" icn (SetFocus $ NewItemFocus i)
                   : case selected of
-                    InsertingPropositionFocus elemType i' | i == i' ->
-                      [editorWithTitle (if elemType == Axiom then axiomHeading i
-                                        else if elemType == AxiomSet then axiomSetHeading i
-                                        else theoremHeading i) "newrule" (InsertProposition i elemType) UpdateInput Reset textIn]
+                    InsertingPropositionFocus ruleType i' | i == i' ->
+                      [editorWithTitle (if ruleType == R.Axiom then axiomHeading i
+                                        else if ruleType == R.Induction then inductionHeading i
+                                        else theoremHeading i) "newrule" (InsertProposition i ruleType) UpdateInput Reset textIn]
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 
