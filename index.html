@@ -9,7 +9,7 @@
     <script src="split.min.js"></script>
     <script src="FileSaver.min.js"></script>
     <title> Holbert </title>
-    <link rel="icon" type="image/png" href="./favicon.PNG">
+    <link rel="icon" type="image/png" href="favicon.PNG">
     <style>
       @font-face {
         font-family: 'NeoEulerMedium';
@@ -61,59 +61,63 @@
         --logo-shadow-col:#666;
         --sidebar-insert-bg-col: #EEEEFF;
         --sidebar-insert-hover-bg-col: #FFEEFF;
+        --sidebar-text-col: #000;
         --rule-name-elim-col: #0091aa;
         --rule-name-rewrite-col: #5500aa;
+        --scrollbar-col: #EEE;
+        --scrollbar-hover-col: #dfdfdf;
       }
       @media screen and (prefers-color-scheme: dark) {
-      :root {
-          --link-col: #AAAAFF;
-          --link-hover-col: #CC99FF;
-          --link-active-col: #AAAAFF;
-          --jump-hl-col: #767676;
-          --gutter-hl-col: #767676;
-          --editor-border-col: #AAAAFF;
-          --editor-bg-col: #333344;
-          --faint-line-col: #222222;
-          --tab-border-col: #444444;
-          --tab-fg-col: #AAA;
-          --tab-active-fg-col: #FFFFFF;
-          --bg-col: #111;
-          --fg-col: #EFEFEF;
-          --icon-teal-col: #77ccff;
-          --icon-blue-col: #AAAAFF;
-          --icon-red-col: #FF5959;
-          --icon-grey-col: #aaaaaa;
-          --icon-active-col: #CC99FF;
-          --icon-hover-col: #CC99FF;
-          --editable-hover-col: #444466;
-          --apply-option-hover-border-col: #CC99FF;
-          --apply-option-hover-bg-col: #330022;
-          --apply-option-border-col: #AAAAFF;
-          --apply-option-bg-col: #000;
-          --inactive-option-hover-border-col: #77ccff;
-          --inactive-option-hover-bg-col: #21383c;;
-          --rule-binder-col: #AACCAA;
-          --rule-name-local-col: #AAAAEE;
-          --freevar-col: #AAFFAA;
-          --metavar-col: #777;
-          --bound-col: #ffaef5;
-          --placeholder-fg-col: #777;
-          --symbol-col: #FF9999;
-          --item-inserting-col: #CC99FF;
-          --sidebar-header-col: #333;
-          --scrollbar: #333;
-          --scrollbar-hover: #444;
-          --error-bg-col: #FFAAAA;
-          --logo-col: #83ff83;
-          --logo-shadow-col:#333;
-          --index-unsolved-col: #FFAA00;
-          --index-solved-col: #00FFAA;
-          --index-bullet-col: #AAAAAA;
-          --sidebar-insert-bg-col: #EEEEFF;
-          --sidebar-insert-hover-bg-col: #FFEEFF;
-          --rule-name-elim-col:  #77ccff;;
-          --rule-name-rewrite-col: #f5c95a;
-      }
+        :root {
+            --link-col: #AAAAFF;
+            --link-hover-col: #CC99FF;
+            --link-active-col: #AAAAFF;
+            --jump-hl-col: #767676;
+            --gutter-hl-col: #767676;
+            --editor-border-col: #AAAAFF;
+            --editor-bg-col: #333344;
+            --faint-line-col: #222222;
+            --tab-border-col: #444444;
+            --tab-fg-col: #AAA;
+            --tab-active-fg-col: #FFFFFF;
+            --bg-col: #111;
+            --fg-col: #EFEFEF;
+            --icon-teal-col: #77ccff;
+            --icon-blue-col: #AAAAFF;
+            --icon-red-col: #FF5959;
+            --icon-grey-col: #aaaaaa;
+            --icon-active-col: #CC99FF;
+            --icon-hover-col: #CC99FF;
+            --editable-hover-col: #444466;
+            --apply-option-hover-border-col: #CC99FF;
+            --apply-option-hover-bg-col: #330022;
+            --apply-option-border-col: #AAAAFF;
+            --apply-option-bg-col: #000;
+            --inactive-option-hover-border-col: #77ccff;
+            --inactive-option-hover-bg-col: #21383c;;
+            --rule-binder-col: #AACCAA;
+            --rule-name-local-col: #AAAAEE;
+            --freevar-col: #AAFFAA;
+            --metavar-col: #777;
+            --bound-col: #ffaef5;
+            --placeholder-fg-col: #777;
+            --symbol-col: #FF9999;
+            --item-inserting-col: #CC99FF;
+            --sidebar-header-col: #333;
+            --error-bg-col: #FFAAAA;
+            --logo-col: #83ff83;
+            --logo-shadow-col:#333;
+            --index-unsolved-col: #FFAA00;
+            --index-solved-col: #00FFAA;
+            --index-bullet-col: #AAAAAA;
+            --sidebar-insert-bg-col: #2d2d30;
+            --sidebar-insert-hover-bg-col: #3f3f44;
+            --sidebar-text-col: #DDD;
+            --rule-name-elim-col:  #77ccff;;
+            --rule-name-rewrite-col: #f5c95a;
+            --scrollbar-col: #222;
+            --scrollbar-hover-col: #313131;
+        }
       }
 
       /* LINKS AND ANCHOR ANIMATIONS */
@@ -202,19 +206,22 @@
         margin-top:12px;
       }
       ::-webkit-scrollbar {
-        width: 10px;
+        width: 12px;
       }
       ::-webkit-scrollbar-track {
-        background: var(--bg-col); 
-        border-radius: 5px;
+        background: var(--bg-col);
       }
       ::-webkit-scrollbar-thumb {
-        background: var(--sidebar-header-col);
+        background: var(--scrollbar-col);
         opacity: 0.1;
-        border-radius: 5px;
+        border-radius: 6px;
+        background-clip: padding-box;
+        border: 2px solid transparent;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #3e3f44; 
+        background: var(--scrollbar-hover-col);
+        background-clip: padding-box;
+        border: 2px solid transparent;
       }
       ::-webkit-scrollbar-corner {
         display: none;
@@ -686,6 +693,7 @@
         border: 0;
         background: var(--sidebar-insert-bg-col);
         display:block;
+        color: var(--sidebar-text-col);
       }
       .sidebar-insert-paragraph {
         margin-top:5px;
