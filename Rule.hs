@@ -16,8 +16,8 @@ import Data.Aeson (ToJSON,FromJSON)
 
 data RuleType
   = Axiom
-  | Theorem
   | Induction
+  | Theorem
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Rule = R RuleType P.RuleName P.Prop (Maybe ProofState)

@@ -115,8 +115,8 @@ viewEditor x =
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axiom."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Induction i) [block "item-rule-theoremheading" ["Induction Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Induction i) [block "item-rule-theoremheading" ["Induction."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
       , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]
