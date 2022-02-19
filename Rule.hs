@@ -16,7 +16,7 @@ import Data.Aeson (ToJSON,FromJSON)
 
 data RuleType
   = Axiom
-  | Basis
+  | InductBasis
   | InductSteps
   | InductPrinc
   | Theorem
