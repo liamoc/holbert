@@ -16,7 +16,9 @@ import Data.Aeson (ToJSON,FromJSON)
 
 data RuleType
   = Axiom
-  | Induction
+  | Basis
+  | InductSteps
+  | InductPrinc
   | Theorem
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -32,9 +34,6 @@ name = lensVL $ \act (R ruleType n prp m) -> (\n' -> R ruleType n' prp m) <$> ac
 
 blankAxiom :: RuleType -> P.RuleName -> Rule
 blankAxiom ruleType n = (R ruleType n P.blank Nothing)
-
-blankInduction :: RuleType -> P.RuleName -> Rule
-blankInduction ruleType n = (R ruleType n P.blank Nothing)
 
 blankTheorem :: RuleType -> P.RuleName -> Rule
 blankTheorem ruleType n = (R ruleType n P.blank (Just $ PS (PT.fromProp P.blank) 0))

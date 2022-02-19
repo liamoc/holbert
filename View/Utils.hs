@@ -26,6 +26,9 @@ metabinder v = inline "rule-binder" (name v ++ ["."])
 
 axiomHeading i = block "item-rule-theoremheading" [anchor i ["Axiom."]]
 inductionHeading i = block "item-rule-theoremheading" [h3_ [] [anchor i ["Induction Axioms."]]]
+basisSubheading i = block "item-rule-theoremheading" [anchor i ["Basis."]]
+stepsSubheading i = block "item-rule-theoremheading" [anchor i ["Inductive Steps."]]
+princSubheading i = block "item-rule-theoremheading" [anchor i ["Inductive Principle."]]
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 
 space = inline "space" [" "]
