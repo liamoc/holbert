@@ -25,10 +25,10 @@ anchor i = a_ [id_ $ "anchor" <> MS.pack (show i)]
 metabinder v = inline "rule-binder" (name v ++ ["."])
 
 axiomHeading i = block "item-rule-theoremheading" [anchor i ["Axiom."]]
-inductionHeading i = block "item-rule-theoremheading" [h3_ [] [anchor i ["Induction Axioms."]]]
-basisSubheading i = block "item-rule-theoremheading" [anchor i ["Basis."]]
-stepsSubheading i = block "item-rule-theoremheading" [anchor i ["Inductive Steps."]]
-princSubheading i = block "item-rule-theoremheading" [anchor i ["Inductive Principle."]]
+inductionHeading i = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."]]
+inductionBasisHeadng i = block "item-rule-theoremheading" [span_ [] ["Indcution Axiom: Basis."]]
+inductionInitHeadng i = block "item-rule-theoremheading" [span_ [class_ "item-rule-inductionheading"] [anchor i ["Basis and Inductive Steps."]]]
+inductionPrincHeading i = block "item-rule-theoremheading" [span_ [class_ "item-rule-inductionheading"] [anchor i ["Inductive Principle."]]]
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 
 space = inline "space" [" "]

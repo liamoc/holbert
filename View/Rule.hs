@@ -17,22 +17,15 @@ renderRule i opts tbl textIn selected (R.R ruleType name prop mpt) = div_ []
     R.Axiom ->  axiomHeading i
               : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
               : []
-    R.InductBasis ->  inductionHeading i
+    R.InductionInit ->  inductionHeading i
                     : block "" []
-                    -- : if basisExists [] else basisSubheading i : button
-                    : basisSubheading i
-                    : button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert basis"] [typicon "plus-outline"]  -- add basis
+                    : inductionInitHeadng i
+                    : button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert basis"] [typicon "plus-outline"]  -- add axiom
                     : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
-                    -- : if stepsExist then [] else stepsSubheading i : button
-                    : stepsSubheading i
-                    : button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert inductive step"] [typicon "plus-outline"]  -- add step
+                    : inductionPrincHeading i
+                    : button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert inductive principle"] [typicon "plus-outline"]  -- add axiom
                     : []
-    R.InductSteps ->  block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
-                    -- if stepsExist then [] else princSubheading i : button
-                    : princSubheading i
-                    : button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert inductive principle"] [typicon "plus-outline"]  -- add princ
-                    : []
-    R.InductPrinc ->  block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
+    R.InductionPrinc ->  block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
                     : []
     R.Theorem -> theoremHeading i
                     : case mpt of

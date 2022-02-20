@@ -115,7 +115,7 @@ viewEditor x =
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axiom."]]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.InductBasis i) [block "item-rule-theoremheading" ["Induction Axioms."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.InductionInit i) [block "item-rule-theoremheading" ["Induction Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
@@ -191,9 +191,8 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                   : case selected of
                     InsertingPropositionFocus ruleType i' | i == i' ->
                       [editorWithTitle (if ruleType == R.Axiom then axiomHeading i
-                                        else if ruleType == R.InductBasis then basisSubheading i
-                                        else if ruleType == R.InductSteps then stepsSubheading i
-                                        else if ruleType == R.InductPrinc then princSubheading i
+                                        else if ruleType == R.InductionInit then inductionBasisHeadng i
+                                        else if ruleType == R.InductionPrinc then inductionPrincHeading i
                                         else theoremHeading i) "newrule" (InsertProposition i ruleType) UpdateInput Reset textIn]
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
