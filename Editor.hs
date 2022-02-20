@@ -148,7 +148,7 @@ runAction' (DeleteItem idx) ed =
 runAction' (InsertProposition idx ruleType) ed =
   let n = inputText ed
       item = (if ruleType == R.Theorem then R.blankTheorem
-              else R.blankAxiom) ruleType n
+              else R.blankAxiom) ruleType n -- in future, if ruleType == R.InductionPrinc then R.genInductionPrinc
    in case n of
         "" -> Left "Name cannot be empty"
         _ | n `elem` concatMap (mapMaybe (Prp.defnName . fst) . defined) (document ed) -> Left "Name already in use"

@@ -191,8 +191,8 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                   : case selected of
                     InsertingPropositionFocus ruleType i' | i == i' ->
                       [editorWithTitle (if ruleType == R.Axiom then axiomHeading i
-                                        else if ruleType == R.InductionInit then inductionBasisHeadng i
-                                        else if ruleType == R.InductionPrinc then inductionPrincHeading i
+                                        else if ruleType == R.InductionInit then inductionInitEnter i
+                                        else if ruleType == R.InductionPrinc then inductionPrincEnter i
                                         else theoremHeading i) "newrule" (InsertProposition i ruleType) UpdateInput Reset textIn]
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)

@@ -17,22 +17,20 @@ renderRule i opts tbl textIn selected (R.R ruleType name prop mpt) = div_ []
     R.Axiom ->  axiomHeading i
               : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
               : []
-    R.InductionInit ->  inductionHeading i
-                    : block "" []
-                    : inductionInitHeadng i
-                    : button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert basis"] [typicon "plus-outline"]  -- add axiom
-                    : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
-                    : inductionPrincHeading i
-                    : button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert inductive principle"] [typicon "plus-outline"]  -- add axiom
-                    : []
-    R.InductionPrinc ->  block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
-                    : []
+    R.InductionInit ->  inductionHeading
+                      : block "" []
+                      : inductionInitHeadngDummy i R.Axiom
+                      : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
+                      : inductionPrincHeadingDummy i R.Axiom
+                      : []
+    R.InductionPrinc ->   block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
+                        : []
     R.Theorem -> theoremHeading i
-                    : case mpt of
-                        Just ps ->  block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
-                                  : block "item-rule-proofbox" [renderProofTree opts (ps ^. R.proofTree) tbl selected textIn]
-                                  : []
-                        Nothing ->  []
+                  : case mpt of
+                      Just ps ->  block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
+                                : block "item-rule-proofbox" [renderProofTree opts (ps ^. R.proofTree) tbl selected textIn]
+                                : []
+                      Nothing ->  []
   where
     ruleDOs = RDO { termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts }
 

@@ -37,6 +37,8 @@ blankAxiom ruleType n = (R ruleType n P.blank Nothing)
 blankTheorem :: RuleType -> P.RuleName -> Rule
 blankTheorem ruleType n = (R ruleType n P.blank (Just $ PS (PT.fromProp P.blank) 0))
 
+-- in future: genInductionPrinc
+
 -- warning, do not use this lens to assign to anything that might invalidate the proof state
 -- use propUpdate for that (which will reset the proof state)
 prop :: Lens' Rule P.Prop
