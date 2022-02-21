@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module View.Utils where
 import qualified Editor as E
+import qualified Rule as R
+import qualified Item as I
 import Miso
 import qualified Miso.String as MS
 import Data.Char
@@ -28,17 +30,13 @@ metabinder v = inline "rule-binder" (name v ++ ["."])
 axiomHeading i = block "item-rule-theoremheading" [anchor i ["Axiom."]]
 inductionHeading = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."]]
 inductionInitEnter i = block "item-rule-theoremheading" [inline "" ["Basis or Inductive Step."]]
-inductionInitHeadng i ruleType = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Steps. "],
-                                  iconButton "blue" "Insert inductive basis or step" "plus-outline" (SetFocus $ E.InsertingPropositionFocus ruleType i)]]
+inductionInitHeading i ruleType = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Steps. "],
+                                  iconButton "blue" "Insert inductive basis or step" "plus-outline" (SetFocus $ R.NameFocus)]]
 inductionPrincEnter i = block "item-rule-theoremheading" [inline "" ["Inductive Principle."]]
 inductionPrincHeading i ruleType = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "],
-                                    iconButton "blue" "Insert inductive principle" "plus-outline" (SetFocus $ E.InsertingPropositionFocus ruleType i)]]
+                                    iconButton "blue" "Insert inductive principle" "plus-outline" (SetFocus $ R.NameFocus)]]
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
--- buttons with no action
-inductionInitHeadngDummy i ruleType = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Steps. "],
-                          button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert basis"] [typicon "plus-outline"]]]
-inductionPrincHeadingDummy i ruleType = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "],
-                            button_ [class_ "button-icon insert button-icon-blue", type_ "button", title_ "Insert basis"] [typicon "plus-outline"]]]
+-- SetFocus $ InsertingPropositionFocus R.Axiom i
 
 space = inline "space" [" "]
 turnstile = inline "symbol symbol-turnstile symbol-bold" ["⊢"]

@@ -18,6 +18,7 @@ data RuleType
   = Axiom
   | InductionInit
   | InductionPrinc
+  | InductionAxiom
   | Theorem
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
