@@ -36,7 +36,7 @@ inductionPrincEnter i = block "item-rule-theoremheading" [inline "" ["Inductive 
 inductionPrincHeading i = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "],
                                     iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.NameFocus)]]
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
--- SetFocus $ E.InsertingPropositionFocus R.Axiom i
+-- SetFocus $ E.InsertingPropositionFocus R.InductionAxiom i
 
 space = inline "space" [" "]
 turnstile = inline "symbol symbol-turnstile symbol-bold" ["⊢"]
