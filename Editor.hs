@@ -34,6 +34,7 @@ data EditorFocus
   | NoFocus
   | NewItemFocus ItemIndex
   | InsertingPropositionFocus R.RuleType ItemIndex
+  | InductionFocus ItemIndex
   | CreditsFocus
   | ImportFocus
   deriving (Show, Eq)

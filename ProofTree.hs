@@ -158,7 +158,7 @@ applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
 
 -- Wrapper for elim rules
 -- Rule to apply, path to apply it to, which assumption to apply elim to
-applyElim :: P.NamedProp -> Path -> P.NamedProp -> ProofTree -> UnifyM ProofTree
+applyElim :: P.NamedProp -> Path -> P.NamedProp -> ProofTree -> UnifyM ProofTree -- Added P.NamedProp to pass in selected assumption
 applyElim (r,prp) p (rr,assm) pt = do
     do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
        pure $ applySubst subst pt'
@@ -171,7 +171,7 @@ applyElim (r,prp) p (rr,assm) pt = do
 
     -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
     -- Will only try to unify goal if it unifies with an assumption
-    applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree]) -- Added [T.Prop] for assumptions
+    applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRuleElim skolems g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
        n <- fresh  -- Returns increasing #, always unique
        let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
@@ -180,7 +180,6 @@ applyElim (r,prp) p (rr,assm) pt = do
        substs <- P.unifierProp assm s
        substs' <- unifier (T.applySubst substs g) (T.applySubst substs g')  -- TODO: fix unification for inductive principle
        pure (substs <> substs',map fromProp sgs))  -- T.applySubst like P.subst but takes terms not props
-       
     applyRuleElim skolems g _ = empty
 
 applySubst :: T.Subst -> ProofTree -> ProofTree

@@ -19,9 +19,14 @@ renderRule i opts tbl textIn selected (R.R ruleType name prop mpt) = div_ []
               : []
     R.InductionInit ->  inductionHeading
                       : block "" []
-                      : inductionInitHeading i R.InductionAxiom
+                      : inductionInitHeading i
                       : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
-                      : inductionPrincHeading i R.InductionAxiom
+                      : renderRule i opts tbl textIn selected (R.R R.InductionAxiom name prop mpt)
+                       : []
+    R.InductionPrinc -> inductionHeading
+                      : block "" []
+                      : inductionPrincHeading i
+                      : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
                       : []
     R.InductionAxiom -> [ block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop] ]
     R.Theorem -> theoremHeading i

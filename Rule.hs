@@ -97,7 +97,12 @@ checkVariableName new = case T.invalidName new of
   Just e  -> errorMessage $ "Invalid variable name: " <> pack e
   Nothing -> pure ()
 
-data ProofFocus = GoalFocus [(P.NamedProp, Action Rule)] | RewriteGoalFocus Bool [(P.NamedProp, Action Rule)] | AssumptionFocus Int [(P.NamedProp, Action Rule)] | MetavariableFocus Int | SubtitleFocus PT.Path | ProofBinderFocus PT.Path Int deriving (Show, Eq)
+data ProofFocus = GoalFocus [(P.NamedProp, Action Rule)]
+                | RewriteGoalFocus Bool [(P.NamedProp, Action Rule)]
+                | AssumptionFocus Int [(P.NamedProp, Action Rule)]
+                | MetavariableFocus Int
+                | SubtitleFocus PT.Path
+                | ProofBinderFocus PT.Path Int deriving (Show, Eq)
 
 data GoalSummary = GS [(PT.Path,Int,T.Name)] [(P.NamedProp, Maybe (Action Rule))] T.Term PT.Path Bool deriving (Show, Eq)
 

@@ -82,6 +82,11 @@ viewEditor x =
       NewItemFocus i -> newItemMenu i
       ItemFocus i (I.ParagraphFocus _) -> editingHelp
       ImportFocus -> importForm
+      InductionFocus i ->
+        [ block "sidebar-header" ["Indcution elements:"]
+        , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.InductionInit i) [block "item-rule-theoremheading" ["Basis and Inductive Steps."]]
+        , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.InductionPrinc i) [block "item-rule-theoremheading" ["Inductive Principle"]]
+        ]
       CreditsFocus ->
         [ block "sidebar-header" ["Credits"]
         , block "sidebar-credits"
@@ -115,7 +120,7 @@ viewEditor x =
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axiom."]]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.InductionInit i) [block "item-rule-theoremheading" ["Induction Axioms."]]
+      , button "sidebar-insert" "" (SetFocus $ InductionFocus i) [block "item-rule-theoremheading" ["Induction Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
