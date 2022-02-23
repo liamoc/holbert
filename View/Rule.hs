@@ -21,8 +21,7 @@ renderRule i opts tbl textIn selected (R.R ruleType name prop mpt) = div_ []
                       : block "" []
                       : inductionInitHeading i
                       : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
-                      : renderRule i opts tbl textIn selected (R.R R.InductionAxiom name prop mpt)
-                       : []
+                      : []
     R.InductionPrinc -> inductionHeading
                       : block "" []
                       : inductionPrincHeading i
@@ -38,12 +37,4 @@ renderRule i opts tbl textIn selected (R.R ruleType name prop mpt) = div_ []
   where
     ruleDOs = RDO { termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts }
 
-
--- R.Induction -> inductionHeading i
---                 : block "" []
---                 : basisSubheading i
---                 : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
---                 : stepsSubheading i
---                 : block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
---                 :principleSubheading i
---                 : [ block "rule" [renderPropNameE (Editable (selected, textIn)) (Just (P.Defn name)) [] ruleDOs prop] ]
+-- : renderRule i opts tbl textIn selected (R.R R.InductionAxiom name prop mpt)
