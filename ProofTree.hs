@@ -16,6 +16,7 @@ import StringRep
 import Unification
 import Optics.Core
 import Control.Applicative
+import Debug.Trace
 
 --data Style = Tree | Prose | Equational
 
@@ -172,15 +173,60 @@ applyElim (r,prp) p (rr,assm) pt = do
     -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
     -- Will only try to unify goal if it unifies with an assumption
     applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
-    applyRuleElim skolems g (P.Forall (m:ms) sgs g') = do  -- skolem is in scope; is bound and can't be subsituted - can't unify with these vars
-       n <- fresh  -- Returns increasing #, always unique
-       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
-       applyRuleElim skolems g (P.subst mt 0 (P.Forall ms sgs g'))
-    applyRuleElim skolems g (P.Forall [] (s:sgs) g') = (do
-       substs <- P.unifierProp assm s
-       substs' <- unifier (T.applySubst substs g) (T.applySubst substs g')  -- TODO: fix unification for inductive principle
-       pure (substs <> substs',map fromProp sgs))  -- T.applySubst like P.subst but takes terms not props
+    applyRuleElim skolems g r@(P.Forall ms (P.Forall [] [] t:sgs) g') = do  -- m:ms will change to list of specific vars
+        let indices = T.mentioned t
+        traceM (show (indices,r))
+        result <- foldM (\r i -> generalise skolems i r) r indices
+        let (P.Forall ms' (s:sgs') g') = result
+        substs <- P.unifierProp assm s
+        -- apply substs to our rule
+        
+        let introRule = P.applySubst substs (P.Forall ms' sgs' g')
+        traceM (show (P.Forall ms' sgs' g', introRule))
+        -- applyRule to the result on our goal
+        (substs', sgs'') <- applyRule skolems g introRule
+        pure (substs <> substs', sgs'')
     applyRuleElim skolems g _ = empty
+    
+    applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
+    applyRule skolems g (P.Forall (m :ms) sgs g')
+      | (T.LocalVar 0,args) <- T.peelApTelescope g' = do
+         traceM "It's happening"
+         let cutoff = length (m:ms) 
+         let exclusions = map (subtract cutoff) $ filter (>= cutoff) $ concatMap T.mentioned args 
+         n <- fresh
+         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems -1])
+         applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g')) 
+      | otherwise = do
+         traceM (show g')
+         n <- fresh
+         let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+         applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
+    applyRule skolems g (P.Forall [] sgs g') = do
+       (,map fromProp sgs) <$> unifier g g'
+
+
+-- generlaise func to apply to all the mentioned (terms.hs)
+-- generalise :: [Vars in scope] -> Prop -> Index -> Prop (unnified?)
+-- 1: get all mentioned of A_1 in x
+-- 2: generlaise with 1
+-- 3: unify A_1 with chosen assumps in elim rule
+-- 4: 
+
+generalise :: [T.Name] -> T.Index -> P.Prop -> UnifyM P.Prop
+generalise skolems i (P.Forall ms sgs g) = do 
+    (P.Forall ms' sgs' g') <- generalise' skolems i (P.Forall (reverse ms) sgs g)
+    pure (P.Forall (reverse ms') sgs' g')
+generalise' skolems 0 (P.Forall (m:ms) sgs g) = do  -- m:ms will change to list of specific vars
+    n <- fresh  -- Returns increasing #, always unique
+    let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
+    let (P.Forall [] sgs' g') = (P.subst mt 0 (P.Forall [] sgs g))
+    pure (P.Forall ms sgs' g')
+generalise' skolems n (P.Forall (m:ms) sgs g) | n > 0 = do 
+    (P.Forall ms' sgs' g') <- generalise' skolems (n-1) (P.Forall ms sgs g)
+    pure (P.Forall (m:ms') sgs' g')        
+generalise' skolems n _ = error $ "index " ++ show n ++ " out of range"
+    
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT opts sks lcls g sgs) =
