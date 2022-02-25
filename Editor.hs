@@ -2,7 +2,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 module Editor where
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromJust, fromMaybe,mapMaybe)
 import qualified Miso.String as MS
 import Optics.Core
 import Control.Monad (foldM)
@@ -77,29 +77,11 @@ getRuleAt :: Int -> Document -> R.Rule
 getRuleAt i s = case s !! i of 
   I.Rule v -> v
   _ -> error "Rule not found!" 
-rulesSummary :: (Int, PT.Path) -> Document -> ([MS.MisoString], [(MS.MisoString, [Prp.NamedProp])])
-rulesSummary (i, p) s =
-  let (lefts, I.Rule (R.R n prp (Just (R.PS pt c))) : rights) = splitAt i s
-      context = fst $ fromJust $ ipreview (PT.path p PT.%+ PT.step) pt
-      lcls = zip (map Prp.Local [0 ..]) (PT.locals context)
-      ctx = PT.bound context
-      rules = groupedRules lefts []
-   in (ctx, filter (not . null . snd) (("Local Facts", lcls) : rules))
-  where
-    groupedRules :: Document -> [(MS.MisoString, [Prp.NamedProp])] -> [(MS.MisoString, [Prp.NamedProp])]
-    groupedRules [] acc = acc
-    groupedRules (I.Heading (H.Heading n str) : xs) acc
-      | n < 2 = groupedRules xs ((str, []) : acc)
-      | otherwise = groupedRules xs acc
-    groupedRules (i : xs) (h : acc) =
-      let rs = map (\(R.R n prp _) -> (Prp.Defn n, prp)) (toListOf I.rule i)
-       in groupedRules xs (fmap (rs ++) h : acc)
-    groupedRules (i : xs) [] = error "Script didn't start with a heading"
-
+  
 processRenames :: [(MS.MisoString, MS.MisoString)] -> Document -> Either MS.MisoString Document
 processRenames rns doc = foldM processRename doc rns
   where
-    names = concatMap defined doc
+    names = mapMaybe (Prp.defnName . fst) $ concatMap defined doc
     processRename doc (s, s')
       | s' `elem` names = Left "Cannot rename: Name already in use"
       | otherwise = Right $ map (renamed (s, s')) doc
@@ -124,19 +106,23 @@ runAction' Reset ed = pure (ed {message = Nothing, currentFocus = NoFocus})
 runAction' (ItemAction mi act) ed = do
   let index | Just i <- mi = i
             | ItemFocus i _ <- currentFocus ed = i
+  let localFocus = case currentFocus ed of 
+       ItemFocus i' f | i' == index -> Just f
+       _ -> Nothing
   let (lefts,it:rights) = splitAt index (document ed)
-  (item, mf, inv, rns) <- runController (handle act it) (inputText ed) (concatMap definedSyntax lefts)
+  (item, mf, inv, rns) <- runController (handle act it) (inputText ed) (concatMap definedSyntax lefts) (concatMap defined lefts) localFocus
   doc' <- processRenames rns (document ed)
   let doc'' = over (after index) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) doc'
       ed'   = ed {message = Nothing, document = doc''}
       (leave, newFocus) = case mf of
-        Nothing -> (False, NoFocus)
-        Just (leave, f) -> (leave, ItemFocus index f)
+        Clear -> (False, NoFocus)
+        Switch f -> (False, ItemFocus index f)
+        Leave f -> (True, ItemFocus index f)
   (if leave then runAction' (SetFocus newFocus) else (pure . switchFocus newFocus)) ed'
 runAction' (SetFocus f) ed = case currentFocus ed of
   ItemFocus i f' -> do
     let (lefts,it:rights) = splitAt i (document ed)
-    (item, _, inv, rns) <- runController (leaveFocus f' it) (inputText ed) (concatMap definedSyntax lefts)
+    (item, _, inv, rns) <- runController (leaveFocus f' it) (inputText ed) (concatMap definedSyntax lefts) (concatMap defined lefts) (Just ())
     let doc = over (after i) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) (document ed)
     Right $ switchFocus f (ed {message = Nothing, document = doc})
   _ -> Right $ switchFocus f (ed {message = Nothing})
@@ -151,12 +137,12 @@ runAction' (InsertItem idx itm) ed =
 
 runAction' (ShiftDown idx) ed =
   let (lefts, x : y : rest) = splitAt idx (document ed)
-      y' = foldr (.) id (map invalidated (defined x)) y
+      y' = foldr (.) id (map (maybe id invalidated . Prp.defnName . fst) (defined x)) y
    in pure (ed {document = lefts ++ y' : x : rest, currentFocus = NoFocus, message = Nothing})
 
 runAction' (DeleteItem idx) ed =
   let (lefts, x : rest) = splitAt idx (document ed)
-      rest' = map (foldr (.) id (map invalidated (defined x))) rest
+      rest' = map (foldr (.) id (map (maybe id invalidated . Prp.defnName . fst) (defined x))) rest
    in pure (ed {document = lefts ++ rest', currentFocus = NoFocus, message = Nothing})
 
 runAction' (InsertProposition idx b) ed =
@@ -164,7 +150,7 @@ runAction' (InsertProposition idx b) ed =
       item = (if b then R.blankTheorem else R.blankAxiom) n
    in case n of
         "" -> Left "Name cannot be empty"
-        _ | n `elem` concatMap defined (document ed) -> Left "Name already in use"
+        _ | n `elem` concatMap (mapMaybe (Prp.defnName . fst) . defined) (document ed) -> Left "Name already in use"
         _ -> runAction' (InsertItem idx (I.Rule item)) ed
 
 runAction' (LoadDocument m) ed = Right $ ed { document = m, currentFocus = NoFocus, message = Nothing}

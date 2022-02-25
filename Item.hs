@@ -71,9 +71,10 @@ instance Control Item where
   leaveFocus (ParagraphFocus f) (Paragraph h) = Paragraph <$> leaveFocus f h
   leaveFocus (RuleFocus f)      (Rule h)      = Rule      <$> leaveFocus f h
 
-  handle (HeadingAct a)   (Heading s)   = fmap Heading   . zoomFocus HeadingFocus   $ handle a s
-  handle (ParagraphAct a) (Paragraph s) = fmap Paragraph . zoomFocus ParagraphFocus $ handle a s
-  handle (RuleAct a)      (Rule s)      = fmap Rule      . zoomFocus RuleFocus      $ handle a s
+  handle (HeadingAct a)   (Heading s)   = fmap Heading   . zoomFocus HeadingFocus   (\x -> case x of (HeadingFocus f) -> Just f; _ -> Nothing) $ handle a s
+  handle (ParagraphAct a) (Paragraph s) = fmap Paragraph . zoomFocus ParagraphFocus (\x -> case x of (ParagraphFocus f) -> Just f; _ -> Nothing) $ handle a s
+  handle (RuleAct a)      (Rule s)      = fmap Rule      . zoomFocus RuleFocus      (\x -> case x of (RuleFocus f) -> Just f; _ -> Nothing) $ handle a s
+  
 
   inserted (Heading s)   = HeadingFocus   (inserted s)
   inserted (Paragraph s) = ParagraphFocus (inserted s)

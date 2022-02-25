@@ -15,6 +15,7 @@ import qualified Miso.String as MS
 import StringRep
 import Unification
 import Optics.Core
+import Control.Applicative
 
 data Style = Tree | Prose | Equational deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
@@ -30,7 +31,7 @@ type Path = [Int]
 data Context = Context { bound :: [T.Name], locals :: [P.Prop] } deriving (Show)
 
 instance Semigroup Context where
-  Context bs lcls <> Context bs' lcls' = Context (bs' ++ bs) (map (P.raise (length bs')) lcls ++ lcls')
+  Context bs lcls <> Context bs' lcls' = Context (bs' ++ bs) (map (P.raise (length bs')) lcls ++ lcls') 
 instance Monoid Context where
   mempty = Context [] []
 
@@ -159,6 +160,66 @@ applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
             (a,b) <- match skolems e2 (P.Forall [] sgs g')
             return (a, (T.Ap e1 b))
         otherwise -> empty
+
+-- Wrapper for elim rules
+-- Rule to apply, path to apply it to, which assumption to apply elim to
+applyElim :: P.NamedProp -> Path -> P.NamedProp -> ProofTree -> UnifyM ProofTree
+applyElim (r,prp) p (rr,assm) pt = do
+    do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
+       pure $ applySubst subst pt'
+  where
+    guts :: Context -> ProofTree -> WriterT T.Subst UnifyM ProofTree
+    guts context (PT opts xs lcls t _) = do
+       (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) t prp  -- Get assumption from context (is bound context correct?)
+       tell subst
+       pure $ PT opts xs lcls t (Just (P.Elim r rr,sgs))
+
+    -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
+    -- Will only try to unify goal if it unifies with an assumption
+    applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
+    applyRuleElim skolems g r@(P.Forall ms (P.Forall [] [] t:sgs) g') = do  -- m:ms will change to list of specific vars
+        let indices = T.mentioned t
+        (result,_) <- foldM (\(r,count) i -> (,) <$> generalise skolems (i-count) r <*> pure (count+1) ) (r,0) (sort indices)
+        let (P.Forall ms' (s:sgs') g') = result
+        substs <- P.unifierProp (P.raise (length ms') assm) s
+        -- apply substs to our rule
+        let introRule = P.applySubst substs (P.Forall ms' sgs' g')
+        -- applyRule to the result on our goal
+        (substs', sgs'') <- applyRule skolems g introRule
+        pure (substs <> substs', sgs'')
+    applyRuleElim skolems g _ = empty
+    
+    applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
+    applyRule skolems g (P.Forall (m :ms) sgs g')
+      | (T.LocalVar 0,args) <- T.peelApTelescope g' = do
+         let cutoff = length (m:ms) 
+         let exclusions = map (subtract cutoff) $ filter (>= cutoff) $ concatMap T.mentioned args 
+         n <- fresh
+         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems -1])
+         applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g')) 
+      | otherwise = do
+         n <- fresh
+         let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+         applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
+    applyRule skolems g (P.Forall [] sgs g') = do
+       (,map fromProp sgs) <$> unifier g g'
+
+
+-- generlaise func to apply to all the mentioned (terms.hs)
+-- generalise :: [Vars in scope] -> Prop -> Index -> Prop (unnified?)
+-- 1: get all mentioned of A_1 in x
+-- 2: generlaise with 1
+-- 3: unify A_1 with chosen assumps in elim rule
+-- 4: 
+
+generalise :: [T.Name] -> T.Index -> P.Prop -> UnifyM P.Prop
+generalise skolems i r@(P.Forall ms sgs g) = do 
+    let (outer,_:inner) = splitAt (length ms - i - 1) ms
+    n <- fresh  -- Returns increasing #, always unique
+    let mt = foldl T.Ap n (map T.LocalVar [0+length outer..length skolems - 1 + length outer])  
+    let (P.Forall inner' sgs' g') = (P.subst mt 0 (P.Forall inner sgs g))
+    pure (P.Forall (outer++inner') sgs' g')
+    
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT opts sks lcls g sgs) =
