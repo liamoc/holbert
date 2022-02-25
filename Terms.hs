@@ -9,6 +9,8 @@ module Terms
   , peelApTelescope, applyApTelescope
   , Subst, applySubst, fromUnifier
   , invalidName
+  , Index
+  , mentioned
   ) where
 
 import qualified Data.Map as M
@@ -40,6 +42,13 @@ data Term = LocalVar Index
           | Lam (Masked Name) Term
           deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
+mentioned :: Term -> [Index]  -- generlaise with these idxs
+mentioned (LocalVar i) = [i]
+mentioned (Ap a b) = mentioned a ++ mentioned b 
+mentioned (Lam _ t) = map (subtract 1) $ filter (/= 0) $ mentioned t
+mentioned _ = []
+
+
 invalidName "" = Just "Name cannot be empty"
 invalidName s | MS.any isSpace s = Just "Name contains spaces"
 invalidName s | MS.any (`elem` ("()." :: String)) s = Just "Name contains reserved symbols"
@@ -63,7 +72,7 @@ isUsed i (Ap t u)  = isUsed i t || isUsed i u
 isUsed i _ = False
 
 
-subst :: Term -> Int -> Term -> Term
+subst :: Term -> Int -> Term -> Term -- use this!
 subst new i t = case t of
   LocalVar j -> case compare j i of
     LT -> LocalVar j
@@ -115,3 +124,5 @@ fromUnifier :: [(Id,Term)] -> Subst
 fromUnifier [] = mempty
 fromUnifier ((x,v):ts) = let S s = fromUnifier ts
                           in S $ M.insert x v (substMV v x <$> s)
+
+-- free vars func
