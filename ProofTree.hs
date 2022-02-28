@@ -175,14 +175,11 @@ applyElim (r,prp) p (rr,assm) pt = do
     applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRuleElim skolems g r@(P.Forall ms (P.Forall [] [] t:sgs) g') = do  -- m:ms will change to list of specific vars
         let indices = T.mentioned t
-        traceM (show (indices,r))
-        result <- foldM (\r i -> generalise skolems i r) r indices
+        (result,_) <- foldM (\(r,count) i -> (,) <$> generalise skolems (i-count) r <*> pure (count+1) ) (r,0) (sort indices)
         let (P.Forall ms' (s:sgs') g') = result
-        substs <- P.unifierProp assm s
+        substs <- P.unifierProp (P.raise (length ms') assm) s
         -- apply substs to our rule
-        
         let introRule = P.applySubst substs (P.Forall ms' sgs' g')
-        traceM (show (P.Forall ms' sgs' g', introRule))
         -- applyRule to the result on our goal
         (substs', sgs'') <- applyRule skolems g introRule
         pure (substs <> substs', sgs'')
@@ -191,41 +188,25 @@ applyElim (r,prp) p (rr,assm) pt = do
     applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRule skolems g (P.Forall (m :ms) sgs g')
       | (T.LocalVar 0,args) <- T.peelApTelescope g' = do
-         traceM "It's happening"
          let cutoff = length (m:ms) 
          let exclusions = map (subtract cutoff) $ filter (>= cutoff) $ concatMap T.mentioned args 
          n <- fresh
          let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems -1])
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g')) 
       | otherwise = do
-         traceM (show g')
          n <- fresh
          let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
 
-
--- generlaise func to apply to all the mentioned (terms.hs)
--- generalise :: [Vars in scope] -> Prop -> Index -> Prop (unnified?)
--- 1: get all mentioned of A_1 in x
--- 2: generlaise with 1
--- 3: unify A_1 with chosen assumps in elim rule
--- 4: 
-
 generalise :: [T.Name] -> T.Index -> P.Prop -> UnifyM P.Prop
-generalise skolems i (P.Forall ms sgs g) = do 
-    (P.Forall ms' sgs' g') <- generalise' skolems i (P.Forall (reverse ms) sgs g)
-    pure (P.Forall (reverse ms') sgs' g')
-generalise' skolems 0 (P.Forall (m:ms) sgs g) = do  -- m:ms will change to list of specific vars
+generalise skolems i r@(P.Forall ms sgs g) = do 
+    let (outer,_:inner) = splitAt (length ms - i - 1) ms
     n <- fresh  -- Returns increasing #, always unique
-    let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])  -- de Bruijn indexing: indices refers to every var inscope by its bound pos, T.Ap x y - application: expr subst
-    let (P.Forall [] sgs' g') = (P.subst mt 0 (P.Forall [] sgs g))
-    pure (P.Forall ms sgs' g')
-generalise' skolems n (P.Forall (m:ms) sgs g) | n > 0 = do 
-    (P.Forall ms' sgs' g') <- generalise' skolems (n-1) (P.Forall ms sgs g)
-    pure (P.Forall (m:ms') sgs' g')        
-generalise' skolems n _ = error $ "index " ++ show n ++ " out of range"
+    let mt = foldl T.Ap n (map T.LocalVar [0+length outer..length skolems - 1 + length outer])  
+    let (P.Forall inner' sgs' g') = (P.subst mt 0 (P.Forall inner sgs g))
+    pure (P.Forall (outer++inner') sgs' g')
     
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
