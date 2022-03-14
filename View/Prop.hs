@@ -12,8 +12,8 @@ import View.Term
 data RuleDisplayOptions = RDO { termDisplayOptions :: TermDisplayOptions, showInitialMetas :: Bool, ruleStyle :: RuleStyle } 
 
 data EditableMode = NotEditable
-                  | Editable (Maybe (R.Focus R.Rule), MS.MisoString)
-                  | InProofTree (Maybe (R.Focus R.Rule), MS.MisoString)
+                  | Editable (Maybe (R.RuleFocus), MS.MisoString)
+                  | InProofTree (Maybe (R.RuleFocus), MS.MisoString)
 
 renderProp = renderPropName Nothing
 renderPropName = renderPropNameE NotEditable
