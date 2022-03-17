@@ -30,13 +30,10 @@ metabinder v = inline "rule-binder" (name v ++ ["."])
 axiomHeading i = block "item-rule-theoremheading" [anchor i ["Axiom."]]
 inductionHeading = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."]]
 inductionInitEnter i = block "item-rule-theoremheading" [inline "" ["Basis or Inductive Step."]]
-inductionInitHeading i = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Steps. "],
-                          iconButton "blue" "Insert new basis or inductive step" "plus-outline" (SetFocus $ R.AddingRule)]]
+inductionInitHeading i = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Steps. "], iconButton "blue" "Insert new basis or inductive step" "plus-outline" (SetFocus $ R.AddingRule)]]
 inductionPrincEnter i = block "item-rule-theoremheading" [inline "" ["Inductive Principle."]]
-inductionPrincHeading i = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "],
-                                    iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.NameFocus)]]
+inductionPrincHeading i = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
--- SetFocus $ E.InsertingPropositionFocus R.InductionAxiom i
 
 space = inline "space" [" "]
 turnstile = inline "symbol symbol-turnstile symbol-bold" ["⊢"]

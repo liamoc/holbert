@@ -18,7 +18,6 @@ data RuleType
   = Axiom
   | InductionInit
   | InductionPrinc
-  | InductionAxiom
   | Theorem
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -292,10 +291,12 @@ handleRI Rename state = do
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
                   | AddingRule
+                  | DeletingRule
                   deriving (Show, Eq)
 
   data Action Rule = RA Int RuleAction -- new action to add new blank axiom to end pf rules
                    | AddRule
+                   | DeleteRule Int
                    deriving (Show, Eq)
 
   defined (R _ ls) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls

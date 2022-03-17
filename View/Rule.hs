@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings, TupleSections #-}
 module View.Rule where
 import Miso
+import qualified Miso.String as MS
 import Optics.Core
 import Data.Maybe (isNothing)
+import Data.String
 import View.Utils
 import View.Prop
 import View.ProofTree
@@ -12,13 +14,21 @@ import qualified Rule as R
 import qualified ProofTree as PT
 import qualified Prop as P
 import qualified Controller as C
+import qualified Editor as E
 
 renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
   $ case ruleType of
-    R.Axiom ->  inductionInitHeading i
+    R.Axiom ->  axiomHeading i
               : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
-              -- add button for delete rule n
-              : zipWith (\n (R.RI name prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn name)) [] ruleDOs prop] ) [0..] ris              
+              : zipWith (\n (R.RI name prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn name)) [] ruleDOs prop, block "axiom-options" [getName name, button_ [class_ "button-axiom button-icon button-icon-red", type_ "button", title_ "Delete axiom"] [typicon "trash"]]] ) [0..] ris
+    R.InductionInit ->  inductionHeading
+              : block "" []
+              : inductionInitHeading i
+              : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
+              : zipWith (\n (R.RI name prop mpt) -> fmap (wrapping n) $ block "rule" [inline "" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn name)) [] ruleDOs prop, block "axiom-options" [getName name, button_ [class_ "button-axiom button-icon button-icon-red", type_ "button", title_ "Delete axiom"] [typicon "trash"]]]] ) [0..] ris
+    R.InductionPrinc -> inductionPrincHeading i
+                      : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
+                      : zipWith (\n (R.RI name prop mpt) -> fmap (wrapping n) $ block "rule" [inline "" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn name)) [] ruleDOs prop, block "axiom-options" [getName name, button_ [class_ "button-axiom button-icon button-icon-red", type_ "button", title_ "Delete axiom"] [typicon "trash"]]]] ) [0..] ris
     R.Theorem -> theoremHeading i
                   : zipWith (\n (R.RI name prop mpt) -> 
                     fmap (wrapping n) $ multi $ case mpt of
@@ -34,6 +44,7 @@ renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
     wrapping i = mapLocalAction (R.RF i) (R.RA i)
     unwrapping :: Int -> R.Focus R.Rule -> Maybe R.RuleFocus
     unwrapping n (R.RF i rf) = if n == i then Just rf else Nothing
-    unwrapping n R.AddingRule = Nothing 
-
--- : renderRule i opts tbl textIn selected (R.R R.InductionAxiom name prop mpt)
+    unwrapping n R.AddingRule = Nothing
+    getName ::  MS.MisoString -> View (LocalAction R.RuleFocus R.RuleAction)
+    getName ruleName = fromString (MS.fromMisoString ruleName)
+    
