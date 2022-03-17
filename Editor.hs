@@ -79,6 +79,14 @@ getRuleAt i s = case s !! i of
   I.Rule v -> v
   _ -> error "Rule not found!" 
   
+processNewnames :: [MS.MisoString] -> Document -> Either MS.MisoString ()
+processNewnames nn doc = mapM_ processNewname nn
+  where
+    processNewname n = case n of
+        "" -> Left "Name cannot be empty"
+        _ | n `elem` concatMap (mapMaybe (Prp.defnName . fst) . defined) doc -> Left "Name already in use"
+          | otherwise -> Right ()
+
 processRenames :: [(MS.MisoString, MS.MisoString)] -> Document -> Either MS.MisoString Document
 processRenames rns doc = foldM processRename doc rns
   where
@@ -111,7 +119,8 @@ runAction' (ItemAction mi act) ed = do
        ItemFocus i' f | i' == index -> Just f
        _ -> Nothing
   let (lefts,it:rights) = splitAt index (document ed)
-  (item, mf, inv, rns) <- runController (handle act it) (inputText ed) (concatMap definedSyntax lefts) (concatMap defined lefts) localFocus
+  (item, mf, inv, rns, nn) <- runController (handle act it) (inputText ed) (concatMap definedSyntax lefts) (concatMap defined lefts) localFocus
+  processNewnames nn (document ed)
   doc' <- processRenames rns (document ed)
   let doc'' = over (after index) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) doc'
       ed'   = ed {message = Nothing, document = doc''}
@@ -123,8 +132,10 @@ runAction' (ItemAction mi act) ed = do
 runAction' (SetFocus f) ed = case currentFocus ed of
   ItemFocus i f' -> do
     let (lefts,it:rights) = splitAt i (document ed)
-    (item, _, inv, rns) <- runController (leaveFocus f' it) (inputText ed) (concatMap definedSyntax lefts) (concatMap defined lefts) (Just ())
-    let doc = over (after i) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) (document ed)
+    (item, _, inv, rns, nn) <- runController (leaveFocus f' it) (inputText ed) (concatMap definedSyntax lefts) (concatMap defined lefts) (Just ())
+    processNewnames nn (document ed)
+    doc' <- processRenames rns (document ed)
+    let doc = over (after i) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) doc'
     Right $ switchFocus f (ed {message = Nothing, document = doc})
   _ -> Right $ switchFocus f (ed {message = Nothing})
 

@@ -15,7 +15,9 @@ import qualified Controller as C
 
 renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
   $ case ruleType of
-    R.Axiom ->  axiomHeading i
+    R.Axiom ->  inductionInitHeading i
+              : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
+              -- add button for delete rule n
               : zipWith (\n (R.RI name prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn name)) [] ruleDOs prop] ) [0..] ris              
     R.Theorem -> theoremHeading i
                   : zipWith (\n (R.RI name prop mpt) -> 
@@ -24,13 +26,14 @@ renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
                                 : block "item-rule-proofbox" [renderProofTree opts (ps ^. R.proofTree) tbl (selected >>= unwrapping n)  textIn]
                                 : []
                       Nothing ->  []
-                ) [0..] ris 
+                  ) [0..] ris 
                    
   where
     ruleDOs = RDO { termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts }
     wrapping :: Int -> LocalAction R.RuleFocus R.RuleAction -> LocalAction (R.Focus R.Rule) (R.Action R.Rule) 
     wrapping i = mapLocalAction (R.RF i) (R.RA i)
     unwrapping :: Int -> R.Focus R.Rule -> Maybe R.RuleFocus
-    unwrapping n (R.RF i rf) = if n == i then Just rf else Nothing 
+    unwrapping n (R.RF i rf) = if n == i then Just rf else Nothing
+    unwrapping n R.AddingRule = Nothing 
 
 -- : renderRule i opts tbl textIn selected (R.R R.InductionAxiom name prop mpt)

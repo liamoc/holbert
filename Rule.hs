@@ -291,9 +291,11 @@ handleRI Rename state = do
 
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
+                  | AddingRule
                   deriving (Show, Eq)
 
   data Action Rule = RA Int RuleAction -- new action to add new blank axiom to end pf rules
+                   | AddRule
                    deriving (Show, Eq)
 
   defined (R _ ls) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls
@@ -305,7 +307,15 @@ instance Control Rule where
   renamed (s,s') r = over (ruleItems % proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
   editable tbl (RF i rf) (R _ ls) = editableRI tbl rf (ls !! i)
+  editable tbl AddingRule _ = Nothing
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
+  leaveFocus AddingRule r = pure r
 
   handle (RA i a) r = zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
+  handle (AddRule) (R t ls) = do
+    name <- textInput
+    newResource name
+    let s' = R t (RI name P.blank Nothing:ls) 
+    setFocus (RF 0 $ RuleTermFocus [])
+    pure s'
