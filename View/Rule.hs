@@ -21,18 +21,20 @@ renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
     R.Axiom ->  axiomsHeading
               : block "" []
               : axiomHeading i
-              : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
-              : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiom ruleName n]) [0..] ris
+              : ( if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn
+                  else if selected == Just (R.Testing) then editor "" R.Test textIn -- can't pass in ruleName and n so iassume i dont deal with delete action here (so idk where then). Test just prints "test" to console
+                  else multi [])
+              : zipWith (\n rule@(R.RI ruleName prop mpt) -> removeAxiom ruleName n) [0..] ris -- removeAxiom only works without fmap. need to use RuleFocus to get correct type signature (can't use action directly like editor does to delte item)
     R.InductionInit -> inductionHeading
                      : block "" []
                      : inductionInitHeading i
                      : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
-                     : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiomX ruleName n] ) [0..] ris
+                     : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiomX ruleName n, block "" []] ) [0..] ris
     R.InductionPrinc -> inductionHeading
                       : block "" []
                       : inductionPrincHeading i
                       : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
-                      : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiomX ruleName n] ) [0..] ris
+                      : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiomX ruleName n, block "" []] ) [0..] ris
     R.Theorem -> theoremHeading i
                : zipWith (\n (R.RI name prop mpt) -> 
                  fmap (wrapping n) $ multi $ case mpt of
@@ -49,7 +51,8 @@ renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
     unwrapping :: Int -> R.Focus R.Rule -> Maybe R.RuleFocus
     unwrapping n (R.RF i rf) = if n == i then Just rf else Nothing
     unwrapping n R.AddingRule = Nothing
-    -- unwrapping n (R.DeletingRule idx) = Nothing
+    unwrapping n (R.DeletingRule _ _) = Nothing
+    unwrapping n (R.Testing) = Nothing
     strToView ::  MS.MisoString -> View (LocalAction R.RuleFocus R.RuleAction)
     strToView ruleName = fromString (MS.fromMisoString (MS.pack (show ruleName)))
     

@@ -5,7 +5,9 @@ import qualified Prop as P
 import qualified Terms as T
 import Controller
 import Unification
+import Debug.Trace
 import Miso.String (MisoString, pack)
+import Data.String
 import qualified Miso.String as MS
 import Optics.Core
 import StringRep
@@ -131,7 +133,7 @@ data RuleFocus = ProofFocus ProofFocus (Maybe GoalSummary)
                   | NewRuleBinderFocus P.Path
                   | RuleTermFocus P.Path
                   | NameFocus
-                  | DeletingRule Int
+                  -- | DeletingRule Int P.RuleName
                   deriving (Show, Eq)
 
 data RuleAction = Tactic ProofState PT.Path
@@ -150,7 +152,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | DeletePremise P.Path
                   | Rename
                   | InstantiateMetavariable Int
-                  | DeleteRule Int
+                  -- | DeleteRule Int P.RuleName
                   deriving (Show, Eq)
 
 
@@ -169,6 +171,7 @@ leaveFocusRI (RuleBinderFocus p i)  = noFocus . handleRI (RenameRuleBinder p i)
 leaveFocusRI (NewRuleBinderFocus p) = noFocus . handleRI (AddRuleBinder p)
 leaveFocusRI (RuleTermFocus p)      = noFocus . handleRI (UpdateTerm p)
 leaveFocusRI NameFocus              = noFocus . handleRI Rename
+-- leaveFocusRI (DeletingRule n ruleName) = noFocus . handleRI (DeleteRule n ruleName) -- just printing to console with this. idk how to call DeletingRule not using leaveFocusRI
 --TODO handle other foci?
 leaveFocusRI _                      = pure
 
@@ -290,22 +293,23 @@ handleRI Rename state = do
     clearFocus
     pure $ set name new state
 
-handleRI (DeleteRule idx) state = do
-    invalidate (view name state)
-    pure $ state
+-- pass in list or ruleitems, select n, return state with new list of rule items?
+-- handleRI (DeleteRule idx ruleName) state = do
+--   traceM ("Rule name: " ++ (fromString (MS.fromMisoString ruleName)) ++ " | Index: " ++ fromString (MS.fromMisoString (MS.toMisoString idx)))
+--   pure state
 
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
                   | AddingRule
-                  -- | DeletingRule Int
+                  | DeletingRule Int P.RuleName
+                  | Testing
                   deriving (Show, Eq)
 
   data Action Rule = RA Int RuleAction
                    | AddRule
-                  --  | DeleteRule Int
+                   | DeleteRule Int P.RuleName
+                   | Test
                    deriving (Show, Eq)
-
-  
 
   defined (R _ ls) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls
 
@@ -317,11 +321,13 @@ instance Control Rule where
 
   editable tbl (RF i rf) (R _ ls) = editableRI tbl rf (ls !! i)
   editable tbl AddingRule _ = Nothing
-  -- editable tbl (DeletingRule _) _ = Nothing
+  editable tbl (DeletingRule _ _) _ = Nothing
+  editable tbl Testing _ = Nothing
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
   leaveFocus AddingRule r = pure r
-  -- leaveFocus (DeletingRule _) r = pure r
+  leaveFocus (DeletingRule _ _) r = pure r
+  leaveFocus Testing r = pure r
 
   handle (RA i a) r = zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
   handle AddRule (R t ls) = do
@@ -330,4 +336,13 @@ instance Control Rule where
     let s' = R t (RI name P.blank Nothing:ls) 
     setFocus (RF 0 $ RuleTermFocus [])
     pure s'
-  -- handle (DeleteRule idx) r = errorMessage (MS.toMisoString idx)
+
+  handle (DeleteRule idx ruleName) r = do
+    traceM ("Rule name: " ++ (fromString (MS.fromMisoString ruleName)) ++ " | Index: " ++ fromString (MS.fromMisoString (MS.toMisoString idx)))
+    clearFocus
+    pure r
+
+  handle Test r = do
+    traceM "test"
+    clearFocus
+    pure r

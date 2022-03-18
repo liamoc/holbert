@@ -38,7 +38,7 @@ inductionInitHeading i = block "" [inline "item-rule-inductionheading" [anchor i
 inductionPrincHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
 
 removeAxiomX ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (SetFocus $ R.NameFocus)]
-removeAxiom ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (SetFocus $ R.DeletingRule n)]
+removeAxiom ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (SetFocus $ R.Testing)]
 
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 
