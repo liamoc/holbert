@@ -131,6 +131,7 @@ data RuleFocus = ProofFocus ProofFocus (Maybe GoalSummary)
                   | NewRuleBinderFocus P.Path
                   | RuleTermFocus P.Path
                   | NameFocus
+                  | DeletingRule Int
                   deriving (Show, Eq)
 
 data RuleAction = Tactic ProofState PT.Path
@@ -149,6 +150,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | DeletePremise P.Path
                   | Rename
                   | InstantiateMetavariable Int
+                  | DeleteRule Int
                   deriving (Show, Eq)
 
 
@@ -288,16 +290,22 @@ handleRI Rename state = do
     clearFocus
     pure $ set name new state
 
+handleRI (DeleteRule idx) state = do
+    invalidate (view name state)
+    pure $ state
+
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
                   | AddingRule
-                  | DeletingRule
+                  -- | DeletingRule Int
                   deriving (Show, Eq)
 
-  data Action Rule = RA Int RuleAction -- new action to add new blank axiom to end pf rules
+  data Action Rule = RA Int RuleAction
                    | AddRule
-                   | DeleteRule Int
+                  --  | DeleteRule Int
                    deriving (Show, Eq)
+
+  
 
   defined (R _ ls) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls
 
@@ -309,14 +317,17 @@ instance Control Rule where
 
   editable tbl (RF i rf) (R _ ls) = editableRI tbl rf (ls !! i)
   editable tbl AddingRule _ = Nothing
+  -- editable tbl (DeletingRule _) _ = Nothing
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
   leaveFocus AddingRule r = pure r
+  -- leaveFocus (DeletingRule _) r = pure r
 
   handle (RA i a) r = zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
-  handle (AddRule) (R t ls) = do
+  handle AddRule (R t ls) = do
     name <- textInput
     newResource name
     let s' = R t (RI name P.blank Nothing:ls) 
     setFocus (RF 0 $ RuleTermFocus [])
     pure s'
+  -- handle (DeleteRule idx) r = errorMessage (MS.toMisoString idx)

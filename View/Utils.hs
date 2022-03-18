@@ -27,12 +27,19 @@ anchor i = a_ [id_ $ "anchor" <> MS.pack (show i)]
 
 metabinder v = inline "rule-binder" (name v ++ ["."])
 
-axiomHeading i = block "item-rule-theoremheading" [anchor i ["Axiom."]]
-inductionHeading = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."]]
+axiomEnter i = block "item-rule-theoremheading" [inline "" ["Axiom."]]
+axiomsHeading = block "item-rule-theoremheading" [h4_ [] ["Axioms."]]
+axiomHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Axiom. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
+
 inductionInitEnter i = block "item-rule-theoremheading" [inline "" ["Basis or Inductive Step."]]
-inductionInitHeading i = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Steps. "], iconButton "blue" "Insert new basis or inductive step" "plus-outline" (SetFocus $ R.AddingRule)]]
 inductionPrincEnter i = block "item-rule-theoremheading" [inline "" ["Inductive Principle."]]
-inductionPrincHeading i = block "item-rule-theoremheading" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
+inductionHeading = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."]]
+inductionInitHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Step. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
+inductionPrincHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
+
+removeAxiomX ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (SetFocus $ R.NameFocus)]
+removeAxiom ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (SetFocus $ R.DeletingRule n)]
+
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 
 space = inline "space" [" "]

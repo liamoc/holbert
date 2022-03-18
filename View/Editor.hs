@@ -120,7 +120,7 @@ viewEditor x =
       ]
     newItemMenu i = let insertHeading i n = InsertItem i (I.Heading (H.Heading n "")) in
       [ block "sidebar-header" ["Proof elements:"]
-      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axiom."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InductionFocus i) [block "item-rule-theoremheading" ["Induction Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
       , block "sidebar-header" ["Text elements:"]
@@ -180,7 +180,7 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
     scriptSize = length script
     go tbl (i,item) =
       let mainItem = renderItem opts i tbl textIn item selected
-          inserting = selected == NewItemFocus i
+          inserting = selected == NewItemFocus i || selected == InductionFocus i
           itemOptions
             | i > 0 =
               block "item-options"
@@ -195,7 +195,7 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
              in iconButton cls "Insert new element" icn (SetFocus $ NewItemFocus i)
                   : case selected of
                     InsertingPropositionFocus ruleType i' | i == i' ->
-                      [editorWithTitle (if ruleType == R.Axiom then axiomHeading i
+                      [editorWithTitle (if ruleType == R.Axiom then axiomEnter i
                                         else if ruleType == R.InductionInit then inductionInitEnter i
                                         else if ruleType == R.InductionPrinc then inductionPrincEnter i
                                         else theoremHeading i) "newrule" (InsertProposition i ruleType) UpdateInput Reset textIn]
