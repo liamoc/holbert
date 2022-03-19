@@ -163,8 +163,6 @@ editableRI tbl NameFocus = preview name
 editableRI tbl (ProofFocus (SubtitleFocus pth) g) = fmap (fromMaybe "Show:" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
 editableRI _ _ = const Nothing
 
-
-
 leaveFocusRI (ProofFocus (ProofBinderFocus p i) g) = noFocus . handleRI (RenameProofBinder p i) --These define the action when the user leaves focus on an item
 leaveFocusRI (RuleBinderFocus p i)  = noFocus . handleRI (RenameRuleBinder p i)
 leaveFocusRI (NewRuleBinderFocus p) = noFocus . handleRI (AddRuleBinder p)
@@ -172,7 +170,6 @@ leaveFocusRI (RuleTermFocus p)      = noFocus . handleRI (UpdateTerm p)
 leaveFocusRI NameFocus              = noFocus . handleRI Rename
 --TODO handle other foci?
 leaveFocusRI _                      = pure
-
 
 handleRI :: RuleAction -> RuleItem -> Controller RuleFocus RuleItem
 handleRI (SelectGoal pth) state = do
@@ -301,13 +298,11 @@ handleRI (DeleteRule idx ruleName) state = do
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
                   | AddingRule
-                  | Testing
                   deriving (Show, Eq)
 
   data Action Rule = RA Int RuleAction
                    | AddRule
                   --  | DeleteRule Int P.RuleName
-                   | Test
                    deriving (Show, Eq)
 
   defined (R _ ls) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls
@@ -320,11 +315,9 @@ instance Control Rule where
 
   editable tbl (RF i rf) (R _ ls) = editableRI tbl rf (ls !! i)
   editable tbl AddingRule _ = Nothing
-  editable tbl Testing _ = Nothing
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
   leaveFocus AddingRule r = pure r
-  leaveFocus Testing r = pure r
 
   handle (RA i a) r = zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
   handle AddRule (R t ls) = do
@@ -341,8 +334,3 @@ instance Control Rule where
   --   traceM ("Rule name: " ++ (fromString (MS.fromMisoString ruleName)) ++ " | Index: " ++ fromString (MS.fromMisoString (MS.toMisoString idx)))
   --   clearFocus
   --   pure r
-
-  handle Test r = do
-    traceM "test"
-    clearFocus
-    pure r

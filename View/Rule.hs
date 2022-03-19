@@ -21,8 +21,7 @@ renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
     R.Axiom ->  axiomsHeading
               : block "" []
               : axiomHeading i
-              : ( if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn
-                  else multi [])
+              : ( if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
               : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiom ruleName n, block "" []] ) [0..] ris
     R.InductionInit -> inductionHeading
                      : block "" []
@@ -50,8 +49,6 @@ renderRule i opts tbl textIn selected (R.R ruleType ris) = div_ []
     unwrapping :: Int -> R.Focus R.Rule -> Maybe R.RuleFocus
     unwrapping n (R.RF i rf) = if n == i then Just rf else Nothing
     unwrapping n R.AddingRule = Nothing
-    -- unwrapping n (R.DeletingRule _ _) = Nothing
-    unwrapping n (R.Testing) = Nothing
-    strToView ::  MS.MisoString -> View (LocalAction R.RuleFocus R.RuleAction)
-    strToView ruleName = fromString (MS.fromMisoString (MS.pack (show ruleName)))
+    -- strToView ::  MS.MisoString -> View (LocalAction R.RuleFocus R.RuleAction)
+    -- strToView ruleName = fromString (MS.fromMisoString (MS.pack (show ruleName)))
     
