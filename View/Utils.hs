@@ -9,13 +9,18 @@ import Data.Char
 import Data.List (dropWhileEnd, intersperse)
 import Data.Maybe (fromMaybe)
 
-data LocalAction f a = UpdateInput MS.MisoString | Reset | Act a | SetFocus f deriving (Show, Eq)
+data LocalAction f a = UpdateInput MS.MisoString
+                    | Reset
+                    | Act a
+                    | SetFocus f
+                    deriving (Show, Eq)
 
 mapLocalAction :: (a -> a') -> (b -> b') -> LocalAction a b -> LocalAction a' b'
 mapLocalAction f g (UpdateInput s) = UpdateInput s
 mapLocalAction f g Reset = Reset
 mapLocalAction f g (Act a) = Act (g a)
 mapLocalAction f g (SetFocus b) = SetFocus (f b)
+
 
 noActionsCoerce :: View a -> View b 
 noActionsCoerce = fmap (const $ error "Actions triggered on a noActionsCoerce node!")
@@ -37,8 +42,7 @@ inductionHeading = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."
 inductionInitHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Step. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
 inductionPrincHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
 
-removeAxiomX ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (SetFocus $ R.NameFocus)]
-removeAxiom ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (SetFocus $ R.Testing)]
+removeAxiom ruleName n = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (Act $ (R.DeleteRule n ruleName))]
 
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 
