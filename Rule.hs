@@ -151,7 +151,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | DeletePremise P.Path
                   | Rename
                   | InstantiateMetavariable Int
-                  | DeleteRule Int P.RuleName
+                  | DeleteRI
                   deriving (Show, Eq)
 
 
@@ -288,12 +288,10 @@ handleRI Rename state = do
     clearFocus
     pure $ set name new state
 
--- data Rule = R RuleType [RuleItem]
--- remove ri !! n from Rule
--- pass in list or ruleitems, select n, return state with new list of rule items?
-handleRI (DeleteRule idx ruleName) state = do
-  traceM ("Rule name: " ++ (fromString (MS.fromMisoString ruleName)) ++ " | Index: " ++ fromString (MS.fromMisoString (MS.toMisoString idx)))
-  pure state
+handleRI DeleteRI ri = do
+  let ruleName = (view name ri)
+  traceM ("RI name: " ++ (fromString (MS.fromMisoString ruleName)))
+  pure $ over (proofState % proofTree) (PT.clear ruleName) ri
 
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
@@ -302,7 +300,6 @@ instance Control Rule where
 
   data Action Rule = RA Int RuleAction
                    | AddRule
-                  --  | DeleteRule Int P.RuleName
                    deriving (Show, Eq)
 
   defined (R _ ls) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls
@@ -326,11 +323,3 @@ instance Control Rule where
     let s' = R t (RI name P.blank Nothing:ls) 
     setFocus (RF 0 $ RuleTermFocus [])
     pure s'
-
-  -- data Rule = R RuleType [RuleItem]
-  -- remove ri !! n from Rule
-  -- pass in list or ruleitems, select n, return state with new list of rule items?
-  -- handle (DeleteRule idx ruleName) r = do
-  --   traceM ("Rule name: " ++ (fromString (MS.fromMisoString ruleName)) ++ " | Index: " ++ fromString (MS.fromMisoString (MS.toMisoString idx)))
-  --   clearFocus
-  --   pure r
