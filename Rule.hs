@@ -13,6 +13,7 @@ import Optics.Core
 import StringRep
 import Control.Monad(when)
 import Data.Maybe(fromMaybe,fromJust,mapMaybe)
+import Data.List
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
 
@@ -41,12 +42,19 @@ blankAxiom ruleType n = (R ruleType [RI n P.blank Nothing])
 blankTheorem :: RuleType -> P.RuleName -> Rule
 blankTheorem ruleType n = (R ruleType [RI n P.blank (Just $ PS (PT.fromProp P.blank) 0)])
 
--- in future: genInductionPrinc
+-- possibly source of `invalidated` and `renamed` being broken
 ruleItems :: IxTraversal' Int Rule RuleItem 
 ruleItems = itraversalVL guts
   where 
     --guts :: forall f. Applicative f => (RuleItem -> f RuleItem) -> Rule -> f Rule 
     guts f (R t ls) =  R t <$> traverse (\(i, e) -> f i e) (zip [0..] ls)
+
+deleteItemFromRI :: Int -> [RuleItem] -> [RuleItem]
+deleteItemFromRI _ [] = []
+deleteItemFromRI n ris = left ++ right
+  where
+    (left , x:right) = splitAt n ris
+    
   
 -- warning, do not use this lens to assign to anything that might invalidate the proof state
 -- use propUpdate for that (which will reset the proof state)
@@ -151,7 +159,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | DeletePremise P.Path
                   | Rename
                   | InstantiateMetavariable Int
-                  | DeleteRI
+                  | DeleteRI Int [RuleItem]
                   deriving (Show, Eq)
 
 
@@ -288,10 +296,13 @@ handleRI Rename state = do
     clearFocus
     pure $ set name new state
 
-handleRI DeleteRI ri = do
-  let ruleName = (view name ri)
-  traceM ("RI name: " ++ (fromString (MS.fromMisoString ruleName)))
-  pure $ over (proofState % proofTree) (PT.clear ruleName) ri
+handleRI (DeleteRI n ris) ri = do
+    let ruleName = (view name ri)
+        ris' = deleteItemFromRI n ris
+    traceM ("RI name: " ++ (show ruleName) ++ ", RI idx: " ++ (show n))
+    traceM ("RIs: " ++ (show ris'))
+    pure $ over (proofState % proofTree) (PT.clear ruleName) ri -- this isn't doing anything
+    -- this has to return a ruleitem, where do ireturn the new [ruleitem] (ris')?
 
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
@@ -306,8 +317,10 @@ instance Control Rule where
 
   inserted _ = RF 0 (RuleTermFocus []) --When you've inserted an item switches to the relevant focus
 
+  -- broken!
   invalidated s r = over (ruleItems % proofState % proofTree) (PT.clear s) r --Whenever we change a rule this goes through the document and removes it from use in proofs
 
+  -- broken!
   renamed (s,s') r = over (ruleItems % proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
   editable tbl (RF i rf) (R _ ls) = editableRI tbl rf (ls !! i)

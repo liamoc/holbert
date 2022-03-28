@@ -83,7 +83,7 @@ viewEditor x =
       ItemFocus i (I.ParagraphFocus _) -> editingHelp
       ImportFocus -> importForm
       InductionFocus i ->
-        [ block "sidebar-header" ["Indcution elements: ",
+        [ block "sidebar-header" ["Induction elements: ",
             iconButton "grey" "Return to proof elements" "arrow-back-outline" (SetFocus $ NewItemFocus i) ]
         , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.InductionInit i) [block "item-rule-theoremheading" ["Basis and Inductive Steps."]]
         , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.InductionPrinc i) [block "item-rule-theoremheading" ["Inductive Principle"]]

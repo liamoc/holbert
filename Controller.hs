@@ -58,7 +58,6 @@ invalidate n = modify (\(CS ff txt sy prps foc inv  rn nn) -> (CS ff txt sy prps
 renameResource :: MS.MisoString -> MS.MisoString -> Controller focus ()
 renameResource n m = modify (\(CS ff txt sy prps foc inv rn nn) -> (CS ff txt sy prps foc inv ((n, m) : rn) nn))
 
-
 newResource :: MS.MisoString  -> Controller focus ()
 newResource n = modify (\(CS ff txt sy prps foc inv rn nn) -> (CS ff txt sy prps foc inv rn (n:nn)))
 
