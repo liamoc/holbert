@@ -42,7 +42,7 @@ inductionHeading = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."
 inductionInitHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Step. "], iconButton "blue" "Insert new basis or inductive step" "plus-outline" (SetFocus $ R.AddingRule)]]
 inductionPrincHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
 
-removeAxiom n ruleName ris= block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (Act $ R.DeleteRI n ris)]
+removeAxiom ruleName = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (Act $ R.DeleteRI)]
 
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 

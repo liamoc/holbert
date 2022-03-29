@@ -74,14 +74,16 @@ goalbinders :: Lens' ProofTree [T.Name]
 goalbinders = lens (\(PT _ xs _   _ sg) -> xs)
                    (\(PT opts _ lcls t sg) xs -> PT opts xs lcls t sg)
 
-
-
 fromProp :: P.Prop -> ProofTree
 fromProp (P.Forall sks lcls g) = PT Nothing sks lcls g Nothing
 
 dependencies :: Traversal' ProofTree P.RuleName
 dependencies = traversalVL guts
   where
+    guts act (PT opts sks lcls g (Just (P.Elim (P.Defn rr) rr2,sgs)))
+        = (\rr' sgs' -> PT opts sks lcls g (Just (P.Elim (P.Defn rr') rr2,sgs')))
+          <$> act rr
+          <*> traverse (guts act) sgs
     
     guts act (PT opts sks lcls g (Just (P.Rewrite (P.Defn rr) fl,sgs)))
         = (\rr' sgs' -> PT opts sks lcls g (Just (P.Rewrite (P.Defn rr') fl,sgs')))
@@ -116,7 +118,7 @@ apply (r,prp) p pt = do
     applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRule skolems g (P.Forall (m :ms) sgs g') = do
        n <- fresh
-       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+       let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])
        applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
@@ -186,16 +188,17 @@ applyElim (r,prp) p (rr,assm) pt = do
     applyRuleElim skolems g _ = empty
     
     applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
-    applyRule skolems g (P.Forall (m :ms) sgs g')
+    applyRule skolems g (P.Forall (m:ms) sgs g')
       | (T.LocalVar 0,args) <- T.peelApTelescope g' = do
          let cutoff = length (m:ms) 
          let exclusions = map (subtract cutoff) $ filter (>= cutoff) $ concatMap T.mentioned args 
          n <- fresh
-         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems -1])
+         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems - 1])
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g')) 
       | otherwise = do
          n <- fresh
-         let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
+         traceM (show ((map T.LocalVar [0..length skolems - 1])))
+         let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
@@ -206,8 +209,7 @@ generalise skolems i r@(P.Forall ms sgs g) = do
     n <- fresh  -- Returns increasing #, always unique
     let mt = foldl T.Ap n (map T.LocalVar [0+length outer..length skolems - 1 + length outer])  
     let (P.Forall inner' sgs' g') = (P.subst mt 0 (P.Forall inner sgs g))
-    pure (P.Forall (outer++inner') sgs' g')
-    
+    pure (P.Forall (outer++inner') sgs' g')  
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT opts sks lcls g sgs) =
@@ -215,12 +217,15 @@ applySubst subst (PT opts sks lcls g sgs) =
 
 clear :: P.RuleName -> ProofTree -> ProofTree
 clear toClear x@(PT opts sks lcl g (Just (rr,sgs)))
-     | rr == (P.Defn toClear) = PT opts sks lcl g Nothing
-     | rr == (P.Rewrite (P.Defn toClear) True) = PT opts sks lcl g Nothing
-     | rr == (P.Rewrite (P.Defn toClear) False) = PT opts sks lcl g Nothing
-     | otherwise              = PT opts sks lcl g $ Just (rr, map (clear toClear) sgs)
+     | matches rr = PT opts sks lcl g Nothing
+     | otherwise  = PT opts sks lcl g $ Just (rr, map (clear toClear) sgs)
+  where 
+    matches :: P.RuleRef -> Bool 
+    matches (P.Elim t t') = any matches [t, t']  
+    matches (P.Rewrite t _) = matches t
+    matches (P.Defn t) = t == toClear
+    matches _ = False
 clear toClear x = x
-
 
 renameRule :: (P.RuleName, P.RuleName) -> ProofTree -> ProofTree
 renameRule (s,s') pt = over dependencies subst pt

@@ -159,7 +159,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | DeletePremise P.Path
                   | Rename
                   | InstantiateMetavariable Int
-                  | DeleteRI Int [RuleItem]
+                  | DeleteRI
                   deriving (Show, Eq)
 
 
@@ -296,14 +296,6 @@ handleRI Rename state = do
     clearFocus
     pure $ set name new state
 
-handleRI (DeleteRI n ris) ri = do
-    let ruleName = (view name ri)
-        ris' = deleteItemFromRI n ris
-    traceM ("RI name: " ++ (show ruleName) ++ ", RI idx: " ++ (show n))
-    traceM ("RIs: " ++ (show ris'))
-    pure $ over (proofState % proofTree) (PT.clear ruleName) ri -- this isn't doing anything
-    -- this has to return a ruleitem, where do ireturn the new [ruleitem] (ris')?
-
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
                   | AddingRule
@@ -317,10 +309,8 @@ instance Control Rule where
 
   inserted _ = RF 0 (RuleTermFocus []) --When you've inserted an item switches to the relevant focus
 
-  -- broken!
   invalidated s r = over (ruleItems % proofState % proofTree) (PT.clear s) r --Whenever we change a rule this goes through the document and removes it from use in proofs
 
-  -- broken!
   renamed (s,s') r = over (ruleItems % proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
   editable tbl (RF i rf) (R _ ls) = editableRI tbl rf (ls !! i)
@@ -328,6 +318,13 @@ instance Control Rule where
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
   leaveFocus AddingRule r = pure r
+
+  handle (RA i DeleteRI) r@(R ruleType lst) = do
+    let (left , x:right) = splitAt i lst
+    let ruleName = view name x
+    traceM ("RI name: " ++ (show ruleName) ++ ", RI idx: " ++ (show i))
+    invalidate ruleName
+    pure $ (R ruleType (left ++ right))
 
   handle (RA i a) r = zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
   handle AddRule (R t ls) = do
