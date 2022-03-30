@@ -121,7 +121,6 @@ runAction' (ItemAction mi act) ed = do
        _ -> Nothing
   let (lefts,it:rights) = splitAt index (document ed)
   (item, mf, inv, rns, nn) <- runController (handle act it) (inputText ed) (concatMap definedSyntax lefts) (concatMap defined lefts) localFocus
-  traceM (show (act,inv))
   processNewnames nn (document ed)
   doc' <- processRenames rns (document ed)
   let doc'' = over (after index) (\(_, rest) -> (item, map (foldr (.) id (map invalidated inv)) rest)) doc'

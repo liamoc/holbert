@@ -322,7 +322,6 @@ instance Control Rule where
   handle (RA i DeleteRI) r@(R ruleType lst) = do
     let (left , x:right) = splitAt i lst
     let ruleName = view name x
-    traceM ("RI name: " ++ (show ruleName) ++ ", RI idx: " ++ (show i))
     invalidate ruleName
     pure $ (R ruleType (left ++ right))
 
