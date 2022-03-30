@@ -197,7 +197,6 @@ applyElim (r,prp) p (rr,assm) pt = do
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g')) 
       | otherwise = do
          n <- fresh
-         traceM (show ((map T.LocalVar [0..length skolems - 1])))
          let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRule skolems g (P.Forall [] sgs g') = do
