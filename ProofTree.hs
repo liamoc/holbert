@@ -159,9 +159,9 @@ applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
             return (a, (T.Ap e1 b))
         otherwise -> empty
 
--- Wrapper for elim rules
--- Rule to apply, path to apply it to, which assumption to apply elim to
-applyElim :: P.NamedProp -> Path -> P.NamedProp -> ProofTree -> UnifyM ProofTree -- Added P.NamedProp to pass in selected assumption
+-- [CPM] Wrapper for elim rules
+-- [CPM] Rule to apply, path to apply it to, which assumption to apply elim to
+applyElim :: P.NamedProp -> Path -> P.NamedProp -> ProofTree -> UnifyM ProofTree -- [CPM] Added P.NamedProp to pass in selected assumption
 applyElim (r,prp) p (rr,assm) pt = do
     do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
        pure $ applySubst subst pt'
@@ -172,18 +172,18 @@ applyElim (r,prp) p (rr,assm) pt = do
        tell subst
        pure $ PT opts xs lcls t (Just (P.Elim r rr,sgs))
 
-    -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
-    -- Will only try to unify goal if it unifies with an assumption
+    -- [CPM] Identical to applyRule (for Intro) above but also tries to unify with an assumption
+    -- [CPM] Will only try to unify goal if it unifies with an assumption
     applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
-    applyRuleElim skolems g r@(P.Forall ms (P.Forall [] [] t:sgs) g') = do  -- m:ms will change to list of specific vars
+    applyRuleElim skolems g r@(P.Forall ms (P.Forall [] [] t:sgs) g') = do  -- [CPM] m:ms will change to list of specific vars
         let indices = T.mentioned t
-        (result,_) <- foldM (\(r,count) i -> (,) <$> generalise skolems (i-count) r <*> pure (count+1) ) (r,0) (sort indices)
+        (result,x) <- foldM (\(r,count) i -> (,) <$> instantiate skolems (i-count) r <*> pure (count+1) ) (r,0) (sort indices)  -- [CPM] Instantiate the vars in the premise
         let (P.Forall ms' (s:sgs') g') = result
         substs <- P.unifierProp (P.raise (length ms') assm) s
-        -- apply substs to our rule
+        -- [CPM] apply substs to our rule
         let introRule = P.applySubst substs (P.Forall ms' sgs' g')
-        -- applyRule to the result on our goal
-        (substs', sgs'') <- applyRule skolems g introRule
+        -- [CPM] applyRule to the result on our goal
+        (substs', sgs'') <- applyRule skolems g introRule  -- [CPM] Instantiate the rest of the vars not in the premise, then unify 
         pure (substs <> substs', sgs'')
     applyRuleElim skolems g _ = empty
     
@@ -193,21 +193,22 @@ applyElim (r,prp) p (rr,assm) pt = do
          let cutoff = length (m:ms) 
          let exclusions = map (subtract cutoff) $ filter (>= cutoff) $ concatMap T.mentioned args 
          n <- fresh
-         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems - 1])
+         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems - 1])  -- [CPM] Instantiate the rest of the vars not in the premise
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g')) 
       | otherwise = do
          n <- fresh
          let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])
          applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
-    applyRule skolems g (P.Forall [] sgs g') = do
+    applyRule skolems g r@(P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
 
-generalise :: [T.Name] -> T.Index -> P.Prop -> UnifyM P.Prop
-generalise skolems i r@(P.Forall ms sgs g) = do 
+-- [CPM] Instantiate only the vars in the premise
+instantiate :: [T.Name] -> T.Index -> P.Prop -> UnifyM P.Prop
+instantiate skolems i r@(P.Forall ms sgs g) = do 
     let (outer,_:inner) = splitAt (length ms - i - 1) ms
-    n <- fresh  -- Returns increasing #, always unique
-    let mt = foldl T.Ap n (map T.LocalVar [0+length outer..length skolems - 1 + length outer])  
-    let (P.Forall inner' sgs' g') = (P.subst mt 0 (P.Forall inner sgs g))
+    n <- fresh  -- [CPM] Returns increasing #, always unique
+    let mt = foldl T.Ap n (map T.LocalVar [(0 + length outer)..(length skolems - 1 + length outer)])
+    let skolems'@(P.Forall inner' sgs' g') = (P.subst mt 0 (P.Forall inner sgs g))
     pure (P.Forall (outer++inner') sgs' g')  
 
 applySubst :: T.Subst -> ProofTree -> ProofTree

@@ -159,7 +159,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | DeletePremise P.Path
                   | Rename
                   | InstantiateMetavariable Int
-                  | DeleteRI
+                  | DeleteRI  -- [CPM] Delete rule item action
                   deriving (Show, Eq)
 
 
@@ -296,6 +296,7 @@ handleRI Rename state = do
     clearFocus
     pure $ set name new state
 
+-- [CPM] Control Rule to manage all rule items of a rule
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
                   | AddingRule
@@ -317,14 +318,16 @@ instance Control Rule where
   editable tbl AddingRule _ = Nothing
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
-  leaveFocus AddingRule r = pure r
+  leaveFocus AddingRule r = pure r  -- [CPM] Leave add rule button focus
 
+  -- [CPM] Delete a rule from a list of rules
   handle (RA i DeleteRI) r@(R ruleType lst) = do
     let (left , x:right) = splitAt i lst
     let ruleName = view name x
     invalidate ruleName
     pure $ (R ruleType (left ++ right))
 
+  -- [CPM] Add a rule to a list of rules
   handle (RA i a) r = zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
   handle AddRule (R t ls) = do
     name <- textInput

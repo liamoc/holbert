@@ -16,6 +16,7 @@ import qualified Prop as P
 import qualified Controller as C
 import qualified Editor as E
 
+-- [CPM] Handle adding all type of rules and theorem
 renderRule i opts tbl textIn selected rules@(R.R ruleType ris) = div_ []
   $ case ruleType of
     R.Axiom ->  axiomsHeading

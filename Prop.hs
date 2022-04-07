@@ -118,8 +118,8 @@ isIntroduction :: Prop -> Bool
 isIntroduction (Forall _ _ c) | (T.Const _, rest) <- T.peelApTelescope c = True
 isIntroduction _ = False
 
--- Identical to unifier in Terms.hs but instead passes in propositions
--- (has to go here to use Prop, can't import Prop in Unification.hs as it loops imports)
+-- [CPM] Identical to unifier in Terms.hs but instead passes in propositions
+-- [CPM] (has to go here to use Prop, can't import Prop in Unification.hs as it loops imports)
 unifierProp :: Prop -> Prop -> UnifyM T.Subst
-unifierProp (Forall [] [] p1) (Forall [] [] p2) = unifier p1 p2  -- Simple case
-unifierProp _ _ = empty  -- Complex case (empty for now)
+unifierProp (Forall [] [] p1) (Forall [] [] p2) = unifier p1 p2  -- [CPM] Simple case
+unifierProp _ _ = empty  -- [CPM] Complex case (empty for now)
