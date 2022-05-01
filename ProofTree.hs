@@ -16,7 +16,6 @@ import StringRep
 import Unification
 import Optics.Core
 import Control.Applicative
-import Debug.Trace
 
 --data Style = Tree | Prose | Equational
 
