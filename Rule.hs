@@ -11,6 +11,7 @@ import Data.String
 import qualified Miso.String as MS
 import Optics.Core
 import StringRep
+import qualified Data.Char
 import Control.Monad(when)
 import Data.Maybe(fromMaybe,fromJust,mapMaybe)
 import Data.List
@@ -236,10 +237,11 @@ handleRI (RenameProofBinder pth i) state = do
 
 handleRI (AddRuleBinder pth) state = do
     new <- textInput
-    checkVariableName new
+    let news = filter (not . MS.null) (MS.splitOn "." new)
+    mapM checkVariableName news
     invalidate (view name state)
     setFocus (RuleTermFocus pth)
-    pure $ over (propUpdate % P.path pth) (P.addBinder new) state
+    pure $ over (propUpdate % P.path pth) (P.addBinders news) state
 
 handleRI (RenameRuleBinder pth i) state = do
     new <- textInput
@@ -290,6 +292,7 @@ handleRI (DeletePremise (x:pth)) state = do
 handleRI Rename state = do
     new <- textInput
     when (new == "") $ errorMessage "Name cannot be empty"
+    when (MS.all Data.Char.isSpace new) $ errorMessage "Name cannot be empty"
     renameResource (view name state) new
     clearFocus
     pure $ set name new state

@@ -13,6 +13,7 @@ import Optics.Lens
 import Optics.Iso
 import Optics.Core
 import Control.Applicative
+import Data.List(foldl')
 
 type RuleName = MisoString
 
@@ -62,6 +63,8 @@ removePremise :: Int -> Prop -> Prop
 removePremise i (Forall vs lcls g) = let (first,_:rest) = splitAt i lcls
                                       in Forall vs (first ++ rest) g
 
+addBinders :: [T.Name] -> Prop -> Prop
+addBinders news prop = foldl' (flip addBinder) prop news
 addBinder :: T.Name -> Prop -> Prop
 addBinder new (Forall vs lcls g) =  Forall (vs ++ [new]) (map (raise 1) lcls) (T.raise 1 g)
 

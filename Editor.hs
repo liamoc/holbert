@@ -14,8 +14,7 @@ import qualified ProofTree as PT
 import qualified Prop as Prp
 import qualified Rule as R
 import DisplayOptions
-import Debug.Trace
-
+import qualified Data.Char 
 type Document = [I.Item]
 type ItemIndex = Int
 
@@ -163,6 +162,7 @@ runAction' (InsertProposition idx ruleType) ed =
               else R.blankAxiom) ruleType n
    in case n of
         "" -> Left "Name cannot be empty"
+        _ | MS.all Data.Char.isSpace n -> Left "Name cannot be empty"
         _ | n `elem` concatMap (mapMaybe (Prp.defnName . fst) . defined) (document ed) -> Left "Name already in use"
         _ -> runAction' (InsertItem idx (I.Rule item)) ed
 
