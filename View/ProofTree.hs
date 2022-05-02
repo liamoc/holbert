@@ -104,5 +104,5 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     metabinderEditor pth i n = editor "expanding" (R.RenameProofBinder pth i) n
 
     goalButton pth  = case selected of
-      Just (R.ProofFocus _ (Just (R.GS _ _ _ pth' _)))  | pth == pth' -> focusedButton "button-icon button-icon-active button-icon-goal" "" (Act $ R.SelectGoal pth) [typicon "location"]
-      _ -> button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (Act $ R.SelectGoal pth) [typicon "location-outline"]
+      Just (R.ProofFocus _ (Just (R.GS _ _ _ pth' _)))  | pth == pth' -> focusedButton "button-icon button-icon-active button-icon-goal" "" (Act $ R.SelectGoal pth False) [typicon "location"]
+      _ -> button "button-icon button-icon-blue button-icon-goal" "Unsolved goal" (Act $ R.SelectGoal pth False) [typicon "location-outline"]

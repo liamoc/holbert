@@ -50,24 +50,28 @@ viewEditor x =
           , renderGoal currentRule (inputText x) i (Just foc) (displayOptions x) gs
           ]      
         ] ++ case pf of 
-          R.GoalFocus rs -> 
+          R.GoalFocus b rs -> 
             (if null locals then [] else 
               [ block "sidebar-header" ["Assumptions:"]
               , div_ [class_ "sidebar-assumptions"]  (map (renderAvailableRule' currentRule (map (\(_,_,n)->n) (reverse binds)) (displayOptions x) (i, p)) locals) 
               ]) ++
             [ block "sidebar-header" ["Available Rules:"]
+            , div_ [class_ "sidebar-rewrite-box"] 
+                      [ input_ [checked_ b, id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $ R.SelectGoal p b)]
+                      , label_ [class_ "rewrite-checkbox-label", for_ "rev_rewrite"] ["Show non-introduction rules"]
+                      ] 
             , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule currentRule [] (displayOptions x) (i,p)) rs)
             ]
           R.AssumptionFocus ix rs -> 
             [ block "sidebar-header" ["Assumption ", localrule ix,  
-               iconButton "grey" "Close Assumption" "times-outline" (ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $ R.SelectGoal p ) ]
+               iconButton "grey" "Close Assumption" "times-outline" (ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $ R.SelectGoal p False ) ]
             , div_ [class_ "sidebar-assumptions"]  [renderAvailableRule''  (map (\(_,_,n)->n) (reverse binds)) (displayOptions x) (i, p) $ fst (locals !! ix)]
             , block "sidebar-header" ["Available Eliminators:"]
             , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule currentRule [] (displayOptions x) (i,p)) rs)
             ]
           R.RewriteGoalFocus b rs -> 
             [ block "sidebar-header" ["Available Rewrites:",
-               iconButton "grey" "Close Rewrites" "times-outline" (ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $ R.SelectGoal p ) ]
+               iconButton "grey" "Close Rewrites" "times-outline" (ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $ R.SelectGoal p False) ]
             , div_ [class_ "sidebar-rewrite-box"] 
                       [ input_ [checked_ b, id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $ R.RewriteGoal b)]
                       , label_ [class_ "rewrite-checkbox-label", for_ "rev_rewrite"] ["Reverse rewrite application"]

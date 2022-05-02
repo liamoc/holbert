@@ -112,8 +112,8 @@ checkVariableName new = case T.invalidName new of
   Just e  -> errorMessage $ "Invalid variable name: " <> pack e
   Nothing -> pure ()
 
-data ProofFocus = GoalFocus [(P.NamedProp, RuleAction)]
-                | RewriteGoalFocus Bool [(P.NamedProp, RuleAction)]
+data ProofFocus = GoalFocus Bool [(P.NamedProp, RuleAction)]  -- bool is whether to show non-intro rules
+                | RewriteGoalFocus Bool [(P.NamedProp, RuleAction)] -- bool is rewrite direction
                 | AssumptionFocus Int [(P.NamedProp, RuleAction)]
                 | MetavariableFocus Int
                 | SubtitleFocus PT.Path
@@ -145,7 +145,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | ToggleStyle PT.Path
                   | SetSubgoalHeading PT.Path
                   | Nix PT.Path
-                  | SelectGoal PT.Path
+                  | SelectGoal PT.Path Bool -- bool is to show non-intro rules or not
                   | ExamineAssumption Int
                   | RewriteGoal Bool
                   | RenameProofBinder PT.Path Int
@@ -178,10 +178,10 @@ leaveFocusRI NameFocus              = noFocus . handleRI Rename
 leaveFocusRI _                      = pure
 
 handleRI :: RuleAction -> RuleItem -> Controller RuleFocus RuleItem
-handleRI (SelectGoal pth) state = do
+handleRI (SelectGoal pth b) state = do
     let summary = getGoalSummary state pth 
-    rules <- filter (P.isIntroduction . snd) <$> getKnownRules
-    setFocus (ProofFocus (GoalFocus $ mapMaybe (\r -> (,) r <$> applyRuleTactic state r pth) rules) summary)
+    rules <- filter (if b then const True else P.isIntroduction . snd) <$> getKnownRules
+    setFocus (ProofFocus (GoalFocus b $ mapMaybe (\r -> (,) r <$> applyRuleTactic state r pth) rules) summary)
     pure state
 handleRI (ExamineAssumption i) state = do 
   foc <- getOriginalFocus 
@@ -206,7 +206,7 @@ handleRI (Tactic ps pth) state = let
                     else fst <$> ipreview (isingular (proofState % proofTree % PT.outstandingGoals)) state'
       in do
         case newFocus of
-          Just f -> handleRI (SelectGoal f) state'
+          Just f -> handleRI (SelectGoal f False) state'
           _      -> clearFocus >> pure state'
 handleRI (ToggleStyle pth) state = do
   let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Show:" })
@@ -219,7 +219,7 @@ handleRI (SetSubgoalHeading pth) state = do
   foc <- getOriginalFocus
   let state' = over (proofState % proofTree % PT.path pth % PT.style) f state
   case foc of
-    Just (ProofFocus _ (Just (GS _ _ _ p _))) -> handleRI (SelectGoal p) state'
+    Just (ProofFocus _ (Just (GS _ _ _ p _))) -> handleRI (SelectGoal p False) state'
     _ -> pure state'
 handleRI (Nix pth) state = do
     clearFocus
@@ -231,7 +231,7 @@ handleRI (RenameProofBinder pth i) state = do
     let state' = set (proofState % proofTree % PT.path pth % PT.goalbinders % ix i) new state
     foc <- getOriginalFocus
     case foc of
-      Just (ProofFocus _ (Just (GS _  _ _ p _))) -> handleRI (SelectGoal p) state'
+      Just (ProofFocus _ (Just (GS _  _ _ p _))) -> handleRI (SelectGoal p False) state'
       _ -> pure state'
 
 handleRI (AddRuleBinder pth) state = do
@@ -272,7 +272,7 @@ handleRI (InstantiateMetavariable i) state = do
         foc <- getOriginalFocus
         let state' = over (proofState % proofTree) (PT.applySubst (T.fromUnifier [(i,obj)])) state
         case foc of
-          Just (ProofFocus _ (Just (GS _  _ _ p _))) -> handleRI (SelectGoal p) state'
+          Just (ProofFocus _ (Just (GS _  _ _ p _))) -> handleRI (SelectGoal p False) state'
           _ -> pure state'
 
 handleRI (AddPremise pth) state = do

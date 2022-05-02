@@ -21,7 +21,7 @@ renderRule i opts tbl textIn selected rules@(R.R ruleType ris) = div_ [class_ cl
     R.Axiom ->  axiomHeading i (case ris of [_] -> ""; _ -> "s")
               : ( if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
               : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) 
-                          $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n) True textIn) (Just (P.Defn ruleName)) [] ruleDOs prop] )
+                          $ block "rule axiom" [renderPropNameE (Editable (selected >>= unwrapping n) True textIn) (Just (P.Defn ruleName)) [] ruleDOs prop] )
                   [0..] ris
     R.Theorem -> theoremHeading i
                : zipWith (\n (R.RI name prop mpt) -> 
