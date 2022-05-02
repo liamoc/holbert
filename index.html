@@ -55,6 +55,7 @@
         --sidebar-header-col: #c9c9d8;
         --error-bg-col: #FFAAAA;
         --logo-col:#c9dec9;
+        --axioms-notwellformed-col: #ffeecc;
         --index-unsolved-col: #FFAA00;
         --index-solved-col:#00AA66;
         --index-bullet-col: #666666;
@@ -107,6 +108,7 @@
             --error-bg-col: #FFAAAA;
             --logo-col: #83ff83;
             --logo-shadow-col:#333;
+            --axioms-notwellformed-col: #785000;
             --index-unsolved-col: #FFAA00;
             --index-solved-col: #00FFAA;
             --index-bullet-col: #AAAAAA;
@@ -328,6 +330,12 @@
         margin-bottom: 2px;
         font-size:20px;
       }
+      .not-intro-error .editable {
+        background:var(--axioms-notwellformed-col)!important; 
+      }
+      .not-intro-error .editable:hover {
+        background:var(--editable-hover-col)!important;
+      }
       .editable {
         color:var(--fg-col);
         background:var(--bg-col);
@@ -423,14 +431,18 @@
       }
       .axiom {
         display:inline-block;
-        padding-right:10px;
-        padding-bottom:5px;
-        padding-top:5px;
+        margin-right:10px;
+        margin-bottom:5px;
+        margin-top:5px;
         vertical-align:bottom;
         white-space:nowrap;
       }
       .addition {
-        padding-bottom:23px;
+        margin-bottom:23px;
+      }
+      .not-intro-error {
+        background:var(--axioms-notwellformed-col);
+        border-radius:5px;
       }
       .item-rule-axiom-set {
         white-space: normal;

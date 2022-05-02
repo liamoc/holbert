@@ -158,8 +158,7 @@ runAction' (DeleteItem idx) ed =
 
 runAction' (InsertProposition idx ruleType) ed =
   let n = inputText ed
-      item = (if ruleType == R.Theorem then R.blankTheorem
-              else R.blankAxiom) ruleType n
+      item = R.blank ruleType n
    in case n of
         "" -> Left "Name cannot be empty"
         _ | MS.all Data.Char.isSpace n -> Left "Name cannot be empty"

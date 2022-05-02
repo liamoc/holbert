@@ -120,6 +120,7 @@ viewEditor x =
       [ block "sidebar-header" ["Proof elements:"]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
+      , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Inductive i) [block "item-rule-theoremheading" ["Inductive Definition."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
       , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]
@@ -192,8 +193,8 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
              in iconButton cls "Insert new element" icn (SetFocus $ NewItemFocus i)
                   : case selected of
                     InsertingPropositionFocus ruleType i' | i == i' ->
-                      [editorWithTitle (if ruleType == R.Axiom then axiomEnter i
-                                        else theoremHeading i) "newrule" (InsertProposition i ruleType) UpdateInput Reset textIn]
+                      [editorWithTitle (case ruleType of R.Axiom -> axiomEnter i; R.Theorem -> theoremHeading i; R.Inductive -> inductiveHeading i)
+                        "newrule" (InsertProposition i ruleType) UpdateInput Reset textIn]
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 

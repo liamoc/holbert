@@ -21,6 +21,7 @@ import Data.Aeson (ToJSON,FromJSON)
 data RuleType
   = Axiom
   | Theorem
+  | Inductive
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data RuleItem = RI P.RuleName P.Prop (Maybe ProofState)
@@ -35,11 +36,10 @@ data ProofState = PS PT.ProofTree Counter
 name :: Lens' RuleItem P.RuleName
 name = lensVL $ \act (RI n prp m) -> (\n' -> RI n' prp m) <$> act n
 
-blankAxiom :: RuleType -> P.RuleName -> Rule
-blankAxiom ruleType n = (R ruleType [RI n P.blank Nothing])
-
-blankTheorem :: RuleType -> P.RuleName -> Rule
-blankTheorem ruleType n = (R ruleType [RI n P.blank (Just $ PS (PT.fromProp P.blank) 0)])
+blank :: RuleType -> P.RuleName -> Rule
+blank Axiom n = (R Axiom [RI n P.blank Nothing])
+blank Inductive n = (R Inductive [RI n P.blank Nothing])
+blank Theorem n = (R Theorem [RI n P.blank (Just $ PS (PT.fromProp P.blank) 0)])
 
 -- possibly source of `invalidated` and `renamed` being broken
 ruleItems :: IxTraversal' Int Rule RuleItem 

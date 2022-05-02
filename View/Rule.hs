@@ -31,6 +31,11 @@ renderRule i opts tbl textIn selected rules@(R.R ruleType ris) = div_ [class_ cl
                              : []
                    Nothing ->  []
                ) [0..] ris 
+    R.Inductive ->  inductiveHeading i
+              : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) 
+                          $ block ("rule axiom" <> if P.isIntroduction prop then "" else " not-intro-error") [renderPropNameE (Editable (selected >>= unwrapping n) True textIn) (Just (P.Defn ruleName)) [] ruleDOs prop] )
+                  [0..] ris
+             ++ [block "rule axiom addition" $ pure $ if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else iconButton "blue" "Insert new rule" "plus-outline" (SetFocus $ R.AddingRule)]
                    
   where
     classname = case ruleType of R.Axiom -> "item-rule-axiom-set"; _ -> ""
