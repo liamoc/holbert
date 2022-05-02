@@ -12,7 +12,7 @@ import View.Term
 data RuleDisplayOptions = RDO { termDisplayOptions :: TermDisplayOptions, showInitialMetas :: Bool, ruleStyle :: RuleStyle } 
 
 data EditableMode = NotEditable
-                  | Editable (Maybe (R.RuleFocus), MS.MisoString)
+                  | Editable (Maybe R.RuleFocus) Bool MS.MisoString --boolean "is this deletable?"
                   | InProofTree (Maybe (R.RuleFocus), MS.MisoString)
 
 renderProp = renderPropName Nothing
@@ -24,7 +24,7 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
     metabinders pth vs = wrap $
       zipWith (metabinder' pth) [0 ..] vs ++
         case editable of
-          Editable (selected, n) -> case selected of
+          Editable selected deletable n -> case selected of
             Just (R.NewRuleBinderFocus pth') | pth == pth' -> [editor "expanding" (R.AddRuleBinder pth) n]
             Just (R.RuleTermFocus pth') | pth == pth' ->
                 [ iconButton "blue button-icon-addbinder" "Add Variable" "plus" (SetFocus $ R.NewRuleBinderFocus pth)
@@ -41,7 +41,7 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
       _ -> Nothing
 
     metabinder' pth i n = case editable of
-      Editable (selected, n') ->
+      Editable selected _ n' ->
         editableMath n' (metabinder n) (R.RuleBinderFocus pth i) (R.RenameRuleBinder pth i)
           [iconButton "red" "Remove Variable" "trash" (Act $ R.DeleteRuleBinder pth i)]
           selected
@@ -51,7 +51,7 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
       _ -> metabinder n
 
     renderTerm' ctx pth trm = case editable of
-      Editable (selected, n) ->
+      Editable selected _ n ->
         editableMath n (renderTermCtx ctx (termDisplayOptions opts) trm) (R.RuleTermFocus pth) (R.UpdateTerm pth)
           (if null pth then [] else [iconButton "red" "Delete Premise" "trash" (Act $ R.DeletePremise pth)])
           selected
@@ -60,15 +60,15 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
       _ -> renderTermCtx ctx (termDisplayOptions opts) trm
 
     renderRR' rr@(Local n) = renderRR rr
-    renderRR' rr@(Defn n) = case editable of
-      Editable (selected, n) -> editableMath n (renderRR rr) R.NameFocus R.Rename [] selected
+    renderRR' rr@(Defn nm) = case editable of
+      Editable selected deletable n -> multi $ editableMath n (renderRR rr) R.NameFocus R.Rename [] selected : if deletable then [iconButton "red" "Delete axiom" "trash" (Act $ R.DeleteRI)] else []
       _ -> renderRR rr
 
     renderRR (Defn d) = definedrule d
     renderRR (Local i) = localrule i
 
     isSelectedOrBinders pth = case editable of
-      Editable (selected, n) -> case selected of
+      Editable selected _ n -> case selected of
         Just (R.RuleTermFocus pth')      | pth == pth' -> True
         Just (R.RuleBinderFocus pth' _)  | pth == pth' -> True
         Just (R.NewRuleBinderFocus pth') | pth == pth' -> True
@@ -76,7 +76,7 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
       _ -> False
 
     isSelected pth = case editable of 
-      Editable (Just (R.RuleTermFocus pth'),_) -> pth == pth'  
+      Editable (Just (R.RuleTermFocus pth')) _ _ -> pth == pth'  
       otherwise -> False      
 
     renderP labels showMetas title style ctx pth (Forall sks lcls g) =

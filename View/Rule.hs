@@ -16,34 +16,24 @@ import qualified Prop as P
 import qualified Controller as C
 import qualified Editor as E
 
--- [CPM] Handle adding all type of rules and theorem
-renderRule i opts tbl textIn selected rules@(R.R ruleType ris) = div_ []
+renderRule i opts tbl textIn selected rules@(R.R ruleType ris) = div_ [class_ classname]
   $ case ruleType of
-    R.Axiom ->  axiomsHeading
-              : block "" []
-              : axiomHeading i
+    R.Axiom ->  axiomHeading i (case ris of [_] -> ""; _ -> "s")
               : ( if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
-              : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiom ruleName, block "" []] ) [0..] ris
-    R.InductionInit -> inductionHeading
-                     : block "" []
-                     : inductionInitHeading i
-                     : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
-                     : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiom ruleName, block "" []] ) [0..] ris
-    R.InductionPrinc -> inductionHeading
-                      : block "" []
-                      : inductionPrincHeading i
-                      : (if selected == Just (R.AddingRule) then editor "newrule" R.AddRule textIn else multi [])
-                      : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn ruleName)) [] ruleDOs prop, removeAxiom ruleName, block "" []] ) [0..] ris
+              : zipWith (\n (R.RI ruleName prop mpt) -> fmap (wrapping n) 
+                          $ block "rule" [renderPropNameE (Editable (selected >>= unwrapping n) True textIn) (Just (P.Defn ruleName)) [] ruleDOs prop] )
+                  [0..] ris
     R.Theorem -> theoremHeading i
                : zipWith (\n (R.RI name prop mpt) -> 
                  fmap (wrapping n) $ multi $ case mpt of
-                   Just ps ->  block "rule" [renderPropNameE (Editable (selected >>= unwrapping n, textIn)) (Just (P.Defn name)) [] ruleDOs prop]
+                   Just ps ->  block "rule" [renderPropNameE (Editable (selected >>= unwrapping n) False textIn) (Just (P.Defn name)) [] ruleDOs prop]
                              : block "item-rule-proofbox" [renderProofTree opts (ps ^. R.proofTree) tbl (selected >>= unwrapping n)  textIn]
                              : []
                    Nothing ->  []
                ) [0..] ris 
                    
   where
+    classname = case ruleType of R.Axiom -> "item-rule-axiom-set"; _ -> ""
     ruleDOs = RDO { termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts }
     wrapping :: Int -> LocalAction R.RuleFocus R.RuleAction -> LocalAction (R.Focus R.Rule) (R.Action R.Rule) 
     wrapping i = mapLocalAction (R.RF i) (R.RA i)

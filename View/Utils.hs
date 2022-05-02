@@ -32,18 +32,9 @@ anchor i = a_ [id_ $ "anchor" <> MS.pack (show i)]
 
 metabinder v = inline "rule-binder" (name v ++ ["."])
 
--- [CPM] Element headings with action buttons
 axiomEnter i = block "item-rule-theoremheading" [inline "" ["Axiom."]]
-axiomsHeading = block "item-rule-theoremheading" [h4_ [] ["Axioms."]]
-axiomHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Axiom. "], iconButton "blue" "Insert new rule" "plus-outline" (SetFocus $ R.AddingRule)]]
+axiomHeading i plural = block "" [inline "item-rule-theoremheading" [anchor i ["Axiom", text plural, ". "], iconButton "blue" "Insert new rule" "plus-outline" (SetFocus $ R.AddingRule)]]
 
-inductionInitEnter i = block "item-rule-theoremheading" [inline "" ["Basis or Inductive Step."]]
-inductionPrincEnter i = block "item-rule-theoremheading" [inline "" ["Inductive Principle."]]
-inductionHeading = block "item-rule-theoremheading" [h4_ [] ["Induction Axioms."]]
-inductionInitHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Basis and Inductive Step. "], iconButton "blue" "Insert new basis or inductive step" "plus-outline" (SetFocus $ R.AddingRule)]]
-inductionPrincHeading i = block "" [inline "item-rule-inductionheading" [anchor i ["Inductive Principle. "], iconButton "blue" "Insert new inductive principle" "plus-outline" (SetFocus $ R.AddingRule)]]
-
-removeAxiom ruleName = block "axiom-options" [inline "" (name ruleName), iconButton "red" "Delete axiom" "trash" (Act $ R.DeleteRI)]
 
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
 
