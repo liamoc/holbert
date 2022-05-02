@@ -330,6 +330,6 @@ instance Control Rule where
   handle AddRule (R t ls) = do
     name <- textInput
     newResource name
-    let s' = R t (RI name P.blank Nothing:ls) 
-    setFocus (RF 0 $ RuleTermFocus [])
+    let s' = R t (ls ++ [RI name P.blank Nothing]) 
+    setFocus (RF (length ls) $ RuleTermFocus [])
     pure s'

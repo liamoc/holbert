@@ -33,7 +33,8 @@ anchor i = a_ [id_ $ "anchor" <> MS.pack (show i)]
 metabinder v = inline "rule-binder" (name v ++ ["."])
 
 axiomEnter i = block "item-rule-theoremheading" [inline "" ["Axioms."]]
-axiomHeading i plural = block "" [inline "item-rule-theoremheading" [anchor i ["Axiom", text plural, ". "], iconButton "blue" "Insert new rule" "plus-outline" (SetFocus $ R.AddingRule)]]
+axiomHeading i plural = block "" [inline "item-rule-theoremheading" [anchor i ["Axiom", text plural, ". "]]]
+
 
 
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
