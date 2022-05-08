@@ -49,6 +49,7 @@ placeholder = inline "placeholder" ["␣"]
 localrule i = inline "rule-rulename-local" [text (MS.pack (show i))]
 definedrule d = inline "rule-rulename-defined" (name d)
 casesrule n i = inline "rule-rulename-cases" $ [inline "rule-rulename-cases-keyword" [text "cases"], "("] ++ name n ++ [")"]
+inductrule n i = inline "rule-rulename-cases" $ [inline "rule-rulename-cases-keyword" [text "induction"], "("] ++ name n ++ [")"]
 
 button cls title onClk 
   | MS.null title = button_ [class_ cls, type_ "button", onClick onClk]

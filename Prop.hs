@@ -7,27 +7,32 @@ import qualified Miso.String as MS
 import qualified Terms as T
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust,mapMaybe)
 import Optics.Indexed.Core
 import Optics.IxAffineTraversal
 import Optics.Lens
 import Optics.Iso
 import Optics.Core
 import Control.Applicative
-import Data.List(foldl')
+import Data.List(foldl',elemIndex)
 
 type RuleName = MisoString
 
 data RuleRef = Defn RuleName
              | Local Int
              | Cases MisoString Int
+             | Induction MisoString Int
              -- below are for presentation only in proofs
              | Rewrite RuleRef Bool -- bool is if it is flipped
              | Elim RuleRef RuleRef
              deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 defnName :: RuleRef -> Maybe RuleName
-defnName v = case v of Defn n -> Just n; Cases s i -> Just $ "§cases-" <> s <> "§" <> MS.pack (show i) ; _ -> Nothing
+defnName v = case v of
+  Defn n -> Just n
+  Cases s i -> Just $ "§cases-" <> s <> "§" <> MS.pack (show i)
+  Induction s i -> Just $ "§induction-" <> s <> "§" <> MS.pack (show i)
+  _ -> Nothing
 
 type NamedProp = (RuleRef, Prop)
 data Prop = Forall [T.Name] [Prop] T.Term deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
@@ -115,6 +120,26 @@ setConclusionString tbl p txt prp = iatraverseOf (path p %. conclusion) Right pa
   where
     parse ctx _ = SR.parse tbl ctx txt
 
+inductionRule :: MisoString -> Int -> [(MisoString, Int)] -> [Prop] -> NamedProp
+inductionRule str i formers cases = 
+  let subgoals = map caseSubgoal cases
+      names' = map (\i -> "§" <> MS.pack (show i)) (take i [0..])
+      Just ii = elemIndex (str,i) formers
+      elimAsm = T.applyApTelescope (T.Const str) (map T.LocalVar $ reverse [0..i-1])
+      conclusion = T.applyApTelescope (T.LocalVar $ i + ii) (map T.LocalVar $ reverse [0..i-1])
+      names'' = map (\i -> "§P" <> MS.pack (show i)) (take (length formers) [0..])
+      in (Induction str i, Forall (names'' ++ names') (Forall [] [] elimAsm:subgoals) conclusion)
+  where
+    caseSubgoal (Forall vs sgs t) 
+      | (T.Const k, rest) <- T.peelApTelescope t , Just ii <- elemIndex (k,length rest) formers
+         = let newConc = T.applyApTelescope (T.LocalVar (length vs + i + ii)) rest
+               sgs' = mapMaybe eachSubgoal sgs
+               eachSubgoal (Forall [] [] tt) | (T.Const kk, sgRest) <- T.peelApTelescope tt
+                                             , Just iii <- elemIndex (kk, length sgRest) formers
+                                             = Just (Forall [] [] $ T.applyApTelescope (T.LocalVar (length vs + i + iii)) sgRest)
+               eachSubgoal _ = Nothing
+            in (Forall vs (sgs' ++ sgs) newConc)
+      | otherwise = error "Not valid introduction rule"
 caseRule :: MisoString -> Int -> [Prop] -> NamedProp
 caseRule str i cases = 
   let (names, subgoals) = foldr (\c (names,r) -> let (names', r') = caseSubgoal c in (merge names names', r':r))

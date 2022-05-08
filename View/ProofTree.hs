@@ -25,6 +25,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     renderRR (P.Defn d) = definedrule d
     renderRR (P.Local i) = localrule i
     renderRR (P.Cases n i) = casesrule n i
+    renderRR (P.Induction n i) = inductrule n i
 
     currentGS = case selected of 
       Just (R.ProofFocus t g) -> g 
@@ -60,12 +61,12 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
             $ [div_ [class_ "word-proof-goal"] [ renderPropNameE (InProofTree (selected, textIn)) Nothing ctx' ruleDOs $ P.Forall [] [] prp ] ]
 
           conclusion = pure $ renderPropNameLabelledE (Just $ case assumptionsMode opts of
-              New | not showPreamble -> map P.Local [length rns ..]
-              Cumulative | not showPreamble -> map P.Local [0..]
+              New | not showPreamble || inTree -> map P.Local [length rns ..]
+              Cumulative | not showPreamble || inTree -> map P.Local [0..]
               _ -> []) Nothing (InProofTree (selected, textIn)) Nothing ctx' ruleDOs
                            $ P.Forall [] (case assumptionsMode opts of
-              New  | not showPreamble -> lcls
-              Cumulative | not showPreamble -> rns'
+              New  | not showPreamble || inTree -> lcls
+              Cumulative | not showPreamble || inTree -> rns'
               _ -> []) prp
        in if shouldShowWords then 
             multi $ (if showPreamble then id else (span_ [class_ "item-rule-proofheading"] ["Proof. "] :) )

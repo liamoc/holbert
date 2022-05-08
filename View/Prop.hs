@@ -67,6 +67,7 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
     renderRR (Defn d) = definedrule d
     renderRR (Local i) = localrule i
     renderRR (Cases n i) = casesrule n i
+    renderRR (Induction n i) = inductrule n i
 
     isSelectedOrBinders pth = case editable of
       Editable selected _ n -> case selected of

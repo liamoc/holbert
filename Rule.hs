@@ -301,8 +301,11 @@ generateDerivedRules old Inductive rs =
   let rs' = filter P.isIntroduction (map (view prop) rs)
       definitions = foldr (\x m -> M.insertWith (++) (P.introRoot x) [x] m) M.empty rs'
       caseRules = map snd $ M.toList $ M.mapWithKey (\(k,i) intros -> P.caseRule k i intros) definitions
-   in do generateDiffs old (mapMaybe (P.defnName . fst) caseRules) 
-         pure caseRules
+      allIntros = concatMap snd $ M.toList definitions
+      inductionRules = map snd $ M.toList $ M.mapWithKey (\(k,i) intros -> P.inductionRule k i (M.keys definitions) allIntros) definitions
+      newRules = caseRules ++ inductionRules
+   in do generateDiffs old (mapMaybe (P.defnName . fst) newRules) 
+         pure newRules 
   where 
     generateDiffs old [] = mapM_ invalidate old
     generateDiffs old (n:ns) | n `notElem` old = newResource n >> generateDiffs old ns
