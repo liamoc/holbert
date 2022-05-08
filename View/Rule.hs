@@ -39,7 +39,7 @@ renderRule i opts tbl textIn selected rules@(R.R ruleType ris rest) = div_ [clas
              ++ [block "" $ map (\(name,p) -> block ("rule " <> classToUse) [fmap (wrapping undefined) $ renderPropName (Just name) [] ruleDOs p]) rest]
                    
   where
-    classname = case ruleType of R.Axiom -> "item-rule-axiom-set"; _ -> ""
+    classname = case ruleType of R.Axiom -> "item-rule-axiom-set"; R.Inductive -> "item-rule-axiom-set"; _ -> ""
     ruleDOs = RDO { termDisplayOptions = tDOs opts, showInitialMetas = showMetaBinders opts, ruleStyle = compactRules opts }
     wrapping :: Int -> LocalAction R.RuleFocus R.RuleAction -> LocalAction (R.Focus R.Rule) (R.Action R.Rule) 
     wrapping i = mapLocalAction (R.RF i) (R.RA i)
