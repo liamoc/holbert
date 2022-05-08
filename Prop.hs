@@ -3,6 +3,7 @@ module Prop where
 import Unification
 import qualified StringRep as SR
 import Miso.String(MisoString)
+import qualified Miso.String as MS
 import qualified Terms as T
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
@@ -19,13 +20,14 @@ type RuleName = MisoString
 
 data RuleRef = Defn RuleName
              | Local Int
+             | Cases MisoString Int
              -- below are for presentation only in proofs
              | Rewrite RuleRef Bool -- bool is if it is flipped
              | Elim RuleRef RuleRef
              deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 defnName :: RuleRef -> Maybe RuleName
-defnName v = case v of Defn n -> Just n; _ -> Nothing
+defnName v = case v of Defn n -> Just n; Cases s i -> Just $ "§cases-" <> s <> "§" <> MS.pack (show i) ; _ -> Nothing
 
 type NamedProp = (RuleRef, Prop)
 data Prop = Forall [T.Name] [Prop] T.Term deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
@@ -113,6 +115,34 @@ setConclusionString tbl p txt prp = iatraverseOf (path p %. conclusion) Right pa
   where
     parse ctx _ = SR.parse tbl ctx txt
 
+caseRule :: MisoString -> Int -> [Prop] -> NamedProp
+caseRule str i cases = 
+  let (names, subgoals) = foldr (\c (names,r) -> let (names', r') = caseSubgoal c in (merge names names', r':r))
+                                (replicate i Nothing,[]) cases 
+      names' = zipWith (\i mn -> maybe ("§" <> MS.pack (show i)) id mn) [0..] names
+      elimAsm = T.applyApTelescope (T.Const str) (map T.LocalVar $ reverse [0..i-1])
+      in (Cases str i, Forall ("§P":names') (Forall [] [] elimAsm:subgoals) (T.LocalVar i))
+  where
+    merge = zipWith (<|>)
+    caseSubgoal (Forall vs sgs t) 
+      | (T.Const k, rest) <- T.peelApTelescope t , length rest == i, k == str
+         = let (sgs', vs', rest',names) = formatArgs vs rest sgs (i-1)
+            in (names, Forall vs' sgs' (T.LocalVar (length vs' + i)))
+      | otherwise = error "Not valid introduction rule"
+  
+    formatArgs vs [] sgs i = (sgs,vs,[],[])
+    formatArgs vs (a:as) sgs i
+      = case a of 
+          T.LocalVar n | n < length vs 
+            -> let (lefts,name:rights) = splitAt (length vs - n-1) vs
+                   vs' = lefts ++ rights
+                   a' = T.LocalVar (i + length vs')
+                   (sgs', vs'', as',names) = formatArgs vs' (map (T.subst a' n) as) (map (subst a' n) sgs) (i-1)
+                in (sgs', vs'', T.LocalVar (i + length vs''):as', Just name:names)
+          _ -> let (sgs',  vs', as',names) = formatArgs vs as sgs (i-1)
+                   sg = Forall [] [] $ T.Ap (T.Ap (T.Const "_=_") (T.LocalVar (i + length vs'))) a
+                in (sg:sgs', vs', T.LocalVar (i + length vs'): as', Nothing:names)
+
 isRewrite :: Prop -> Bool 
 isRewrite (Forall _ _ c) | (T.Const "_=_", rest) <- T.peelApTelescope c = True
 isRewrite _ = False
@@ -121,6 +151,10 @@ isIntroduction :: Prop -> Bool
 isIntroduction (Forall _ _ c) | (T.Const _, rest) <- T.peelApTelescope c = True
 isIntroduction _ = False
 
+introRoot :: Prop -> (MisoString, Int)
+introRoot (Forall _ _ c) | (T.Const k, rest) <- T.peelApTelescope c = (k, length rest)
+introRoot _ = error "Not an intro rule!"
+
 unifierProp :: Prop -> Prop -> UnifyM T.Subst
-unifierProp (Forall [] [] p1) (Forall [] [] p2) = unifier p1 p2  -- [CPM] Simple case
-unifierProp _ _ = empty  -- [CPM] Complex case (empty for now)
+unifierProp (Forall [] [] p1) (Forall [] [] p2) = unifier p1 p2
+unifierProp _ _ = empty

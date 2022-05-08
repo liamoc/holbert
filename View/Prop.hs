@@ -59,13 +59,14 @@ renderPropNameLabelledE labels ptpath editable n ctx opts prp = renderP labels (
         renderTermCtxEditable (Just (n, flip R.ProofFocus currentGS . R.MetavariableFocus, R.InstantiateMetavariable, selected)) ctx (termDisplayOptions opts) trm
       _ -> renderTermCtx ctx (termDisplayOptions opts) trm
 
-    renderRR' rr@(Local n) = renderRR rr
     renderRR' rr@(Defn nm) = case editable of
       Editable selected deletable n -> multi $ editableMath n (renderRR rr) R.NameFocus R.Rename [] selected : if deletable then [iconButton "red" "Delete axiom" "trash" (Act $ R.DeleteRI)] else []
       _ -> renderRR rr
+    renderRR' rr = renderRR rr
 
     renderRR (Defn d) = definedrule d
     renderRR (Local i) = localrule i
+    renderRR (Cases n i) = casesrule n i
 
     isSelectedOrBinders pth = case editable of
       Editable selected _ n -> case selected of

@@ -17,7 +17,7 @@ import Data.Maybe(fromMaybe,fromJust,mapMaybe)
 import Data.List
 import GHC.Generics(Generic)
 import Data.Aeson (ToJSON,FromJSON)
-
+import qualified Data.Map as M
 data RuleType
   = Axiom
   | Theorem
@@ -26,7 +26,7 @@ data RuleType
 
 data RuleItem = RI P.RuleName P.Prop (Maybe ProofState)
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
-data Rule = R RuleType [RuleItem]
+data Rule = R RuleType [RuleItem] [P.NamedProp]
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type Counter = Int
@@ -37,16 +37,14 @@ name :: Lens' RuleItem P.RuleName
 name = lensVL $ \act (RI n prp m) -> (\n' -> RI n' prp m) <$> act n
 
 blank :: RuleType -> P.RuleName -> Rule
-blank Axiom n = (R Axiom [RI n P.blank Nothing])
-blank Inductive n = (R Inductive [RI n P.blank Nothing])
-blank Theorem n = (R Theorem [RI n P.blank (Just $ PS (PT.fromProp P.blank) 0)])
+blank Axiom n = (R Axiom [RI n P.blank Nothing] [])
+blank Inductive n = (R Inductive [RI n P.blank Nothing] [])
+blank Theorem n = (R Theorem [RI n P.blank (Just $ PS (PT.fromProp P.blank) 0)] [])
 
--- possibly source of `invalidated` and `renamed` being broken
 ruleItems :: IxTraversal' Int Rule RuleItem 
 ruleItems = itraversalVL guts
   where 
-    --guts :: forall f. Applicative f => (RuleItem -> f RuleItem) -> Rule -> f Rule 
-    guts f (R t ls) =  R t <$> traverse (\(i, e) -> f i e) (zip [0..] ls)
+    guts f (R t ls rest) =  R t <$> traverse (\(i, e) -> f i e) (zip [0..] ls) <*> pure rest
 
 deleteItemFromRI :: Int -> [RuleItem] -> [RuleItem]
 deleteItemFromRI _ [] = []
@@ -179,6 +177,7 @@ leaveFocusRI NameFocus              = noFocus . handleRI Rename
 leaveFocusRI _                      = pure
 
 handleRI :: RuleAction -> RuleItem -> Controller RuleFocus RuleItem
+
 handleRI (SelectGoal pth b) state = do
     let summary = getGoalSummary state pth 
     rules <- filter (if b then const True else P.isIntroduction . snd) <$> getKnownRules
@@ -297,6 +296,19 @@ handleRI Rename state = do
     clearFocus
     pure $ set name new state
 
+generateDerivedRules :: [P.RuleName] -> RuleType -> [RuleItem] -> Controller (Focus Rule) [P.NamedProp]
+generateDerivedRules old Inductive rs = 
+  let rs' = filter P.isIntroduction (map (view prop) rs)
+      definitions = foldr (\x m -> M.insertWith (++) (P.introRoot x) [x] m) M.empty rs'
+      caseRules = map snd $ M.toList $ M.mapWithKey (\(k,i) intros -> P.caseRule k i intros) definitions
+   in do generateDiffs old (mapMaybe (P.defnName . fst) caseRules) 
+         pure caseRules
+  where 
+    generateDiffs old [] = mapM_ invalidate old
+    generateDiffs old (n:ns) | n `notElem` old = newResource n >> generateDiffs old ns
+                             | otherwise = generateDiffs old ns
+generateDerivedRules _ _ _ = pure []
+
 instance Control Rule where
   data Focus Rule = RF Int RuleFocus
                   | AddingRule
@@ -306,7 +318,7 @@ instance Control Rule where
                    | AddRule
                    deriving (Show, Eq)
 
-  defined (R _ ls) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls
+  defined (R _ ls rest) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls ++ rest
 
   inserted _ = RF 0 (RuleTermFocus []) --When you've inserted an item switches to the relevant focus
 
@@ -314,22 +326,32 @@ instance Control Rule where
 
   renamed (s,s') r = over (ruleItems % proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
 
-  editable tbl (RF i rf) (R _ ls) = editableRI tbl rf (ls !! i)
+  editable tbl (RF i rf) (R _ ls _) = editableRI tbl rf (ls !! i)
   editable tbl AddingRule _ = Nothing
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
   leaveFocus AddingRule r = pure r  -- [CPM] Leave add rule button focus
 
-  handle (RA i DeleteRI) r@(R ruleType lst) = do
+  handle (RA i DeleteRI) r@(R ruleType lst rest) = do
     let (left , x:right) = splitAt i lst
     let ruleName = view name x
     invalidate ruleName
-    pure $ (R ruleType (left ++ right))
+    rest' <- generateDerivedRules (mapMaybe (P.defnName . fst) rest) ruleType (left ++ right)
+    pure (R ruleType (left ++ right) rest')
 
-  handle (RA i a) r = zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
-  handle AddRule (R t ls) = do
+  handle (RA i a) r = do
+    R t sgs rest <- zoomFocus (RF i) (\(RF i' rf) -> if i == i' then Just rf else Nothing) 
+                                     (atraverseOf (elementOf ruleItems i) pure (handleRI a) r)
+    b <- anyInvalidated 
+    if b then do 
+      rest' <- generateDerivedRules (mapMaybe (P.defnName . fst) rest) t sgs
+      pure (R t sgs rest')
+    else pure (R t sgs rest)
+    
+  handle AddRule (R t ls rest) = do
     name <- textInput
     newResource name
-    let s' = R t (ls ++ [RI name P.blank Nothing]) 
+    rest' <- generateDerivedRules (mapMaybe (P.defnName . fst) rest) t (ls ++ [RI name P.blank Nothing]) 
+    let s' = R t (ls ++ [RI name P.blank Nothing]) rest'
     setFocus (RF (length ls) $ RuleTermFocus [])
     pure s'

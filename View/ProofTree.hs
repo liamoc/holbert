@@ -24,6 +24,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     renderRR (P.Elim r i) = span_ [class_ "rule-rulename-elim"] [renderRR r, sup_ [] [renderRR i]]
     renderRR (P.Defn d) = definedrule d
     renderRR (P.Local i) = localrule i
+    renderRR (P.Cases n i) = casesrule n i
 
     currentGS = case selected of 
       Just (R.ProofFocus t g) -> g 

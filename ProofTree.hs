@@ -215,6 +215,7 @@ clear toClear x@(PT opts sks lcl g (Just (rr,sgs)))
     matches (P.Elim t t') = any matches [t, t']  
     matches (P.Rewrite t _) = matches t
     matches (P.Defn t) = t == toClear
+    matches r@(P.Cases _ _) = P.defnName r == Just toClear
     matches _ = False
 clear toClear x = x
 

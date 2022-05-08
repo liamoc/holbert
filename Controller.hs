@@ -52,6 +52,9 @@ textInput = editing <$> get
 syntaxTable :: Controller focus SyntaxTable
 syntaxTable = syntaxes <$> get
 
+anyInvalidated :: Controller focus Bool 
+anyInvalidated = not . null . invalidates <$> get 
+
 invalidate :: MS.MisoString -> Controller focus ()
 invalidate n = modify (\(CS ff txt sy prps foc inv  rn nn) -> (CS ff txt sy prps foc (n : inv) rn nn))
 

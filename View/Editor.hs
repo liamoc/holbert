@@ -46,7 +46,7 @@ viewEditor x =
         [ block "sidebar-header" ["Current Goal:"]
         , div_ [class_ "sidebar-goal-display"]
           [ div_ [class_ "sidebar-goal-buttons"] [iconButton (case pf of R.RewriteGoalFocus _ _ -> "active"; _ -> "teal" ) "Rewrite Goal" "equals-outline" 
-                                                 $ (ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $  R.RewriteGoal False) ] 
+                                                 $ (ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $  R.RewriteGoal False)]
           , renderGoal currentRule (inputText x) i (Just foc) (displayOptions x) gs
           ]      
         ] ++ case pf of 
@@ -159,7 +159,7 @@ renderIndex (_ : script) = ul_ [class_ "sidebar-index"] $ renderIndex' (zip [1 .
     renderIndex' ((i, I.Heading (H.Heading lvl hd)) : scr)
       | (itms, rest) <- span (within lvl) scr =
         li_ [] [b_ [] [a_ [href_ $ "#anchor" <> (MS.pack $ show i)] [text hd]], ul_ [] $ renderIndex' itms] : renderIndex' rest
-    renderIndex' ((i, I.Rule (R.R ruleType lst)) : scr) = map (\(R.RI n _ mpt) ->
+    renderIndex' ((i, I.Rule (R.R ruleType lst _)) : scr) = map (\(R.RI n _ mpt) ->
       li_ []
         [ a_ [href_ $ "#anchor" <> (MS.pack $ show i)] [definedrule n]
         , case mpt of
