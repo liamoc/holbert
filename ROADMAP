@@ -3,17 +3,21 @@
    - Persistence to local storage
    - Submission to server?
    - Lockable regions
-- Elimination rules and induction (Chris)
+- Elimination rules and induction
    - Applying a rule as an elimination rule DONE
-   - Defining an inductive set
-   - Applying an induction tactic
-   - Simultaneous induction
+   - Defining an inductive set DONE
+   - Applying an induction tactic DONE
+   - Simultaneous induction DONE
    - Defining inductive sets via grammar
 - Equality and Definitions (Rayhana)
    - Applying an equality rule as a rewrite DONE
    - Definitions that are stricter than axioms.
-   - Transitive calculational proofs
+   - Transitive calculational proofs IN PROGRESS
    - Inductive definitions (possibly)
+   - Automatic use of reflexivity when possible
+   - Rewriting in assumptions
+   - Rewriting with assumptions
+   - Rewriting to use transitivity when rewriting on an equality proof.
 - Syntax (Yueyang)
    - Mix-fix definitions, parsing and pretty printing.
 - Built-ins

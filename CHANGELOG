@@ -1,7 +1,11 @@
 * In progress
 - New feature: mix-fix syntax declarations
 - New feature: Multi-file documents
-
+* Version 0.5
+- New feature: Can now define multiple rules in an Axiom block
+- New feature: Can now define "inductive definitions" as a block of
+  introduction rules. Cases and induction rules are then auto-generated.
+- Improvement: Unification now gives better solutions for induction rules.
 * Version 0.4
 - New feature: Goal display on RHS
 - Improvement: Only displays applicable rules
