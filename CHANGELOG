@@ -2,10 +2,13 @@
 - New feature: mix-fix syntax declarations
 - New feature: Multi-file documents
 * Version 0.5
+- Improvement: Reflexivity now auto-applied by clicking the rewrite button
 - New feature: Can now define multiple rules in an Axiom block
 - New feature: Can now define "inductive definitions" as a block of
   introduction rules. Cases and induction rules are then auto-generated.
+- Improvement: Can rewrite with local assumptions
 - Improvement: Unification now gives better solutions for induction rules.
+- Improvement: Axiom blocks can now contain multiple rules.
 * Version 0.4
 - New feature: Goal display on RHS
 - Improvement: Only displays applicable rules
