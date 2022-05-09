@@ -76,7 +76,7 @@ viewEditor x =
                       [ input_ [checked_ b, id_ "rev_rewrite", type_ "checkbox", onChecked (\(Checked b) -> ItemAction (Just i) $ I.RuleAct $ R.RA currentRule $ R.RewriteGoal b)]
                       , label_ [class_ "rewrite-checkbox-label", for_ "rev_rewrite"] ["Reverse rewrite application"]
                       ]
-            , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule currentRule [] (displayOptions x) (i,p)) rs)
+            , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule currentRule (map (\(_,_,n)->n) (reverse binds)) (displayOptions x) (i,p)) rs)
             ]
           _ -> []
 

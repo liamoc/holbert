@@ -51,6 +51,13 @@ definedrule d = inline "rule-rulename-defined" (name d)
 casesrule n i = inline "rule-rulename-cases" $ [inline "rule-rulename-cases-keyword" [text "cases"], "("] ++ name n ++ [")"]
 inductrule n i = inline "rule-rulename-cases" $ [inline "rule-rulename-cases-keyword" [text "induction"], "("] ++ name n ++ [")"]
 
+collapsableblock i t c
+  = div_ [ class_ "collapsable-block" ] 
+         [ input_ [id_ $ "collapsable-check-" <> i, class_ "collapsable-toggle", type_ "checkbox"]
+         , label_ [for_ $ "collapsable-check-" <> i, class_ "collapsable-label"] t
+         , div_ [class_ "collapsable-content"] c
+         ]
+
 button cls title onClk 
   | MS.null title = button_ [class_ cls, type_ "button", onClick onClk]
   | otherwise     = button_ [class_ cls, type_ "button", title_ title, onClick onClk]

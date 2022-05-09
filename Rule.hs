@@ -194,8 +194,8 @@ handleRI (ExamineAssumption i) state = do
 handleRI (RewriteGoal rev) state = do 
   foc <- getOriginalFocus 
   case foc of 
-    Just (ProofFocus _ (Just gs@(GS _ _ t p _)))  -> do
-      rules <- filter (P.isRewrite . snd) <$> getKnownRules
+    Just (ProofFocus _ (Just gs@(GS _ lcls t p _)))  -> do
+      rules <- filter (P.isRewrite . snd) . (map fst lcls ++) <$> getKnownRules
       setFocus (ProofFocus (RewriteGoalFocus rev (mapMaybe (\r -> (,) r <$> applyRewriteTactic state r rev p ) rules)) (Just gs))
       pure state
     _ -> pure state
@@ -323,17 +323,17 @@ instance Control Rule where
 
   defined (R _ ls rest) = map (\(RI n prp _) -> (P.Defn n,prp) ) ls ++ rest
 
-  inserted _ = RF 0 (RuleTermFocus []) --When you've inserted an item switches to the relevant focus
+  inserted _ = RF 0 (RuleTermFocus [])
 
-  invalidated s r = over (ruleItems % proofState % proofTree) (PT.clear s) r --Whenever we change a rule this goes through the document and removes it from use in proofs
+  invalidated s r = over (ruleItems % proofState % proofTree) (PT.clear s) r
 
-  renamed (s,s') r = over (ruleItems % proofState % proofTree) (PT.renameRule (s,s')) r --If we change the *name* of a rule we just update its name throughout the document
+  renamed (s,s') r = over (ruleItems % proofState % proofTree) (PT.renameRule (s,s')) r
 
   editable tbl (RF i rf) (R _ ls _) = editableRI tbl rf (ls !! i)
   editable tbl AddingRule _ = Nothing
 
   leaveFocus (RF i rf) r = atraverseOf (elementOf ruleItems i) pure (leaveFocusRI rf) r
-  leaveFocus AddingRule r = pure r  -- [CPM] Leave add rule button focus
+  leaveFocus AddingRule r = pure r
 
   handle (RA i DeleteRI) r@(R ruleType lst rest) = do
     let (left , x:right) = splitAt i lst
