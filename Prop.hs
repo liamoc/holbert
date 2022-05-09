@@ -137,11 +137,13 @@ inductionRule str i formers cases =
     caseSubgoal (Forall vs sgs t) 
       | (T.Const k, rest) <- T.peelApTelescope t , Just ii <- elemIndex (k,length rest) formers
          = let newConc = T.applyApTelescope (T.LocalVar (length vs + i + ii)) rest
-               sgs' = mapMaybe eachSubgoal sgs
-               eachSubgoal (Forall [] [] tt) | (T.Const kk, sgRest) <- T.peelApTelescope tt
-                                             , Just iii <- elemIndex (kk, length sgRest) formers
-                                             = Just (Forall [] [] $ T.applyApTelescope (T.LocalVar (length vs + i + iii)) sgRest)
-               eachSubgoal _ = Nothing
+               sgs' = mapMaybe (eachSubgoal (length vs)) sgs
+               eachSubgoal offset (Forall vvs sggs tt) 
+                 | (T.Const kk, sgRest) <- T.peelApTelescope tt
+                 , Just iii <- elemIndex (kk, length sgRest) formers
+                 = let sggs' = mapMaybe (eachSubgoal $ offset + length vvs) sggs 
+                    in Just (Forall vvs (sggs' ++ sggs) $ T.applyApTelescope (T.LocalVar (length vvs + offset + i + iii)) sgRest)
+               eachSubgoal _ _ = Nothing
             in (Forall vs (sgs' ++ sgs) newConc)
       | otherwise = error "Not valid introduction rule"
 caseRule :: MisoString -> Int -> [Prop] -> NamedProp
