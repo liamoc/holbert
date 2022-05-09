@@ -18,7 +18,7 @@ import View.Utils hiding (LocalAction (..))
 import qualified View.Utils as U
 import Data.List(mapAccumL)
 
-version = "0.4.0"
+version = "0.5.0"
 
 data RuleType
   = Apply
