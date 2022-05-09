@@ -216,7 +216,6 @@ clear toClear x@(PT opts sks lcl g (Just (rr,sgs)))
     matches (P.Rewrite t _) = matches t
     matches (P.Defn t) = t == toClear
     matches r = P.defnName r == Just toClear
-    matches _ = False
 clear toClear x = x
 
 renameRule :: (P.RuleName, P.RuleName) -> ProofTree -> ProofTree

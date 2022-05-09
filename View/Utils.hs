@@ -50,6 +50,7 @@ localrule i = inline "rule-rulename-local" [text (MS.pack (show i))]
 definedrule d = inline "rule-rulename-defined" (name d)
 casesrule n i = inline "rule-rulename-cases" $ [inline "rule-rulename-cases-keyword" [text "cases"], "("] ++ name n ++ [")"]
 inductrule n i = inline "rule-rulename-cases" $ [inline "rule-rulename-cases-keyword" [text "induction"], "("] ++ name n ++ [")"]
+builtinrule n = inline "rule-rulename-cases" $ [inline "rule-rulename-cases-keyword" [text n]]
 
 collapsableblock i t c
   = div_ [ class_ "collapsable-block" ] 

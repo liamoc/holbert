@@ -194,10 +194,13 @@ handleRI (ExamineAssumption i) state = do
 handleRI (RewriteGoal rev) state = do 
   foc <- getOriginalFocus 
   case foc of 
-    Just (ProofFocus _ (Just gs@(GS _ lcls t p _)))  -> do
-      rules <- filter (P.isRewrite . snd) . (map fst lcls ++) <$> getKnownRules
-      setFocus (ProofFocus (RewriteGoalFocus rev (mapMaybe (\r -> (,) r <$> applyRewriteTactic state r rev p ) rules)) (Just gs))
-      pure state
+    Just (ProofFocus _ (Just gs@(GS _ lcls t p _)))  ->
+      case applyRuleTactic state P.builtInRefl p of 
+        Just a -> handleRI a state
+        Nothing -> do
+          rules <- filter (P.isRewrite . snd) . (map fst lcls ++) <$> getKnownRules
+          setFocus (ProofFocus (RewriteGoalFocus rev (mapMaybe (\r -> (,) r <$> applyRewriteTactic state r rev p ) rules)) (Just gs))
+          pure state
     _ -> pure state
 handleRI (Tactic ps pth) state = let 
         state' = set proofState ps state 

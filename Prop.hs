@@ -23,6 +23,7 @@ data RuleRef = Defn RuleName
              | Cases MisoString Int
              | Induction MisoString Int
              -- below are for presentation only in proofs
+             | Refl -- built in equality law
              | Rewrite RuleRef Bool -- bool is if it is flipped
              | Elim RuleRef RuleRef
              deriving (Eq, Show, Generic, ToJSON, FromJSON)
@@ -33,6 +34,9 @@ defnName v = case v of
   Cases s i -> Just $ "§cases-" <> s <> "§" <> MS.pack (show i)
   Induction s i -> Just $ "§induction-" <> s <> "§" <> MS.pack (show i)
   _ -> Nothing
+
+builtInRefl :: NamedProp
+builtInRefl = (Refl, Forall ["x"] [] (T.applyApTelescope (T.Const "_=_") [T.LocalVar 0, T.LocalVar 0]))
 
 type NamedProp = (RuleRef, Prop)
 data Prop = Forall [T.Name] [Prop] T.Term deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)

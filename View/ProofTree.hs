@@ -26,6 +26,7 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
     renderRR (P.Local i) = localrule i
     renderRR (P.Cases n i) = casesrule n i
     renderRR (P.Induction n i) = inductrule n i
+    renderRR P.Refl = builtinrule "refl"
 
     currentGS = case selected of 
       Just (R.ProofFocus t g) -> g 
