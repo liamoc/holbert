@@ -1,14 +1,21 @@
 {-# LANGUAGE RecordWildCards, OverloadedStrings #-}
 module Main where
 import Miso
+import Miso.String(MisoString)
 import Editor (runAction, EditorAction (..), Editor (..), initialEditor)
 import qualified ImportExport
 import View.Editor (viewEditor)
+
+
+foreign import javascript unsafe "$r = document.location.search.slice(1);"
+  urlparameter :: IO MisoString
+
 main :: IO ()
-main = startApp App {..}
+main = do 
+  url <- (\x -> if x == "" then "index.holbert" else x) <$> urlparameter
+  startApp App {model = initialEditor url, ..}
   where
     initialAction = Import
-    model         = initialEditor
     update        = updateModel
     view          = viewEditor
     events        = defaultEvents

@@ -56,9 +56,9 @@ data EditorAction
   | DisplayError MS.MisoString
   deriving (Show, Eq)
 
-initialEditor :: Editor
-initialEditor =
-  Editor [I.Heading $ H.Heading 4 "Loading..."] NoFocus "index.holbert" Nothing (O True New BarTurnstile (TDO False True))
+initialEditor :: MS.MisoString -> Editor
+initialEditor url =
+  Editor [I.Heading $ H.Heading 4 "Loading..."] NoFocus url Nothing (O True New BarTurnstile (TDO False True))
 
 after :: Int -> AffineTraversal' [a] (a, [a])
 after n = atraversalVL guts
