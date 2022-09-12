@@ -7,9 +7,11 @@ import DisplayOptions
 import qualified Heading as H
 import qualified Item as I
 import qualified Paragraph as P
+import qualified SyntaxDecl as S
 import qualified Prop as Prp
 import qualified Rule as R
 import qualified Terms as T
+import qualified StringRep as SR
 import Controller(definedSyntax)
 import View.Item
 import View.Term
@@ -121,6 +123,7 @@ viewEditor x =
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Inductive i) [block "item-rule-theoremheading" ["Inductive Definition."]]
+      , button "sidebar-insert" "" (InsertItem i (I.SyntaxDecl $ S.SyntaxDecl 0 "???" SR.LeftAssoc)) [block "item-rule-theoremheading" ["Notation."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
       , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]
@@ -195,6 +198,8 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
                     InsertingPropositionFocus ruleType i' | i == i' ->
                       [editorWithTitle (case ruleType of R.Axiom -> axiomEnter i; R.Theorem -> theoremHeading i; R.Inductive -> inductiveHeading i)
                         "newrule" (InsertProposition i ruleType) UpdateInput Reset textIn]
+--                    InsertingSyntaxDeclFocus i' | i == i' ->
+--                      [editorWithTitle (syntaxDeclHeading i) "newrule" (InsertSyntaxDecl i) UpdateInput Reset textIn]
                     _ -> []
        in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
 

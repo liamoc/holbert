@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, RecursiveDo #-}
+{-# LANGUAGE OverloadedStrings, RecursiveDo, StandaloneDeriving, DeriveAnyClass, DeriveGeneric #-}
 module StringRep (prettyPrint, parse, SyntaxTable (..), EPM.Associativity(..)) where
 
 import Data.Char
@@ -18,9 +18,12 @@ import qualified Data.Text.Lazy as L
 import Terms
 import qualified Text.Earley as EP
 import qualified Text.Earley.Mixfix as EPM
-
+import Data.Aeson(ToJSON, FromJSON)
+import GHC.Generics(Generic)
 data Token = LParen | RParen | Word MS.MisoString | Dot | Binder MS.MisoString deriving (Show, Eq)
-
+deriving instance Generic EPM.Associativity 
+deriving instance FromJSON EPM.Associativity 
+deriving instance ToJSON EPM.Associativity 
 holey :: MS.MisoString -> EPM.Holey MS.MisoString
 holey str = case MS.uncons str of 
   Nothing -> []

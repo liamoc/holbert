@@ -24,6 +24,7 @@ executable app
     Editor
     Rule
     Heading
+    SyntaxDecl
     Paragraph
     Controller
     Item
@@ -36,6 +37,7 @@ executable app
     View.Prop
     View.Paragraph
     View.Heading
+    View.SyntaxDecl
     View.Rule
     View.Item
   ghcjs-options:

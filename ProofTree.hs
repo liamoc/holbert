@@ -133,22 +133,22 @@ applyEq skolems shouldReverse g (r,(P.Forall (m :ms) sgs g')) = do
   let mt = foldl T.Ap n (map T.LocalVar [0..length skolems -1])
   applyEq skolems shouldReverse g (r,(P.subst mt 0 (P.Forall ms sgs g')))
 applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
-  (s,t) <- match skolems g (P.Forall [] sgs g')
+  (s,t) <- match skolems g sgs g'
   return (s,P.Rewrite r shouldReverse,((PT Nothing [] [] t Nothing):(map fromProp sgs)))
   where
-    match :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, T.Term)
-    match skolems  g (P.Forall _ sgs g') = (do
+    match :: [T.Name] -> T.Term -> [P.Prop] -> T.Term -> UnifyM (T.Subst, T.Term)
+    match skolems  g sgs g' = (do
       a <- fresh
       let ma = foldl T.Ap a (map T.LocalVar [0..length skolems -1])
       s <- if shouldReverse then unifier g' (T.Ap (T.Ap (T.Const "_=_") ma) g) else unifier g' (T.Ap (T.Ap (T.Const "_=_") g) ma)
       return (s, ma)) <|> case g of
         (T.Lam (T.M x) e) -> do
-          (a,b) <- match (x:skolems) e (P.Forall [] sgs g')
+          (a,b) <- match (x:skolems) e sgs (T.raise 1 g')
           return (a, (T.Lam (T.M x) b))
         (T.Ap e1 e2) -> (do
-          (a,b) <- match skolems e1 (P.Forall [] sgs g')
+          (a,b) <- match skolems e1 sgs g'
           return (a, (T.Ap b e2))) <|> do
-            (a,b) <- match skolems e2 (P.Forall [] sgs g')
+            (a,b) <- match skolems e2 sgs g'
             return (a, (T.Ap e1 b))
         otherwise -> empty
 

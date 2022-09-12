@@ -11,6 +11,8 @@ import qualified Heading as H
 import qualified Item as I
 import qualified Paragraph as P
 import qualified ProofTree as PT
+import qualified SyntaxDecl as S
+import qualified StringRep as SR
 import qualified Prop as Prp
 import qualified Rule as R
 import DisplayOptions
@@ -34,6 +36,7 @@ data EditorFocus
   | NoFocus
   | NewItemFocus ItemIndex
   | InsertingPropositionFocus R.RuleType ItemIndex
+--  | InsertingSyntaxDeclFocus ItemIndex
   | CreditsFocus
   | ImportFocus
   deriving (Show, Eq)
@@ -50,6 +53,7 @@ data EditorAction
   | UpdateInput MS.MisoString
   | InsertItem ItemIndex I.Item
   | InsertProposition ItemIndex R.RuleType
+--  | InsertSyntaxDecl ItemIndex
   | Download
   | Import
   | LoadDocument Document
@@ -164,6 +168,7 @@ runAction' (InsertProposition idx ruleType) ed =
         _ | MS.all Data.Char.isSpace n -> Left "Name cannot be empty"
         _ | n `elem` concatMap (mapMaybe (Prp.defnName . fst) . defined) (document ed) -> Left "Name already in use"
         _ -> runAction' (InsertItem idx (I.Rule item)) ed
+
 
 runAction' (LoadDocument m) ed = Right $ ed { document = m, currentFocus = NoFocus, message = Nothing}
 runAction' (DisplayError e) ed = Left e

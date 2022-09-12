@@ -39,6 +39,7 @@ axiomHeading i plural = block "" [inline "item-rule-theoremheading" [anchor i ["
 
 inductiveHeading i = block "" [inline "item-rule-theoremheading" [anchor i ["Inductive Definition."]]]
 theoremHeading i = block "item-rule-theoremheading" [anchor i ["Theorem."]]
+syntaxDeclHeading i = block "item-rule-theoremheading" [anchor i ["Notation."]]
 
 space = inline "space" [" "]
 turnstile = inline "symbol symbol-turnstile symbol-bold" ["⊢"]
