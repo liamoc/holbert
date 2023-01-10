@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE BangPatterns #-}
 module Editor where
 import Data.Maybe (fromJust, fromMaybe,mapMaybe)
 import qualified Miso.String as MS
@@ -17,6 +18,7 @@ import qualified Prop as Prp
 import qualified Rule as R
 import DisplayOptions
 import qualified Data.Char 
+import Debug.Trace
 type Document = [I.Item]
 type ItemIndex = Int
 
@@ -29,6 +31,8 @@ data Editor = Editor
   , inputText      :: InputText
   , message        :: Maybe ErrorMessage
   , displayOptions :: DisplayOptions
+  , presentation   :: Maybe (Int, Int)
+  , readerMode     :: Bool 
   } deriving (Show, Eq)
 
 data EditorFocus
@@ -58,11 +62,16 @@ data EditorAction
   | Import
   | LoadDocument Document
   | DisplayError MS.MisoString
+  | EnterPresentation
+  | ExitPresentation
+  | NextSlide
+  | PrevSlide
+  | ToggleReader
   deriving (Show, Eq)
 
 initialEditor :: MS.MisoString -> Editor
 initialEditor url =
-  Editor [I.Heading $ H.Heading 4 "Loading..."] NoFocus url Nothing (O True New BarTurnstile (TDO False True))
+  Editor [I.Heading $ H.Heading 4 "Loading..."] NoFocus url Nothing (O True New BarTurnstile (TDO False True)) Nothing False
 
 after :: Int -> AffineTraversal' [a] (a, [a])
 after n = atraversalVL guts
@@ -169,6 +178,32 @@ runAction' (InsertProposition idx ruleType) ed =
         _ | n `elem` concatMap (mapMaybe (Prp.defnName . fst) . defined) (document ed) -> Left "Name already in use"
         _ -> runAction' (InsertItem idx (I.Rule item)) ed
 
-
+runAction' EnterPresentation ed = Right $ ed { presentation = Just (nextSlide (document ed) (0,0)) }
+runAction' ExitPresentation ed = Right $ ed { presentation = Nothing }
+runAction' NextSlide ed = case presentation ed of 
+                            Nothing -> Right $ ed
+                            Just i  -> Right $ ed { presentation = Just (nextSlide (document ed) i) }
+runAction' PrevSlide ed = case presentation ed of 
+                            Nothing -> Right $ ed
+                            Just i  -> Right $ ed { presentation = Just (prevSlide (document ed) i) }
 runAction' (LoadDocument m) ed = Right $ ed { document = m, currentFocus = NoFocus, message = Nothing}
+runAction' (ToggleReader) ed = Right $ ed { readerMode = not (readerMode ed) }
 runAction' (DisplayError e) ed = Left e
+
+
+nextSlide :: Document -> (Int, Int) -> (Int, Int)
+nextSlide d (start,end) | end >= length d = (start, end)
+nextSlide d (start,end) = case stepTillHeading 1 (end+1) (drop (end +1) d) of 
+  Just i -> if i <= end then (start,end) else (end, i)
+  Nothing -> (start,end)
+
+prevSlide :: Document -> (Int, Int) -> (Int, Int)
+prevSlide d (0,end) = (0,end)
+prevSlide d (start,end) = case stepTillHeading (-1) start (reverse $ take start d) of 
+  Just i -> if (start <= i-1) then (start,end) else (i-1, start)
+  Nothing -> (start,end)
+
+stepTillHeading :: Int -> Int -> Document -> Maybe Int
+stepTillHeading sp (!n) (I.Heading (H.Heading i _):rest) | i <= 1 = Just n
+stepTillHeading sp (!n) (x:rest) = stepTillHeading sp (n + sp) rest
+stepTillHeading sp (!n) [] = Just n

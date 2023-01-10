@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings#-}
 module View.Editor where
 import Miso
 import qualified Miso.String as MS
@@ -19,7 +19,7 @@ import View.Prop
 import View.Utils hiding (LocalAction (..))
 import qualified View.Utils as U
 import Data.List(mapAccumL)
-
+import Data.Maybe(isJust, isNothing)
 version = "0.5.0"
 
 data RuleType
@@ -30,16 +30,27 @@ data RuleType
 
 viewEditor :: Editor -> View EditorAction
 viewEditor x =
-  div_ [class_ "container", onKeyDown (\(KeyCode kc) -> if kc == 27 then Reset else Noop)] $
+  div_ [class_ ("container" <> (case presentation x of 
+                                 Just (0, _) ->  " presentation presentation-centred"
+                                 Just _ -> " presentation presentation-uncentred"
+                                 _ -> "") <> if readerMode x then " readermode" else "")
+       , onKeyDown (\(KeyCode kc) ->  if kc == 27 then Reset else Noop)] $
     [ div_ [class_ "document", id_ "document"]
-      $ renderDoc (inputText x) (displayOptions x) (currentFocus x) (document x) ++ [block "document-endofcontent" []]
+      $ renderDoc (inputText x) (displayOptions x) (currentFocus x) (document x) (presentation x) ++ [block "document-endofcontent" []]
     , div_ [class_ "sidebar", id_ "sidebar"]
       $ toolbar
       : maybe id (\m -> (block "sidebar-errormessage" [text m] :)) (message x)
         [ block "sidebar-main" mainSidebar
         , renderDisplayOptions (displayOptions x)
         ]
-    , script_ [] "Split(['#document','#sidebar'],{ sizes: [70,30], minSize:200});"
+    , script_ [] "Split(['#document','#sidebar'],{ sizes: [70,30], minSize:0});"
+    , div_ [class_ "bottom-widgets", id_ "bottom-widgets"]
+      $ (if isNothing (presentation x) then [ iconButton "blue" "Start Presentation" "media-play" EnterPresentation] else
+        [ iconButton "blue" "Stop Presentation" "media-stop" ExitPresentation
+        , iconButton "teal" "Previous Slide" "media-play-reverse-outline" PrevSlide
+        , iconButton "teal" "Next Slide" "media-play-outline" NextSlide ]) ++
+        [ if readerMode x then iconButton "active" "Reader Mode" "eye" ToggleReader else iconButton "blue" "Reader Mode" "eye-outline" ToggleReader
+        ]
     ]
   where
     mainSidebar = case currentFocus x of
@@ -81,9 +92,6 @@ viewEditor x =
             , div_ [class_ "sidebar-assumptions"] (map (renderAvailableRule currentRule (map (\(_,_,n)->n) (reverse binds)) (displayOptions x) (i,p)) rs)
             ]
           _ -> []
-
-
-        
 
       NewItemFocus i -> newItemMenu i
       ItemFocus i (I.ParagraphFocus _) -> editingHelp
@@ -176,12 +184,15 @@ renderIndex (_ : script) = ul_ [class_ "sidebar-index"] $ renderIndex' (zip [1 .
     within n (_, I.Heading (H.Heading lvl hd)) = lvl > n
     within n _ = True
 
-renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] script
+renderDoc textIn opts selected script present = snd $ mapAccumL go [] $ zip [0 ..] script
   where
     scriptSize = length script
     go tbl (i,item) =
       let mainItem = renderItem opts i tbl textIn item selected
           inserting = selected == NewItemFocus i 
+          shouldDisplay = case present of 
+            Nothing -> True
+            Just (l,u) -> l <= i && i < u
           itemOptions
             | i > 0 =
               block "item-options"
@@ -201,7 +212,10 @@ renderDoc textIn opts selected script = snd $ mapAccumL go [] $ zip [0 ..] scrip
 --                    InsertingSyntaxDeclFocus i' | i == i' ->
 --                      [editorWithTitle (syntaxDeclHeading i) "newrule" (InsertSyntaxDecl i) UpdateInput Reset textIn]
                     _ -> []
-       in (definedSyntax item ++ tbl, block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton)
+       in (definedSyntax item ++ tbl, if shouldDisplay then 
+                                         block (if inserting then "item item-inserting" else "item") $ [mainItem, itemOptions] ++ insertButton
+                                      else "")
+
 
 renderGoal currentRule textIn i selected opts gs@(R.GS sks _ t p b) = 
    fmap (toGlobalAction i . mapLocalAction I.RuleFocus I.RuleAct) $

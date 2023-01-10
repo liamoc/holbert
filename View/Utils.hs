@@ -13,15 +13,28 @@ data LocalAction f a = UpdateInput MS.MisoString
                     | Reset
                     | Act a
                     | SetFocus f
+                    | Noop
                     deriving (Show, Eq)
 
 mapLocalAction :: (a -> a') -> (b -> b') -> LocalAction a b -> LocalAction a' b'
 mapLocalAction f g (UpdateInput s) = UpdateInput s
 mapLocalAction f g Reset = Reset
+mapLocalAction f g Noop = Noop
 mapLocalAction f g (Act a) = Act (g a)
 mapLocalAction f g (SetFocus b) = SetFocus (f b)
 
 
+spanModuloParens :: (Char -> Bool) -> MS.MisoString -> (MS.MisoString, MS.MisoString)
+spanModuloParens p str = helper 0 str 
+  where
+    helper n str | (xs, ys) <- MS.span (\x -> not ((n == 0 && not (p x)) || x `elem` ['(',')'])) str
+             = case MS.uncons ys of 
+                 Just ('(',rest) -> let (lefts, rights) = helper (n+1) rest
+                                     in (xs <> MS.cons '(' lefts, rights)
+                 Just (')',rest) -> let (lefts, rights) = helper (n-1) rest
+                                     in (xs <> MS.cons ')' lefts, rights)
+                 _ -> (xs,ys)
+                           
 noActionsCoerce :: View a -> View b 
 noActionsCoerce = fmap (const $ error "Actions triggered on a noActionsCoerce node!")
 
@@ -179,7 +192,9 @@ editableMath text view focus act extraActions selected
 name str = concatMap go (MS.words str)
   where go str = concat $ intersperse [placeholder] (map name' (MS.splitOn "_" str))
 name' s =
-  let noPrimes = MS.dropWhileEnd (== '\'') s
+  let (sn, vec) | not (MS.null s) = if MS.last s == '*' && isAlpha (MS.head s) then (MS.init s, True) else (s, False)
+                | otherwise = (s,False)
+      noPrimes = MS.dropWhileEnd (== '\'') sn
       bulk = MS.dropWhileEnd (isDigit) noPrimes
       rest = MS.drop (MS.length bulk) noPrimes
       bulk' = case bulk of
@@ -273,11 +288,12 @@ name' s =
         "Psi" -> "Ψ"
         "Omega" -> "Ω"
         _ -> bulk
-      primeString = makePrimeString (MS.length s - MS.length noPrimes)
+      primeString = makePrimeString (MS.length s - MS.length noPrimes - if vec then 1 else 0)
       makePrimeString 0 = ""
       makePrimeString 1 = "′"
       makePrimeString 2 = "″"
       makePrimeString 3 = "‴"
       makePrimeString 4 = "⁗"
       makePrimeString n = "⁗" <> makePrimeString (n - 4)
-   in if MS.null bulk' then [text rest] else [text bulk', sub_ [] [text rest], text primeString]
+      final = if MS.null bulk' then [text rest] else [text bulk', sub_ [] [text rest], text primeString]
+   in if vec then [span_ [class_ "overlined"] final] else final

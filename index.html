@@ -17,6 +17,7 @@
         font-weight: normal;
         src: local('Neo Euler Medium'), url('euler.woff') format('woff');
       }
+      .overlined { text-decoration:overline; }
       :root{
         --link-col:#0000CC;
         --link-hover-col: #AA00CC;
@@ -120,6 +121,46 @@
             --scrollbar-col: #222;
             --scrollbar-hover-col: #313131;
         }
+      }
+      /* FOOTNOTES */
+      .footnote {
+        position: relative;
+        cursor: pointer;
+        color:var(--link-col);
+      }
+      .footnote span.footnote-box {
+        z-index:20000;
+        text-align:left;
+        color: var(--fg-col);
+        cursor: default;
+        background: var(--faint-line-col);
+        border: 0.125rem solid var(--sidebar-header-col);
+        position: absolute;
+        left: 0;
+        bottom: 100%;
+        margin: 0 0 0.7em -1em;
+        width: 19em;
+        padding: 0.8em;
+        line-height: 1.518em;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.35s;
+      }
+      .footnote span.footnote-box::before {
+        content: '';
+        border-style: solid;
+        border-width: 0.7em 0.7em 0 0.7em;
+        border-color: var(--sidebar-header-col) transparent transparent transparent;
+        position: absolute;
+        left: 0.7em;
+        bottom: -0.7em;
+        width: 0;
+        height: 0;
+      }
+      .footnote:hover span.footnote-box {
+        opacity: 1;
+        visibility: visible;
+        transition: all 0.35s;
       }
 
       /* LINKS AND ANCHOR ANIMATIONS */
@@ -329,6 +370,10 @@
         display: inline-block;
         margin-bottom: 2px;
         font-size:20px;
+      }
+      .inline-icon-example {
+        font-size:20px;
+        color: var(--icon-blue-col);
       }
       .not-intro-error .editable {
         background:var(--axioms-notwellformed-col)!important; 
@@ -954,6 +999,145 @@
         .item {
           border-bottom: 0px;
         }
+      }
+      /* PRESENTATION STUFF */
+      .presentation .document {
+        padding-left:5em;
+        padding-top:1em;
+      }
+      .presentation .item-options {
+        display:none;
+      }
+      .presentation .item-options-bottom {
+        display:none;
+      }
+      .presentation .button-icon-insert {
+        display:none;
+      }
+      .readermode .item-options {
+        display:none;
+      }
+      .readermode .item-options-bottom {
+        display:none;
+      }
+      .readermode .button-icon-insert {
+        display:none;
+      }
+      .readermode .button-icon {
+        display:none;
+      }
+      .presentation .item-rule-theoremheading {
+        display:none;
+      }
+      .presentation .item-rule-axiom-set {
+        text-align: center;
+      }
+      .presentation .item-rule-theorem-box {
+        margin-left:30px;
+      }
+      .presentation .item-rule-proofbox {
+         font-size: x-large;
+      }
+      .presentation h1 {
+        font-family: 'Computer Modern Sans';
+        font-size:3em;
+        font-weight: bold;
+      }
+      .presentation img {
+        width: 80%;
+        margin-left: 10%;
+      }
+      .presentation h2 {
+        font-family: 'Computer Modern Sans';
+        font-size: 3em;
+        font-weight: bold;
+      }
+      .presentation h3 {
+        font-family: 'Computer Modern Sans';
+        font-size: 2.7em;
+        font-weight: bold;
+      }
+      .presentation h4 {
+        font-family: 'Computer Modern Sans';
+        font-size: 2.3em;
+        font-weight: bold;
+      }
+      .presentation .paragraph {
+        text-align: left;
+        font-size: 2em;
+        font-family: 'Computer Modern Sans';
+      }
+      .presentation-uncentred .paragraph {
+        padding-left:0.5em;
+        display:list-item;
+        list-style-type: square;     /* See https://developer.mozilla.org/en-US/docs/Web/CSS/list-style-type     */
+        list-style-position: inside;
+      }
+      .presentation .rule {
+         font-size: x-large;
+         margin-right:20px;
+      }
+      .presentation .rule-premise {
+        padding-right:20px;
+        padding-left:20px;
+      }
+      .presentation .rule-binder {
+         font-size: large;
+      }
+      .presentation .rule-rulename-defined {
+         font-size: large;
+      }
+      .presentation .rule-rulename-local {
+         font-size: large;
+      }
+      .presentation .rule-rulename-elim {
+         font-size: large;
+      }
+      .presentation .rule-rulename-cases {
+         font-size: large;
+      }
+      .presentation .rule-rulename-rewrite {
+         font-size: large;
+      }
+      .presentation .apply-option .rule-binder {
+         font-size: small !important;
+      }
+      .presentation .sidebar-goal-display .rule-binder {
+         font-size: small !important;
+      }
+      .presentation .apply-option .rule-rulename-defined {
+         font-size: small !important;
+      }
+      .presentation .apply-option .rule-rulename-local {
+         font-size: small !important;
+      }
+      .presentation .apply-option .rule-rulename-elim {
+         font-size: small !important;
+      }
+      .presentation .apply-option .rule-rulename-cases {
+         font-size: small !important;
+      }
+      .presentation .apply-option .rule-rulename-rewrite {
+         font-size: small !important;
+      }
+      .presentation-centred .paragraph {
+        text-align:center;
+      }
+      .presentation-centred .item {
+        text-align:center;
+      }
+      .bottom-widgets {
+        position:absolute;
+        left: auto;
+        right: 5px;
+        top: auto;
+        bottom: 5px;
+      }
+      .readermode .bottom-widgets .button-icon {
+        display:inline !important;
+      }
+      .readermode .sidebar-logo .button-icon {
+        display:inline !important;
       }
     </style> 
   </head>

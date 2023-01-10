@@ -10,6 +10,7 @@ import View.SyntaxDecl
 toGlobalAction :: Int -> LocalAction (I.Focus I.Item) (I.Action I.Item) -> E.EditorAction
 toGlobalAction _ (UpdateInput s) = E.UpdateInput s
 toGlobalAction _ Reset = E.Reset
+toGlobalAction _ Noop = E.Noop
 toGlobalAction i (Act a) = E.ItemAction (Just i) a
 toGlobalAction i (SetFocus f) = E.SetFocus (E.ItemFocus i f)
 
