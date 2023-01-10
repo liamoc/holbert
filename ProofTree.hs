@@ -16,6 +16,7 @@ import StringRep
 import Unification
 import Optics.Core
 import Control.Applicative
+import Data.Char (isDigit)
 
 data ProofDisplayData = PDD { proseStyle :: Bool, subtitle :: MS.MisoString} 
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
@@ -106,7 +107,8 @@ apply (r,prp) p pt = do
     guts context (PT opts xs lcls t _) = do
        (subst, sgs) <- lift $ applyRule (reverse xs ++ bound context) t prp
        tell subst
-       pure $ PT opts xs lcls t (Just (r,sgs))
+       let ctx' = context <> Context (reverse xs) lcls
+       pure $ PT opts xs lcls t (Just (r,map (deshadow ctx') sgs))
 
     applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRule skolems g (P.Forall (m :ms) sgs g') = do
@@ -115,6 +117,21 @@ apply (r,prp) p pt = do
        applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
     applyRule skolems g (P.Forall [] sgs g') = do
        (,map fromProp sgs) <$> unifier g g'
+
+deshadow :: Context -> ProofTree -> ProofTree
+deshadow ctx (PT disp names locals term mc) = let 
+      names' = map (disambiguate (bound ctx)) names
+      ctx' = ctx <> Context (reverse names') locals
+    in PT disp names' locals term (fmap (fmap (map (deshadow ctx'))) mc)
+  where 
+    disambiguate :: [T.Name] -> T.Name -> T.Name
+    disambiguate ns n | n `notElem` ns = n
+                      | otherwise = disambiguate ns (nextName n)
+
+    nextName n | numbers <- MS.takeWhileEnd isDigit n, not (MS.null numbers), prefix <- MS.dropWhileEnd isDigit n
+               = prefix <> MS.pack (show $ (read (MS.unpack numbers) :: Int) + 1)
+    nextName n = n <> "\'"
+
 
 applyRewrite :: P.NamedProp -> Bool -> Path -> ProofTree -> UnifyM ProofTree
 applyRewrite (r,prp) shouldReverse p pt = do
@@ -125,7 +142,8 @@ applyRewrite (r,prp) shouldReverse p pt = do
     guts context (PT d xs lcls t _) = do
        (subst, r, sgs) <- lift $ applyEq (reverse xs ++ bound context) shouldReverse t (r,prp)
        tell subst
-       pure $ PT d xs lcls t (Just (r,sgs))
+       let ctx' = context <> Context (reverse xs) lcls
+       pure $ PT d xs lcls t (Just (r, map (deshadow ctx') sgs))
 
 applyEq :: [T.Name] -> Bool -> T.Term -> P.NamedProp -> UnifyM (T.Subst, P.RuleRef, [ProofTree])
 applyEq skolems shouldReverse g (r,(P.Forall (m :ms) sgs g')) = do
@@ -163,7 +181,8 @@ applyElim (r,prp) p (rr,assm) pt = do
     guts context (PT opts xs lcls t _) = do
        (subst, sgs) <- lift $ applyRuleElim (reverse xs ++ bound context) t prp
        tell subst
-       pure $ PT opts xs lcls t (Just (P.Elim r rr,sgs))
+       let ctx' = context <> Context (reverse xs) lcls
+       pure $ PT opts xs lcls t (Just (P.Elim r rr,map (deshadow ctx') sgs))
 
     -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
     -- Will only try to unify goal if it unifies with an assumption
