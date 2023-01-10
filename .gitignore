@@ -2,3 +2,5 @@
 /dist
 /result
 /dist-newstyle
+*.local~
+.DS_Store
