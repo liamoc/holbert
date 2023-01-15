@@ -12,16 +12,23 @@ data SyntaxDecl = SyntaxDecl Int MisoString Associativity
 
 
 instance Control SyntaxDecl where
-  data Focus SyntaxDecl = Select
+  data Focus SyntaxDecl = SelectName | SelectPrec
     deriving (Show, Eq)
-  data Action SyntaxDecl = Edit
+  data Action SyntaxDecl = EditName | EditPrec | SetAssoc Associativity
     deriving (Show, Eq)
 
-  editable _ Select (SyntaxDecl _ s _) = Just s
+  editable _ SelectName (SyntaxDecl _ s _) = Just s
+  editable _ SelectPrec (SyntaxDecl i _  _) = Just (MS.pack $ show i)
 
   leaveFocus _ = pure
 
-  handle Edit s@(SyntaxDecl i _ assoc) = do 
+  handle (SetAssoc a) (SyntaxDecl i s _) = 
+    pure (SyntaxDecl i s a)
+  handle EditPrec (SyntaxDecl _ s a) = do
+    new <- textInput
+    let i = read $ MS.unpack new
+    pure (SyntaxDecl i s a)
+  handle EditName s@(SyntaxDecl i _ assoc) = do 
     new <- textInput
     case new of 
         "" -> errorMessage "Syntax cannot be empty"
@@ -30,6 +37,6 @@ instance Control SyntaxDecl where
         _ -> pure ()
         --  Check for notation conflicts?
     pure (SyntaxDecl i new assoc)
-  inserted _ = Select
+  inserted _ = SelectName
 
   definedSyntax (SyntaxDecl i s a) = [(i,s,a)]

@@ -101,6 +101,8 @@ labelledBrackets content label = multi
 parenthesise = ([inline "symbol" ["("]] ++) . (++ [inline "symbol" [")"]])
 
 textbox i act n = input_ [id_ i, onChange act, value_ n]
+numbox i act n = input_ [id_ i, type_ "number", onInput act, value_ n]
+
 expandingTextbox i act n 
   = multi
     [ input_ [id_ i, class_ $ "expandingTextbox-" <> i, onChange act, value_ n]
@@ -167,7 +169,7 @@ editor typ act = editor' typ (Act act) UpdateInput Reset
 editor' typ act update reset n =
   form_
     [class_ $ "editor editor-" <> typ, onSubmit act]
-    [ (if typ `elem` ["expanding", "newrule"] then expandingTextbox else textbox) "editor-textbox" update n
+    [ (if typ == "number" then numbox else (if typ `elem` ["expanding", "newrule"] then expandingTextbox else textbox)) "editor-textbox" update n
     , submitButton "button-icon button-icon-blue" "Confirm" [typicon "tick-outline"]
     , iconButton "grey" "Cancel" "times-outline" reset 
     , focusHack "editor-textbox"

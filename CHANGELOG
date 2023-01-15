@@ -1,6 +1,17 @@
 * In progress
-- New feature: mix-fix syntax declarations
-- New feature: Multi-file documents
+- Improvement: Can set associativity and precedence of mix-fix input syntax.
+
+* Version 0.5.1
+- New feature: Tooltip footnotes for references and footnotes.
+- New feature: Goal tag markup
+- New feature: Overline syntax from * postfix.
+- New feature: Embedding rules in text
+- New feature: Embedding rule names in text
+- New feature: "Reader mode" that hides buttons.
+- New feature: "Presentation mode" that shows one section at a time.
+- Improvement: Auto-rename introduced metas to avoid shadowing.
+- New feature: Basic mix-fix syntax notation support.
+
 * Version 0.5
 - Improvement: Reflexivity now auto-applied by clicking the rewrite button
 - New feature: Can now define multiple rules in an Axiom block

@@ -271,12 +271,19 @@
         display: none;
       }
       /* EDITOR FORMS */
-
       .editor input {
         border: 1px solid var(--editor-border-col);
         border-radius:4px;
         background: var(--editor-bg-col);
         color: var(--fg-col);
+      }
+      .editor-number {
+        display:inline;
+        font-family: 'Computer Modern Typewriter';
+      }
+      .editor-number input {
+        font-family: 'Computer Modern Typewriter';
+        width:5ch;
       }
       .editor-expanding {
         display:inline
@@ -723,8 +730,25 @@
         margin-right: 0.5em;
       }
 
-      .item-syntax > .editable {
+      .item-syntax > button.editable {
         font-family: 'NeoEulerMedium';
+      }
+      .item-syntax > select {
+        border: 0px;
+        appearance: none;
+        text-indent: 1px;
+        font-family: 'Computer Modern Concrete';
+        font-style: italic;
+        padding-left:5px;
+        margin-left:5px;
+      }
+      .item-syntax-precedence {
+        display:inline;
+        font-size:13.3333px;
+        font-style:italic;
+      }
+      .item-syntax-precedence > button {
+        font-family: 'Computer Modern Typewriter';
       }
       /* SIDEBAR */
 
