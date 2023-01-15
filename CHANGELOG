@@ -3,6 +3,7 @@
 
 * Version 0.5.1
 - New feature: Tooltip footnotes for references and footnotes.
+- New feature: Links are supported in paragraphs as are images by URL.
 - New feature: Goal tag markup
 - New feature: Overline syntax from * postfix.
 - New feature: Embedding rules in text
