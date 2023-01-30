@@ -1,5 +1,6 @@
 * In progress
 - Improvement: Can set associativity and precedence of mix-fix input syntax.
+- New feature: Summary proof display style (breaks file format)
 
 * Version 0.5.1
 - New feature: Tooltip footnotes for references and footnotes.

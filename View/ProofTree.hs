@@ -15,7 +15,7 @@ import View.Term
 import View.Paragraph (renderText)
 
 
-renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
+renderProofTree opts pt tbl selected textIn = renderPT False False False [] [] [] pt
   where
     
     termDOs = tDOs opts
@@ -32,16 +32,16 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
       Just (R.ProofFocus t g) -> g 
       _ -> Nothing
 
-    renderPT inTree showPreamble rns ctx pth (PT ptopts sks lcls prp msgs) =
+    renderPT inTree inAbbr showPreamble rns ctx pth (PT ptopts sks lcls prp msgs) =
       let binders = (if showMetaBinders opts && not showPreamble then concat (zipWith (metabinder' pth) [0 ..] sks) else [])
                  ++ boundrules
           boundrules = if assumptionsMode opts == Hidden && not showPreamble then map rulebinder [length rns .. length rns + length lcls - 1] else []       
           premises = case msgs of
-            Just (rr, sgs) -> zipWith (renderPT (inTree || shouldBeTree) (isJust ptopts) rns' ctx') (map (: pth) [0 ..]) sgs
+            Just (rr, sgs) -> zipWith (renderPT (inTree || shouldBeTree) (inAbbr || shouldBeAbbr) (isJust ptopts) rns' ctx') (map (: pth) [0 ..]) sgs
             Nothing        -> []
           spacer = maybe (goalButton pth) (const $ "") msgs
 
-          ruleTitle = Just $ maybe "?" (addNix . renderRR . fst) msgs
+          ruleTitle = Just $ maybe "?" ((if inAbbr || shouldBeAbbr then id else addNix) . renderRR . fst) msgs
 
 
           subtitleWidget = case selected of
@@ -69,7 +69,15 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
               New  | not showPreamble || inTree -> lcls
               Cumulative | not showPreamble || inTree -> rns'
               _ -> []) prp
-       in if shouldShowWords then 
+       in if inAbbr then 
+            multi [fromMaybe "" ruleTitle, spacer, if null premises then "" else multi $ ["("] ++ intersperse ", " premises ++ [")"] ]
+          else if fmap style ptopts == Just Abbr && not inTree then
+            multi $ (if showPreamble then id else (span_ [class_ "item-rule-proofheading"] ["Proof. "] :) )
+                  $ (preamble:)
+                  $ (" by ":)
+                  $ ((if isNothing msgs then id else addNix) (multi [fromMaybe "" ruleTitle, spacer, if null premises then "." else multi $ ["("] ++ intersperse ", " premises ++ [")"] ]):)
+                  $ [styleButton]
+          else if shouldShowWords then 
             multi $ (if showPreamble then id else (span_ [class_ "item-rule-proofheading"] ["Proof. "] :) )
                   $ (preamble:)
                   $ (multi [" by ", fromMaybe "" ruleTitle, spacer, if null premises then ". " else ": "]  :)
@@ -86,12 +94,15 @@ renderProofTree opts pt tbl selected textIn = renderPT False False [] [] [] pt
         wordsrule [p] =  div_ [class_ "word-proof"] [p]
         wordsrule premises =
           div_ [class_ "word-proof"] [ ul_ [] $ map (li_ [] . pure) premises ]
-        styleButton = if shouldShowWords then 
-                        iconButton "grey" "Switch to tree style" "tree" (Act $ R.ToggleStyle pth)
-                      else 
-                        iconButton "grey" "Switch to prose style" "flow-children" (Act $ R.ToggleStyle pth)
+        styleButton = div_ [class_ "proof-style-menu"] 
+                           [ div_ [class_ "proof-style-menu-options"] 
+                                  [ if not shouldBeTree then button "button-style" "Switch to tree style"  (Act $ R.SetStyle pth Tree) ["Tree"] else "" 
+                                  , if not shouldShowWords || shouldBeAbbr then button "button-style" "Switch to prose style"  (Act $ R.SetStyle pth Prose) ["Prose"] else ""
+                                  , if not shouldBeAbbr then button "button-style" "Switch to summary style" (Act $ R.SetStyle pth Abbr) ["Summary"] else "" ]
+                           , iconButton "grey" "Switch proof style" "brush" Noop ]
         shouldShowWords = not inTree && not shouldBeTree
-        shouldBeTree = case ptopts of Nothing -> True; Just opts -> not (proseStyle opts)
+        shouldBeTree = case ptopts of Nothing -> True; Just opts -> style opts == Tree 
+        shouldBeAbbr = case ptopts of Nothing -> False; Just opts -> not inTree && style opts == Abbr 
         addNix t = multi [t, iconButton "red" "Delete proof subtree" "trash" (Act $ R.Nix pth)]
 
         rulebinder v = multi [localrule v, miniTurnstile]

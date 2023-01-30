@@ -146,6 +146,7 @@ inductionRule str i formers cases =
                eachSubgoal _ _ = Nothing
             in (Forall vs (sgs' ++ sgs) newConc)
       | otherwise = error "Not valid introduction rule"
+
 caseRule :: MisoString -> Int -> [Prop] -> NamedProp
 caseRule str i cases = 
   let (names, subgoals) = foldr (\c (names,r) -> let (names', r') = caseSubgoal c in (merge names names', r':r))

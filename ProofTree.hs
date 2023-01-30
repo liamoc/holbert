@@ -18,7 +18,10 @@ import Optics.Core
 import Control.Applicative
 import Data.Char (isDigit)
 
-data ProofDisplayData = PDD { proseStyle :: Bool, subtitle :: MS.MisoString} 
+data ProofStyle = Tree | Prose | Calc | Abbr
+  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+data ProofDisplayData = PDD { style :: ProofStyle, subtitle :: MS.MisoString} 
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data ProofTree = PT (Maybe ProofDisplayData) [T.Name] [P.Prop] T.Term (Maybe (P.RuleRef, [ProofTree]))
@@ -52,9 +55,9 @@ path :: [Int] -> IxAffineTraversal' Context ProofTree ProofTree
 path [] = iatraversal (Right . (mempty,)) (const id)
 path (x:xs) = path xs %+ subgoal x
 
-style :: Lens' ProofTree (Maybe ProofDisplayData)
-style = lens (\(PT opts _  _ _ _ ) -> opts)
-             (\(PT _ xs lcls t sg) opts -> PT opts xs lcls t sg)
+displaydata :: Lens' ProofTree (Maybe ProofDisplayData)
+displaydata = lens (\(PT opts _  _ _ _ ) -> opts)
+                   (\(PT _ xs lcls t sg) opts -> PT opts xs lcls t sg)
 
 assumptions :: Lens' ProofTree [P.Prop]
 assumptions = lens (\(PT _    _  lcls _ _ ) -> lcls)

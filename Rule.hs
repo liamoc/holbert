@@ -141,7 +141,7 @@ data RuleFocus = ProofFocus ProofFocus (Maybe GoalSummary)
                   deriving (Show, Eq)
 
 data RuleAction = Tactic ProofState PT.Path
-                  | ToggleStyle PT.Path
+                  | SetStyle PT.Path PT.ProofStyle
                   | SetSubgoalHeading PT.Path
                   | Nix PT.Path
                   | SelectGoal PT.Path Bool -- bool is to show non-intro rules or not
@@ -165,7 +165,7 @@ editableRI tbl (RuleBinderFocus pth i) = preview (prop % P.path pth % P.metabind
 editableRI tbl (RuleTermFocus pth) = Just . P.getConclusionString tbl pth . view prop
 editableRI tbl (ProofFocus (MetavariableFocus i) g) = const (Just ("?" <> pack (show i)))
 editableRI tbl NameFocus = preview name
-editableRI tbl (ProofFocus (SubtitleFocus pth) g) = fmap (fromMaybe "Show:" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.style)
+editableRI tbl (ProofFocus (SubtitleFocus pth) g) = fmap (fromMaybe "Show:" . fmap PT.subtitle) . preview (proofState % proofTree % PT.path pth % PT.displaydata)
 editableRI _ _ = const Nothing
 
 leaveFocusRI (ProofFocus (ProofBinderFocus p i) g) = noFocus . handleRI (RenameProofBinder p i) --These define the action when the user leaves focus on an item
@@ -211,16 +211,16 @@ handleRI (Tactic ps pth) state = let
         case newFocus of
           Just f -> handleRI (SelectGoal f False) state'
           _      -> clearFocus >> pure state'
-handleRI (ToggleStyle pth) state = do
-  let f Nothing = Just (PT.PDD { PT.proseStyle = True, PT.subtitle = "Show:" })
-      f (Just pdd) = Just $ pdd { PT.proseStyle = not (PT.proseStyle pdd)}
-  pure $ over (proofState % proofTree % PT.path pth % PT.style) f state
+handleRI (SetStyle pth st) state = do
+  let f Nothing = Just (PT.PDD { PT.style = st, PT.subtitle = "Show:" })
+      f (Just pdd) = Just $ pdd { PT.style = st}
+  pure $ over (proofState % proofTree % PT.path pth % PT.displaydata) f state
 handleRI (SetSubgoalHeading pth) state = do
   new <- textInput
-  let f Nothing = Just (PT.PDD {  PT.proseStyle = False, PT.subtitle = new })
+  let f Nothing = Just (PT.PDD {  PT.style = PT.Tree, PT.subtitle = new })
       f (Just pdd) = Just $ pdd { PT.subtitle = new }
   foc <- getOriginalFocus
-  let state' = over (proofState % proofTree % PT.path pth % PT.style) f state
+  let state' = over (proofState % proofTree % PT.path pth % PT.displaydata) f state
   case foc of
     Just (ProofFocus _ (Just (GS _ _ _ p _))) -> handleRI (SelectGoal p False) state'
     _ -> pure state'

@@ -636,6 +636,33 @@
         color: var(--fg-col);
       }
 
+      .proof-style-menu {
+        display:inline-block ;
+        position:relative;
+        margin-bottom:5px;
+      }
+
+      .proof-style-menu-options {
+        display: none;
+        position: absolute;
+        padding: 0px;
+        z-index: 1;
+        border: 1px solid var(--tab-border-col);
+      }
+      .proof-style-menu-options button {
+        font-family: 'Computer Modern Sans';
+        border:0px;
+        background-color: var(--apply-option-bg-col);
+        color: var(--apply-option-border-col);
+      }
+      .proof-style-menu-options button:hover {
+        color: var(--apply-option-hover-border-col);
+        background-color: var(--apply-option-hover-bg-col);
+      }
+
+      .proof-style-menu:hover .proof-style-menu-options {
+        display: block;
+      }
       /* COLLAPSABLE BLOCKS */
       .collapsable-toggle {
         display: none;
