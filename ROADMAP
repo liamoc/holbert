@@ -4,15 +4,13 @@
    - Submission to server?
    - Lockable regions
 - Elimination rules and induction
-   - Defining inductive sets via grammar, with injectivity and distinctness theorems.
+   - Defining inductive sets via grammar
 - Equality and Definitions (Rayhana)
    - Definitions that are stricter than axioms.
    - Inductive definitions
    - Transitive calculational proofs IN PROGRESS
    - Rewriting in assumptions
    - Rewriting to use transitivity when rewriting on an equality proof.
-- Syntax (Yueyang)
-   - Mix-fix definitions, parsing and pretty printing.
 - Built-ins
    - Strings
    - Naturals

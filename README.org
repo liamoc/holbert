@@ -59,6 +59,4 @@ The following MIT licensed JS libraries are used:
 
 - Support for deferred proof steps to lemmas.
 - "Books", multiple interlinked documents.
-- (Built-in) support for equality
-- (Built-in) support for induction
 - And much much more!

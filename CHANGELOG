@@ -1,6 +1,12 @@
 * In progress
 - Improvement: Can set associativity and precedence of mix-fix input syntax.
 - New feature: Summary proof display style (breaks file format)
+- New feature: Constructors. Identifiers that begin with '@' are assumed to be constructors, 
+               which are rendered specially, and are automatically considered to be injective
+               and disjoint from all other constructors. Injectivity and Disjointness are
+               automatically used when eliminating on an equality assumption where both
+               sides are constructors.
+- Bug fix: Elimination rules that only refer to outer skolem variables no longer cause a crash.
 
 * Version 0.5.1
 - New feature: Tooltip footnotes for references and footnotes.
@@ -22,6 +28,7 @@
 - Improvement: Can rewrite with local assumptions
 - Improvement: Unification now gives better solutions for induction rules.
 - Improvement: Axiom blocks can now contain multiple rules.
+
 * Version 0.4
 - New feature: Goal display on RHS
 - Improvement: Only displays applicable rules
