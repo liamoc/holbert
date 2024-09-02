@@ -18,13 +18,20 @@ import Data.List(foldl',elemIndex)
 
 type RuleName = MisoString
 
+data CalcLocation = LHS | RHS
+                  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
 data RuleRef = Defn RuleName
              | Local Int
              | Cases MisoString Int
              | Induction MisoString Int
+             -- Built in laws
+             | Refl
+             | Transitivity
+             | Distinctness RuleRef
+             | Injectivity
              -- below are for presentation only in proofs
-             | Refl -- built in equality law
-             | Rewrite RuleRef Bool -- bool is if it is flipped
+             | Rewrite RuleRef Bool (Maybe CalcLocation) -- bool is if it is flipped
              | Elim RuleRef RuleRef
              deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
@@ -36,7 +43,7 @@ defnName v = case v of
   _ -> Nothing
 
 builtInRefl :: NamedProp
-builtInRefl = (Refl, Forall ["x"] [] (T.applyApTelescope (T.Const "_=_") [T.LocalVar 0, T.LocalVar 0]))
+builtInRefl = (Refl, Forall ["x"] [] (T.applyApTelescope (T.Const "_=_" False) [T.LocalVar 0, T.LocalVar 0]))
 
 type NamedProp = (RuleRef, Prop)
 data Prop = Forall [T.Name] [Prop] T.Term deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
@@ -68,7 +75,7 @@ metabinders = lens (\(Forall xs _    _) -> xs)
                    (\(Forall _  lcls t) xs -> Forall xs lcls t)
 
 blank :: Prop
-blank = Forall [] [] (T.Const "???")
+blank = Forall [] [] (T.Const "???" False)
 
 removePremise :: Int -> Prop -> Prop
 removePremise i (Forall vs lcls g) = let (first,_:rest) = splitAt i lcls
@@ -89,8 +96,8 @@ removeBinder :: Int -> Prop -> Prop
 removeBinder x (Forall vs lcls g) = let
     dbi = length vs - x - 1
     (first,_:last) = splitAt x vs
-    g' = T.subst (T.Const "???") dbi g
-    lcls' = map (subst (T.Const "???") dbi) lcls
+    g' = T.subst (T.Const "???" False) dbi g
+    lcls' = map (subst (T.Const "???" False) dbi) lcls
  in Forall (first ++ last) lcls' g'
 
 isUsed :: Int -> Prop -> Bool
@@ -129,17 +136,17 @@ inductionRule str i formers cases =
   let subgoals = map caseSubgoal cases
       names' = map (\i -> "§" <> MS.pack (show i)) (take i [0..])
       Just ii = elemIndex (str,i) formers
-      elimAsm = T.applyApTelescope (T.Const str) (map T.LocalVar $ reverse [0..i-1])
+      elimAsm = T.applyApTelescope (T.Const str False) (map T.LocalVar $ reverse [0..i-1])
       conclusion = T.applyApTelescope (T.LocalVar $ i + ii) (map T.LocalVar $ reverse [0..i-1])
       names'' = map (\i -> "§P" <> MS.pack (show i)) (take (length formers) [0..])
       in (Induction str i, Forall (names'' ++ names') (Forall [] [] elimAsm:subgoals) conclusion)
   where
     caseSubgoal (Forall vs sgs t) 
-      | (T.Const k, rest) <- T.peelApTelescope t , Just ii <- elemIndex (k,length rest) formers
+      | (T.Const k con, rest) <- T.peelApTelescope t , Just ii <- elemIndex (k,length rest) formers
          = let newConc = T.applyApTelescope (T.LocalVar (length vs + i + ii)) rest
                sgs' = mapMaybe (eachSubgoal (length vs)) sgs
                eachSubgoal offset (Forall vvs sggs tt) 
-                 | (T.Const kk, sgRest) <- T.peelApTelescope tt
+                 | (T.Const kk kon, sgRest) <- T.peelApTelescope tt
                  , Just iii <- elemIndex (kk, length sgRest) formers
                  = let sggs' = mapMaybe (eachSubgoal $ offset + length vvs) sggs 
                     in Just (Forall vvs (sggs' ++ sggs) $ T.applyApTelescope (T.LocalVar (length vvs + offset + i + iii)) sgRest)
@@ -152,12 +159,12 @@ caseRule str i cases =
   let (names, subgoals) = foldr (\c (names,r) -> let (names', r') = caseSubgoal c in (merge names names', r':r))
                                 (replicate i Nothing,[]) cases 
       names' = zipWith (\i mn -> maybe ("§" <> MS.pack (show i)) id mn) [0..] names
-      elimAsm = T.applyApTelescope (T.Const str) (map T.LocalVar $ reverse [0..i-1])
+      elimAsm = T.applyApTelescope (T.Const str False) (map T.LocalVar $ reverse [0..i-1])
       in (Cases str i, Forall ("§P":names') (Forall [] [] elimAsm:subgoals) (T.LocalVar i))
   where
     merge = zipWith (<|>)
     caseSubgoal (Forall vs sgs t) 
-      | (T.Const k, rest) <- T.peelApTelescope t , length rest == i, k == str
+      | (T.Const k con, rest) <- T.peelApTelescope t , length rest == i, k == str
          = let (sgs', vs', rest',names) = formatArgs vs rest sgs (i-1)
             in (names, Forall vs' sgs' (T.LocalVar (length vs' + i)))
       | otherwise = error "Not valid introduction rule"
@@ -172,19 +179,19 @@ caseRule str i cases =
                    (sgs', vs'', as',names) = formatArgs vs' (map (T.subst a' n) as) (map (subst a' n) sgs) (i-1)
                 in (sgs', vs'', T.LocalVar (i + length vs''):as', Just name:names)
           _ -> let (sgs',  vs', as',names) = formatArgs vs as sgs (i-1)
-                   sg = Forall [] [] $ T.Ap (T.Ap (T.Const "_=_") (T.LocalVar (i + length vs'))) a
+                   sg = Forall [] [] $ T.Ap (T.Ap (T.Const "_=_" False) (T.LocalVar (i + length vs'))) a
                 in (sg:sgs', vs', T.LocalVar (i + length vs'): as', Nothing:names)
 
 isRewrite :: Prop -> Bool 
-isRewrite (Forall _ _ c) | (T.Const "_=_", rest) <- T.peelApTelescope c = True
+isRewrite (Forall _ _ c) | (T.Const "_=_" False, rest) <- T.peelApTelescope c = True
 isRewrite _ = False
 
 isIntroduction :: Prop -> Bool 
-isIntroduction (Forall _ _ c) | (T.Const _, rest) <- T.peelApTelescope c = True
+isIntroduction (Forall _ _ c) | (T.Const _ _, rest) <- T.peelApTelescope c = True
 isIntroduction _ = False
 
 introRoot :: Prop -> (MisoString, Int)
-introRoot (Forall _ _ c) | (T.Const k, rest) <- T.peelApTelescope c = (k, length rest)
+introRoot (Forall _ _ c) | (T.Const k _, rest) <- T.peelApTelescope c = (k, length rest)
 introRoot _ = error "Not an intro rule!"
 
 unifierProp :: Prop -> Prop -> UnifyM T.Subst

@@ -49,6 +49,7 @@
         --rule-name-local-col: #0000AA;
         --freevar-col: #00AA00;
         --metavar-col: gray;
+        --constructor-col: slategray;
         --bound-col: #9343a7;
         --placeholder-fg-col: #AAA;
         --symbol-col: #990000;
@@ -102,6 +103,7 @@
             --freevar-col: #AAFFAA;
             --metavar-col: #777;
             --bound-col: #ffaef5;
+            --constructor-col: lightsteelblue;
             --placeholder-fg-col: #777;
             --symbol-col: #FF9999;
             --item-inserting-col: #CC99FF;
@@ -506,7 +508,16 @@
       .item-rule-axiom-set {
         white-space: normal;
       }
-
+      .rule-eq-cell {
+        font-family: 'NeoEulerMedium';
+        vertical-align:middle;        
+      }
+      .rule-eq-ref {
+        padding-left: 20px;
+      }
+      .rule-eq-equals {
+        padding-bottom:6px;
+      }
       .rule-cell {
         font-family: 'NeoEulerMedium';
         vertical-align:bottom;
@@ -581,6 +592,11 @@
       }
       .term-bound {
         color: var(--bound-col);
+      }
+      .term-constructor {
+        font-family: 'Computer Modern Sans';
+        font-weight: bold;
+        color: var(--constructor-col);
       }
       .placeholder {
         color: var(--placeholder-fg-col);

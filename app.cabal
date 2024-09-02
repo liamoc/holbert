@@ -42,5 +42,5 @@ executable app
     View.Item
   ghcjs-options:
     -dedupe
-  build-depends:       base, ghcjs-base, aeson, text, miso, mtl, containers, optics-core, Earley
+  build-depends:       base, ghcjs-base == 0.2.1.0, aeson, hashable==1.3.5.0, text, miso, mtl, containers==0.6.8, optics-core, Earley, jsaddle == 0.9.8.2, unordered-containers==0.2.19.1
   default-language:    Haskell2010 

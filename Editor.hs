@@ -186,7 +186,8 @@ runAction' NextSlide ed = case presentation ed of
 runAction' PrevSlide ed = case presentation ed of 
                             Nothing -> Right $ ed
                             Just i  -> Right $ ed { presentation = Just (prevSlide (document ed) i) }
-runAction' (LoadDocument m) ed = Right $ ed { document = m, currentFocus = NoFocus, message = Nothing}
+runAction' (LoadDocument m) ed = Right $ ed { document = migrate m, currentFocus = NoFocus, message = Nothing}
+  where migrate = id -- map (\i -> over (I.rule % R.ruleItems % R.proofState % R.proofTree % PT.ruleRefs) (\ x -> case x of Prp.OldRewrite a b -> Prp.Rewrite a b Nothing; y -> y) i) 
 runAction' (ToggleReader) ed = Right $ ed { readerMode = not (readerMode ed) }
 runAction' (DisplayError e) ed = Left e
 

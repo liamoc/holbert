@@ -28,25 +28,27 @@ renderTermCtxEditable editable context opts trm = renderTerm' True context trm
         MetaVar i -> case editable of 
           Nothing -> metavar i
           Just (textIn, focus, act, selected) -> editableMath textIn (metavar i) (focus i) (act i) [] selected
-        Const s -> constant s
+        Const s False -> constant s
+        Const s True -> constructor s
 
-      | (Const n, [], args) <- peelApTelescope' t
+      | (Const n b, [], args) <- peelApTelescope' t
       , showInfixes opts
       , MS.count "_" n == length args
-      = multi $ (if outer then id else parenthesise) $ intersperse space (infixTerms n args)
+      = multi $ (if outer then id else parenthesise) $ intersperse space (infixTerms n args b)
 
       | (x, ts, args) <- peelApTelescope' t
       = multi $ (if outer then id else parenthesise) $
           renderTerm'' False ctx x : space : intersperse space (map (renderTerm'' False ctx) args)
       where
-        infixTerms str [] | MS.null str = []
-        infixTerms str [] = [constant str]
-        infixTerms str (x : xs) | Just ('_',str) <- MS.uncons str = renderTerm' False ctx x : infixTerms str xs
-        infixTerms str args | (first, rest) <- MS.span (/= '_') str = constant first : infixTerms rest args
+        infixTerms str [] b | MS.null str = []
+        infixTerms str [] b = [if b then constructor str else constant str]
+        infixTerms str (x : xs) b | Just ('_',str) <- MS.uncons str = renderTerm' False ctx x : infixTerms str xs b
+        infixTerms str args b | (first, rest) <- MS.span (/= '_') str = (if b then constructor first else constant first) : infixTerms rest args b
 
     freevar v = inline "term-freevar" (name v)
     metavar v = inline "term-metavar" (name $ MS.pack ('?' : show v))
     constant v = inline "term-const" (name v)
+    constructor v = inline "term-constructor" (name v)
     boundName txt = inline "term-bound" (name txt)
     binder txt bdy = inline "term-binder" $ [boundName txt, ".", space, bdy]
 

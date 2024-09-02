@@ -144,6 +144,7 @@ data RuleAction = Tactic ProofState PT.Path
                   | SetStyle PT.Path PT.ProofStyle
                   | SetSubgoalHeading PT.Path
                   | Nix PT.Path
+                  | NormaliseEquality PT.Path
                   | SelectGoal PT.Path Bool -- bool is to show non-intro rules or not
                   | ExamineAssumption Int
                   | RewriteGoal Bool
@@ -176,6 +177,25 @@ leaveFocusRI NameFocus              = noFocus . handleRI Rename
 --TODO handle other foci?
 leaveFocusRI _                      = pure
 
+
+distinctness :: P.NamedProp -> Maybe P.NamedProp
+distinctness (n, P.Forall xs [] (T.Ap (T.Ap (T.Const "_=_" False) a) b)) 
+  | (T.Const a' True, avs) <- T.peelApTelescope a
+  , (T.Const b' True, bvs) <- T.peelApTelescope b
+  = if a' /= b' || length avs /= length bvs then 
+      Just (P.Distinctness n, P.Forall ["P"] [] (T.LocalVar 0))
+    else Nothing 
+distinctness _ = Nothing
+
+
+injectivity :: P.NamedProp -> Maybe P.NamedProp
+injectivity (n, asm@(P.Forall [] [] (T.Ap (T.Ap (T.Const "_=_" False) a) b)))
+  | (T.Const a' True, avs) <- T.peelApTelescope a
+  , (T.Const b' True, bvs) <- T.peelApTelescope b
+  = if a' == b' && length avs == length bvs then 
+      Just (P.Injectivity, P.Forall ["P"] (P.raise 1 asm: [ P.Forall [] (zipWith (\v1 v2 -> P.Forall [] [] $ T.raise 1 $ T.Ap (T.Ap (T.Const "_=_" False) v1) v2) avs bvs) (T.LocalVar 0) ] ) (T.LocalVar 0) )
+    else Nothing 
+injectivity _ = Nothing
 handleRI :: RuleAction -> RuleItem -> Controller RuleFocus RuleItem
 
 handleRI (SelectGoal pth b) state = do
@@ -187,9 +207,14 @@ handleRI (ExamineAssumption i) state = do
   foc <- getOriginalFocus 
   case foc of 
     Just (ProofFocus _ (Just gs@(GS _ lcls _ p _))) | (it:_) <- drop i lcls -> do
-      rules <- getKnownRules
-      setFocus (ProofFocus (AssumptionFocus i (mapMaybe (\r -> (,) r <$> applyERuleTactic state (fst it) r p) rules)) (Just gs))
-      pure state
+      case distinctness (fst it) of
+        Just rule | Just a <- applyRuleTactic state rule p -> handleRI a state
+        _ -> case injectivity (fst it) of 
+          Just rule | Just a <- applyERuleTactic state (fst it) rule p -> handleRI a state
+          _ -> do
+            rules <- getKnownRules
+            setFocus (ProofFocus (AssumptionFocus i (mapMaybe (\r -> (,) r <$> applyERuleTactic state (fst it) r p) rules)) (Just gs))
+            pure state
     _ -> pure state
 handleRI (RewriteGoal rev) state = do 
   foc <- getOriginalFocus 
@@ -226,7 +251,7 @@ handleRI (SetSubgoalHeading pth) state = do
     _ -> pure state'
 handleRI (Nix pth) state = do
     clearFocus
-    pure $ set (proofState % proofTree % PT.path pth % PT.step) Nothing state
+    pure $ over (proofState % proofTree % PT.path pth) PT.nix state
 
 handleRI (RenameProofBinder pth i) state = do
     new <- textInput
@@ -251,6 +276,8 @@ handleRI (RenameRuleBinder pth i) state = do
     clearFocus -- should it be updateterm?
     pure $ set (prop % P.path pth % P.metabinders % ix i) new state
 
+handleRI (NormaliseEquality p) state = 
+    pure $ over (proofState % proofTree) (PT.normaliseEquality p) state
 handleRI (DeleteRuleBinder pth i) state = do
     when (maybe False (P.isBinderUsed i) $ preview (prop % P.path pth) state) $ errorMessage "Cannot remove binder: is in use"
     invalidate (view name state)

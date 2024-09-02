@@ -156,11 +156,11 @@ viewEditor x =
           ]
         , tr_ []
           [ td_ [class_ "sidebar-paragraph-editing-lhs"] [code_ [] ["$_/\\_ A B$"]]
-          , td_ [class_ "inline-math"] [renderTerm (TDO True True) $ T.Ap (T.Ap (T.Const "_/\\_") (T.Const "A")) (T.Const "B")]
+          , td_ [class_ "inline-math"] [renderTerm (TDO True True) $ T.Ap (T.Ap (T.Const "_/\\_" False) (T.Const "A" False)) (T.Const "B" False)]
           ]
         , tr_ []
           [ td_ [class_ "sidebar-paragraph-editing-lhs"] [code_ [] ["$A B:_/\\_ A B$"]]
-          , td_ [class_ "inline-math"] $ pure $ renderTermCtx ["A", "B"] (TDO True True) (T.Ap (T.Ap (T.Const "_/\\_") (T.LocalVar 1)) (T.LocalVar 0))
+          , td_ [class_ "inline-math"] $ pure $ renderTermCtx ["A", "B"] (TDO True True) (T.Ap (T.Ap (T.Const "_/\\_" False) (T.LocalVar 1)) (T.LocalVar 0))
           ]
         ]
       ]

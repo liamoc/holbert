@@ -48,7 +48,7 @@ generateTable tbl = (map . map) (\(_,str, a) -> (holey str, a)) $ groupBy ((==) 
 grammar :: SyntaxTable -> EP.Grammar r (EP.Prod r Token Token Term)
 grammar tbl = mdo
   ident     <- EP.rule $ getWord <$> EP.satisfy isLegalWord
-  atom      <- EP.rule $ Const <$> ident
+  atom      <- EP.rule $ smartConst <$> ident
                       <|> EP.namedToken LParen *> program <* EP.namedToken RParen
   normalApp <- EP.rule $ atom
                       <|> Ap <$> normalApp <*> atom
@@ -58,7 +58,10 @@ grammar tbl = mdo
   return program
   where
     maskCon (Binder b) = M b
-    mixfixCon op ts = applyApTelescope (Const $ concatMixfix op) ts
+    smartConst c = case MS.uncons c of
+       Just ('@',xs) -> Const xs True
+       _ -> Const c False
+    mixfixCon op ts = applyApTelescope (smartConst $ concatMixfix op) ts
     getWord (Word w) = w
     tbl' = generateTable tbl
     table = map (map $ first $ map $ fmap (EP.namedToken . Word)) $ tbl'
@@ -71,8 +74,9 @@ grammar tbl = mdo
 postProc :: [Name] -> Term -> Term
 postProc ctx (Lam (M b) t) = Lam (M b) $ postProc (b:ctx) t
 postProc ctx (Ap t1 t2) = Ap (postProc ctx t1) (postProc ctx t2) 
-postProc ctx (Const x) | Just v <- elemIndex x ctx = LocalVar v
-                       | otherwise = Const x
+postProc ctx (Const x False) | Just v <- elemIndex x ctx = LocalVar v
+                             | otherwise = Const x False
+postProc ctx (Const x True) = Const x True
 
 type Error = MS.MisoString
 
@@ -94,16 +98,16 @@ prettyPrint tbl ctx t = MS.ms $ B.toLazyText $ go ctx t
     go ctx e = go' ctx e
     go' ctx (Ap a1 a2) 
       | (x, ts) <- peelApTelescope (Ap a1 a2) = case x of 
-        Const op 
-          | isMixfix op, MS.count "_" op == length ts -> printHoley op $ (map $ go'' ctx) ts
+        Const op b 
+          | isMixfix op b, MS.count "_" op == length ts -> printHoley (if b then "@" <> op else op) $ (map $ go'' ctx) ts
         _ -> go' ctx a1 <> " " <> go'' ctx a2
       where
-        isMixfix op = elem op [ys |  (_,ys, _) <- tbl]  
+        isMixfix op b = elem (if b then "@"<>op else op) [ys |  (_,ys, _) <- tbl]  
         
     go' ctx (Lam n t) = "(" <> go ctx (Lam n t) <> ")"
     go' ctx e = go'' ctx e
     go'' ctx (LocalVar v) = B.fromText (MS.fromMisoString (ctx !! v))
-    go'' ctx (Const id) = B.fromText $ MS.fromMisoString $ id
+    go'' ctx (Const id c) = (if c then "@" else mempty) <> (B.fromText $ MS.fromMisoString $ id)
     go'' ctx (MetaVar id) = "?" <> B.fromText (MS.fromMisoString $ MS.pack (show id))
     go'' ctx e = "(" <> go ctx e <> ")"
 

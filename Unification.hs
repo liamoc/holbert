@@ -60,7 +60,7 @@ fresh = MetaVar <$> lift gen
 
 proj sS s = case peelApTelescope (devar sS s) of
         (Lam _ t,_) -> proj sS t
-        (Const _,ss) -> foldlM proj sS ss
+        (Const _ _,ss) -> foldlM proj sS ss
         (LocalVar i,ss) | i >= 0 -> foldlM proj sS ss
                         | otherwise -> throwError "Unification Failure i < 0"
         (MetaVar f,bs) -> do

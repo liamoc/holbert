@@ -38,7 +38,7 @@ type Index = Int
 data Term = LocalVar Index
           | MetaVar Id
           | Ap Term Term
-          | Const Name
+          | Const Name Bool
           | Lam (Masked Name) Term
           deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
@@ -61,7 +61,7 @@ raise' :: Int -> Int -> Term -> Term
 raise' lower i t = case t of
    LocalVar j -> if j >= lower then LocalVar (i + j) else LocalVar j
    MetaVar i -> MetaVar i
-   Const s -> Const s
+   Const s con -> Const s con
    Ap l r -> raise' lower i l `Ap` raise' lower i r
    Lam n body -> Lam n (raise' (lower + 1) i body)
 
@@ -80,7 +80,7 @@ subst new i t = case t of
     GT -> LocalVar (j - 1)
   MetaVar i -> MetaVar i
   Ap l r -> subst new i l `Ap` subst new i r
-  Const s -> Const s
+  Const s c -> Const s c
   Lam n body -> Lam n (subst (raise 1 new) (i + 1) body)
 
 substMV :: Term -> Id -> Term -> Term
@@ -88,7 +88,7 @@ substMV new i t = case t of
   LocalVar i -> LocalVar i
   MetaVar j  -> if i == j then new else MetaVar j
   Ap l r     -> substMV new i l `Ap` substMV new i r
-  Const s    -> Const s
+  Const s c  -> Const s c
   -- This raising should not be strictly necessary as metavariables should not be subbed for open terms
   Lam n body -> Lam n (substMV (raise 1 new) i body)
 
@@ -96,7 +96,7 @@ reduce :: Term -> Term
 reduce t = case t of
   LocalVar j -> LocalVar j
   MetaVar i -> MetaVar i
-  Const i -> Const i
+  Const i c -> Const i c
   Ap l r -> case reduce l of
     Lam n body -> reduce (subst r 0 body)
     l' -> Ap l' (reduce r)
