@@ -17,12 +17,12 @@ import Unification
 import Optics.Core
 import Control.Applicative
 import Data.Char (isDigit)
-import Debug.Trace 
+import Debug.Trace
 
 data ProofStyle = Tree | Prose | Calc | Abbr
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-data ProofDisplayData = PDD { style :: ProofStyle, subtitle :: MS.MisoString} 
+data ProofDisplayData = PDD { style :: ProofStyle, subtitle :: MS.MisoString}
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data ProofTree = PT (Maybe ProofDisplayData) [T.Name] [P.Prop] T.Term (Maybe (P.RuleRef, [ProofTree]))
@@ -34,7 +34,7 @@ type Path = [Int]
 data Context = Context { bound :: [T.Name], locals :: [P.Prop] } deriving (Show)
 
 instance Semigroup Context where
-  Context bs lcls <> Context bs' lcls' = Context (bs' ++ bs) (map (P.raise (length bs')) lcls ++ lcls') 
+  Context bs lcls <> Context bs' lcls' = Context (bs' ++ bs) (map (P.raise (length bs')) lcls ++ lcls')
 instance Monoid Context where
   mempty = Context [] []
 
@@ -92,7 +92,7 @@ dependencies = traversalVL guts
         = (\rr' sgs' -> PT opts sks lcls g (Just (P.Elim (P.Defn rr') rr2,sgs')))
           <$> act rr
           <*> traverse (guts act) sgs
-    
+
     guts act (PT opts sks lcls g (Just (P.Rewrite (P.Defn rr) fl cl,sgs)))
         = (\rr' sgs' -> PT opts sks lcls g (Just (P.Rewrite (P.Defn rr') fl cl,sgs')))
           <$> act rr
@@ -133,11 +133,11 @@ apply (r,prp) p pt = do
        (,map fromProp sgs) <$> unifier g g'
 
 deshadow :: Context -> ProofTree -> ProofTree
-deshadow ctx (PT disp names locals term mc) = let 
+deshadow ctx (PT disp names locals term mc) = let
       names' = map (disambiguate (bound ctx)) names
       ctx' = ctx <> Context (reverse names') locals
     in PT disp names' locals term (fmap (fmap (map (deshadow ctx'))) mc)
-  where 
+  where
     disambiguate :: [T.Name] -> T.Name -> T.Name
     disambiguate ns n | n `notElem` ns = n
                       | otherwise = disambiguate ns (nextName n)
@@ -153,12 +153,12 @@ normaliseEquality p = over (path p) (reapplyContext (snd . unflatten . fmap remo
 unflatten :: (T.Term, [(T.Term, ProofTree, Path)]) -> (T.Term, ProofTree )
 unflatten (t, []) = error "Shouldn't happen"
 unflatten (t, (t', pt, _) : []  ) = (t', pt)
-unflatten (t, (t', pt, _) : rest) = 
+unflatten (t, (t', pt, _) : rest) =
   let  (rhs, pt') = unflatten (t', rest)
   in  (rhs, PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) t) rhs) (Just (P.Transitivity,[pt,pt'])))
 
 reapplyContext :: (ProofTree -> ProofTree) -> ProofTree -> ProofTree
-reapplyContext f pt@(PT opts names locals _ _) = let (PT _ _ _ goal rest) = f pt 
+reapplyContext f pt@(PT opts names locals _ _) = let (PT _ _ _ goal rest) = f pt
                                                   in PT opts names locals goal rest
 
 flatten :: ProofTree -> Path -> (T.Term, [(T.Term, ProofTree, Path)])
@@ -166,10 +166,10 @@ flatten a@(PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1) g2) (Just (P.Transitiv
   where (g,as) = flatten sg1 (0:pth)
         (g',bs) = flatten sg2 (1:pth)
 flatten a@(PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1) g2) (Just (P.Rewrite rn fl (Just P.LHS),
-            (a'@(PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1') g2') mpt) : rest)))) pth = (g1, (g1',a,pth):as) 
+            (a'@(PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1') g2') mpt) : rest)))) pth = (g1, (g1',a,pth):as)
   where (_,as) = flatten a' (0:pth)
 flatten a@(PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1) g2) (Just (P.Rewrite rn fl (Just P.RHS),
-            (a'@(PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1') g2') mpt) : rest)))) pth = (g1, as ++ [(g2,flipDir a,pth)]) 
+            (a'@(PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1') g2') mpt) : rest)))) pth = (g1, as ++ [(g2,flipDir a,pth)])
   where (_,as) = flatten a' (0:pth)
         flipDir (PT opts ctx lcls goal (Just (P.Rewrite rn fl l, sgs))) = (PT opts ctx lcls goal (Just (P.Rewrite rn (not fl) l, sgs)))
         flipDir xs = xs
@@ -178,8 +178,8 @@ flatten (PT opts sks lcls g mgs) pth = (g, [])
 
 removeRefls :: [(T.Term, ProofTree, Path)] -> [(T.Term, ProofTree, Path)]
 removeRefls xs = case filter notRefl xs of [] -> xs; xs' -> xs'
-  where 
-    notRefl (_,PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1) g2) (Just (P.Refl,[])),_) = False 
+  where
+    notRefl (_,PT _ _ _ (T.Ap (T.Ap (T.Const "_=_" False) g1) g2) (Just (P.Refl,[])),_) = False
     notRefl _ = True
 
 applyRewrite :: P.NamedProp -> Bool -> Path -> ProofTree -> UnifyM ProofTree
@@ -216,7 +216,7 @@ applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
           (a,b,_) <- match skolems op sgs g'
           return (a, T.Ap (T.Ap b e1) e2, Nothing)) <|> (do
             (a,b,_) <- match skolems e1 sgs g'
-            return (a, T.Ap (T.Ap op b) e2, Just P.LHS)) <|> (do 
+            return (a, T.Ap (T.Ap op b) e2, Just P.LHS)) <|> (do
               (a,b,_) <- match skolems e2 sgs g'
               return (a, T.Ap (T.Ap op e1) b, Just P.RHS))
         (T.Ap e1 e2) -> (do
@@ -228,7 +228,7 @@ applyEq skolems shouldReverse g (r,(P.Forall [] sgs g')) = do
 
 -- Wrapper for elim rules
 -- Params: Rule to apply, path to apply it to, which assumption to apply elim to
-applyElim :: P.NamedProp -> Path -> P.NamedProp -> ProofTree -> UnifyM ProofTree 
+applyElim :: P.NamedProp -> Path -> P.NamedProp -> ProofTree -> UnifyM ProofTree
 applyElim (r,prp) p (rr,assm) pt = do
     do (pt', subst) <- runWriterT $ iatraverseOf (path p) pure guts pt
        pure $ applySubst subst pt'
@@ -243,24 +243,24 @@ applyElim (r,prp) p (rr,assm) pt = do
     -- Identical to applyRule (for Intro) above but also tries to unify with an assumption
     -- Will only try to unify goal if it unifies with an assumption
     applyRuleElim :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
-    applyRuleElim skolems g r@(P.Forall ms (P.Forall [] [] t:sgs) g') = do 
+    applyRuleElim skolems g r@(P.Forall ms (P.Forall [] [] t:sgs) g') = do
         let indices = T.mentioned t
         (result,x) <- foldM (\(r,count) i -> (,) <$> instantiate skolems (i-count) r <*> pure (count+1) ) (r,0) (sort indices)
         let (P.Forall ms' (s:sgs') g') = result
         substs <- P.unifierProp (P.raise (length ms') assm) s
         let introRule = P.applySubst substs (P.Forall ms' sgs' g')
-        (substs', sgs'') <- applyRule skolems g introRule 
+        (substs', sgs'') <- applyRule skolems g introRule
         pure (substs <> substs', sgs'')
     applyRuleElim skolems g _ = empty
-    
+
     applyRule :: [T.Name] -> T.Term -> P.Prop -> UnifyM (T.Subst, [ProofTree])
     applyRule skolems g (P.Forall (m:ms) sgs g')
       | (T.LocalVar k,args) <- T.peelApTelescope g', k == length ms = do
-         let cutoff = length (m:ms) 
-         let exclusions = map (subtract cutoff) $ filter (>= cutoff) $ concatMap T.mentioned args 
+         let cutoff = length (m:ms)
+         let exclusions = map (subtract cutoff) $ filter (>= cutoff) $ concatMap T.mentioned args
          n <- fresh
-         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems - 1]) 
-         applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g')) 
+         let mt = foldl T.Ap n (map T.LocalVar $ filter (`notElem` exclusions) $ [0..length skolems - 1])
+         applyRule skolems g (P.subst mt 0 (P.Forall ms sgs g'))
       | otherwise = do
          n <- fresh
          let mt = foldl T.Ap n (map T.LocalVar [0..length skolems - 1])
@@ -270,51 +270,51 @@ applyElim (r,prp) p (rr,assm) pt = do
 
 -- Instantiate the variable at index i with a fresh unification variable
 instantiate :: [T.Name] -> T.Index -> P.Prop -> UnifyM P.Prop
-instantiate skolems i r@(P.Forall [] sgs g) = do 
+instantiate skolems i r@(P.Forall [] sgs g) = do
     pure (P.Forall [] sgs g)
-instantiate skolems i r@(P.Forall ms sgs g) = do 
+instantiate skolems i r@(P.Forall ms sgs g) = do
     let (outer,_:inner) = splitAt (length ms - i - 1) ms
     n <- fresh  -- [CPM] Returns increasing #, always unique
     let mt = foldl T.Ap n (map T.LocalVar [(0 + length outer)..(length skolems - 1 + length outer)])
     let skolems'@(P.Forall inner' sgs' g') = (P.subst mt 0 (P.Forall inner sgs g))
-    pure (P.Forall (outer++inner') sgs' g')  
+    pure (P.Forall (outer++inner') sgs' g')
 
 applySubst :: T.Subst -> ProofTree -> ProofTree
 applySubst subst (PT opts sks lcls g sgs) =
     PT opts sks (map (P.applySubst subst) lcls) (T.applySubst subst g) (fmap (fmap (map (applySubst subst))) sgs)
 
-convertRewriteToTrans :: ProofTree -> ProofTree 
-convertRewriteToTrans (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b) 
-      (Just (P.Rewrite r f (Just P.LHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):sgs)))) 
-  = PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b) 
-     (Just (P.Transitivity, [ PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) a) a') 
+convertRewriteToTrans :: ProofTree -> ProofTree
+convertRewriteToTrans (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b)
+      (Just (P.Rewrite r f (Just P.LHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):sgs))))
+  = PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b)
+     (Just (P.Transitivity, [ PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) a) a')
                                 (Just (P.Rewrite r f (Just P.LHS), PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') a') (Just (P.Refl, [])):sgs))
                             , convertRewriteToTrans sg]))
-convertRewriteToTrans (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b) 
-      (Just (P.Rewrite r f (Just P.RHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):sgs)))) 
-  = PT opts sks lcls  (T.Ap (T.Ap (T.Const "_=_" False) a) b) 
-     (Just (P.Transitivity, [convertRewriteToTrans sg, PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) b') b) 
-                                   (Just (P.Rewrite r (not f) (Just P.LHS), PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) b) b) (Just (P.Refl, [])):sgs))]))  
-convertRewriteToTrans (PT opts sks lcls g (Just (P.Transitivity, [ sg1, sg2 ]))) = 
+convertRewriteToTrans (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b)
+      (Just (P.Rewrite r f (Just P.RHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):sgs))))
+  = PT opts sks lcls  (T.Ap (T.Ap (T.Const "_=_" False) a) b)
+     (Just (P.Transitivity, [convertRewriteToTrans sg, PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) b') b)
+                                   (Just (P.Rewrite r (not f) (Just P.LHS), PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) b) b) (Just (P.Refl, [])):sgs))]))
+convertRewriteToTrans (PT opts sks lcls g (Just (P.Transitivity, [ sg1, sg2 ]))) =
      PT opts sks lcls g (Just (P.Transitivity, [ convertRewriteToTrans sg1, convertRewriteToTrans sg2 ]))
-convertRewriteToTrans pt = pt 
+convertRewriteToTrans pt = pt
 
-nix :: ProofTree -> ProofTree 
-nix (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b) 
-      (Just (P.Rewrite r f (Just P.LHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):_)))) 
+nix :: ProofTree -> ProofTree
+nix (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b)
+      (Just (P.Rewrite r f (Just P.LHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):_))))
   = PT opts sks lcls  (T.Ap (T.Ap (T.Const "_=_" False) a) b) (Just (P.Transitivity, [PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) a) a') Nothing, sg]))
-nix (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b) 
-      (Just (P.Rewrite r f (Just P.RHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):_)))) 
-  = PT opts sks lcls  (T.Ap (T.Ap (T.Const "_=_" False) a) b) (Just (P.Transitivity, [sg, PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) b') b) Nothing]))  
+nix (PT opts sks lcls (T.Ap (T.Ap (T.Const "_=_" False) a) b)
+      (Just (P.Rewrite r f (Just P.RHS), (sg@(PT _ [] [] (T.Ap (T.Ap (T.Const "_=_" False) a') b') msgs):_))))
+  = PT opts sks lcls  (T.Ap (T.Ap (T.Const "_=_" False) a) b) (Just (P.Transitivity, [sg, PT Nothing [] [] (T.Ap (T.Ap (T.Const "_=_" False) b') b) Nothing]))
 nix (PT opts sks lcls g _) = PT opts sks lcls g Nothing
 
 clear :: P.RuleName -> ProofTree -> ProofTree
 clear toClear x@(PT opts sks lcl g (Just (rr,sgs)))
      | matches rr = PT opts sks lcl g Nothing
      | otherwise  = PT opts sks lcl g $ Just (rr, map (clear toClear) sgs)
-  where 
-    matches :: P.RuleRef -> Bool 
-    matches (P.Elim t t') = any matches [t, t']  
+  where
+    matches :: P.RuleRef -> Bool
+    matches (P.Elim t t') = any matches [t, t']
     matches (P.Rewrite t _ _) = matches t
     matches (P.Defn t) = t == toClear
     matches r = P.defnName r == Just toClear
