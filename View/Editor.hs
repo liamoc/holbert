@@ -131,7 +131,7 @@ viewEditor x =
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Axiom i) [block "item-rule-theoremheading" ["Axioms."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Theorem i) [block "item-rule-theoremheading" ["Theorem."]]
       , button "sidebar-insert" "" (SetFocus $ InsertingPropositionFocus R.Inductive i) [block "item-rule-theoremheading" ["Inductive Definition."]]
-      , button "sidebar-insert" "" (InsertItem i (I.SyntaxDecl $ S.SyntaxDecl 0 "???" SR.NonAssoc)) [block "item-rule-theoremheading" ["Notation."]]
+      , button "sidebar-insert" "" (InsertItem i (I.SyntaxDecl $ S.SyntaxDecl [(0,"???", SR.NonAssoc)])) [block "item-rule-theoremheading" ["Notation."]]
       , block "sidebar-header" ["Text elements:"]
       , button "sidebar-insert" "" (insertHeading i 1) [h2_ [] ["Heading 1"]]
       , button "sidebar-insert" "" (insertHeading i 2) [h3_ [] ["Heading 2"]]

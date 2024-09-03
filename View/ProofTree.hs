@@ -131,7 +131,8 @@ renderProofTree opts pt tbl selected textIn = renderPT False False False False [
                                   [ if not shouldBeTree then button "button-style" "Switch to tree style"  (Act $ R.SetStyle pth Tree) ["Tree"] else "" 
                                   , if not shouldShowWords || shouldBeAbbr then button "button-style" "Switch to prose style"  (Act $ R.SetStyle pth Prose) ["Prose"] else ""
                                   , if not shouldBeAbbr then button "button-style" "Switch to summary style" (Act $ R.SetStyle pth Abbr) ["Summary"] else "" 
-                                  , button "button-style" "Switch to calculational style" (Act $ R.SetStyle pth Calc) ["Calc"] ]
+                                  -- , button "button-style" "Switch to calculational style" (Act $ R.SetStyle pth Calc) ["Calc"] 
+                                  ]
                            , iconButton "grey" "Switch proof style" "brush" Noop ]
         shouldShowWords = not inTree && not shouldBeTree
         shouldBeTree = case ptopts of Nothing -> True; Just opts -> style opts == Tree 

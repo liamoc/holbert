@@ -1,5 +1,7 @@
 * In progress
 - Improvement: Can set associativity and precedence of mix-fix input syntax.
+- Improvement: Notation blocks can now define more than one mix-fix syntax.
+- Improvement: Proof style buttons condensed into hover-menu.
 - New feature: Summary proof display style (breaks file format)
 - New feature: Constructors. Identifiers that begin with '@' are assumed to be constructors, 
                which are rendered specially, and are automatically considered to be injective
