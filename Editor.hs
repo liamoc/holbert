@@ -17,7 +17,7 @@ import qualified StringRep as SR
 import qualified Prop as Prp
 import qualified Rule as R
 import DisplayOptions
-import qualified Data.Char 
+import qualified Data.Char
 import Debug.Trace
 type Document = [I.Item]
 type ItemIndex = Int
@@ -32,7 +32,7 @@ data Editor = Editor
   , message        :: Maybe ErrorMessage
   , displayOptions :: DisplayOptions
   , presentation   :: Maybe (Int, Int)
-  , readerMode     :: Bool 
+  , readerMode     :: Bool
   } deriving (Show, Eq)
 
 data EditorFocus
@@ -59,6 +59,7 @@ data EditorAction
   | InsertProposition ItemIndex R.RuleType
 --  | InsertSyntaxDecl ItemIndex
   | Download
+  | Upload
   | Import
   | LoadDocument Document
   | DisplayError MS.MisoString
@@ -87,10 +88,10 @@ after n = atraversalVL guts
 
 
 getRuleAt :: Int -> Document -> R.Rule
-getRuleAt i s = case s !! i of 
+getRuleAt i s = case s !! i of
   I.Rule v -> v
-  _ -> error "Rule not found!" 
-  
+  _ -> error "Rule not found!"
+
 processNewnames :: [MS.MisoString] -> Document -> Either MS.MisoString ()
 processNewnames nn doc = mapM_ processNewname nn
   where
@@ -127,7 +128,7 @@ runAction' Reset ed = pure (ed {message = Nothing, currentFocus = NoFocus})
 runAction' (ItemAction mi act) ed = do
   let index | Just i <- mi = i
             | ItemFocus i _ <- currentFocus ed = i
-  let localFocus = case currentFocus ed of 
+  let localFocus = case currentFocus ed of
        ItemFocus i' f | i' == index -> Just f
        _ -> Nothing
   let (lefts,it:rights) = splitAt index (document ed)
@@ -180,27 +181,27 @@ runAction' (InsertProposition idx ruleType) ed =
 
 runAction' EnterPresentation ed = Right $ ed { presentation = Just (nextSlide (document ed) (0,0)) }
 runAction' ExitPresentation ed = Right $ ed { presentation = Nothing }
-runAction' NextSlide ed = case presentation ed of 
+runAction' NextSlide ed = case presentation ed of
                             Nothing -> Right $ ed
                             Just i  -> Right $ ed { presentation = Just (nextSlide (document ed) i) }
-runAction' PrevSlide ed = case presentation ed of 
+runAction' PrevSlide ed = case presentation ed of
                             Nothing -> Right $ ed
                             Just i  -> Right $ ed { presentation = Just (prevSlide (document ed) i) }
 runAction' (LoadDocument m) ed = Right $ ed { document = migrate m, currentFocus = NoFocus, message = Nothing}
-  where migrate = id -- map (\i -> over (I.rule % R.ruleItems % R.proofState % R.proofTree % PT.ruleRefs) (\ x -> case x of Prp.OldRewrite a b -> Prp.Rewrite a b Nothing; y -> y) i) 
+  where migrate = id -- map (\i -> over (I.rule % R.ruleItems % R.proofState % R.proofTree % PT.ruleRefs) (\ x -> case x of Prp.OldRewrite a b -> Prp.Rewrite a b Nothing; y -> y) i)
 runAction' (ToggleReader) ed = Right $ ed { readerMode = not (readerMode ed) }
 runAction' (DisplayError e) ed = Left e
 
 
 nextSlide :: Document -> (Int, Int) -> (Int, Int)
 nextSlide d (start,end) | end >= length d = (start, end)
-nextSlide d (start,end) = case stepTillHeading 1 (end+1) (drop (end +1) d) of 
+nextSlide d (start,end) = case stepTillHeading 1 (end+1) (drop (end +1) d) of
   Just i -> if i <= end then (start,end) else (end, i)
   Nothing -> (start,end)
 
 prevSlide :: Document -> (Int, Int) -> (Int, Int)
 prevSlide d (0,end) = (0,end)
-prevSlide d (start,end) = case stepTillHeading (-1) start (reverse $ take start d) of 
+prevSlide d (start,end) = case stepTillHeading (-1) start (reverse $ take start d) of
   Just i -> if (start <= i-1) then (start,end) else (i-1, start)
   Nothing -> (start,end)
 

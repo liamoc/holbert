@@ -11,7 +11,7 @@ foreign import javascript unsafe "$r = document.location.search.slice(1);"
   urlparameter :: IO MisoString
 
 main :: IO ()
-main = do 
+main = do
   url <- (\x -> if x == "" then "index.holbert" else x) <$> urlparameter
   startApp App {model = initialEditor url, ..}
   where
@@ -24,14 +24,20 @@ main = do
     logLevel      = Off
 
 updateModel :: EditorAction -> Editor -> Effect EditorAction Editor
-updateModel Import = \m -> act m #> m 
+updateModel Import = \m -> act m #> m
   where
     act m = do
       x <- ImportExport.import_ (inputText m)
-      pure $ case x of 
-        Left e -> DisplayError e 
+      pure $ case x of
+        Left e -> DisplayError e
+        Right x -> LoadDocument x
+updateModel Upload = \m -> act m #> m
+  where
+    act m = do
+      x <- ImportExport.openFile
+      pure $ case x of
+        Left e -> DisplayError e
         Right x -> LoadDocument x
 updateModel Download = \m -> act m #> m
   where act m = ImportExport.export "file.holbert" (document m) >> pure Noop
 updateModel act = noEff . runAction act
-
