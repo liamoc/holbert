@@ -20,7 +20,7 @@ import View.Utils hiding (LocalAction (..))
 import qualified View.Utils as U
 import Data.List(mapAccumL)
 import Data.Maybe(isJust, isNothing)
-version = "0.5.1"
+version = "0.6"
 
 data RuleType
   = Apply

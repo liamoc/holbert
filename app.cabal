@@ -1,5 +1,5 @@
  name:               holbert
-version:             0.5.1.0
+version:             0.6
 synopsis:            An interactive proof assistant
 category:            Web
 license:             BSD3
@@ -15,11 +15,11 @@ executable app
   --if flag(mixfix)
   --  cpp-options: -DMIXFIX
   main-is:             Main.hs
-  other-modules: 
-    StringRep 
-    Prop 
-    ProofTree 
-    Terms 
+  other-modules:
+    StringRep
+    Prop
+    ProofTree
+    Terms
     Unification
     Editor
     Rule
@@ -43,4 +43,4 @@ executable app
   ghcjs-options:
     -dedupe
   build-depends:       base, ghcjs-base == 0.2.1.0, aeson, hashable==1.3.5.0, text, miso, mtl, containers==0.6.8, optics-core, Earley, jsaddle == 0.9.8.2, unordered-containers==0.2.19.1
-  default-language:    Haskell2010 
+  default-language:    Haskell2010

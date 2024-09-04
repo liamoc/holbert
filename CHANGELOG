@@ -1,4 +1,7 @@
 * In progress
+- Forward reasoning, calc proofs
+
+* Version 0.6:
 - New feature: Files can now be loaded directly from the local file system.
 - Improvement: When supported, the download/save button produces a file picker dialog.
 - Improvement: Can set associativity and precedence of mix-fix input syntax.

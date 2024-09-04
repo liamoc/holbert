@@ -1,5 +1,5 @@
 OUTPUT=dist/build/app/app.jsexe/
-OUTPUT_NEWSTYLE=dist-newstyle/build/x86_64-linux/ghcjs-8.6.0.1/holbert-0.5.1.0/x/app/build/app/app.jsexe/
+OUTPUT_NEWSTYLE=dist-newstyle/build/x86_64-linux/ghcjs-8.6.0.1/holbert-0.6/x/app/build/app/app.jsexe/
 STATICS=index.html favicon.PNG euler.woff typicons.* *.min.js cmunfonts *.holbert
 all:
 	cabal build && cp -R $(STATICS) $(OUTPUT)
