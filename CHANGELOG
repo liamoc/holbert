@@ -1,4 +1,6 @@
 * In progress
+- New feature: Files can now be loaded directly from the local file system.
+- Improvement: When supported, the download/save button produces a file picker dialog.
 - Improvement: Can set associativity and precedence of mix-fix input syntax.
 - Improvement: Notation blocks can now define more than one mix-fix syntax.
 - Improvement: Proof style buttons condensed into hover-menu.
